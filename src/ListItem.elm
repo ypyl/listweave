@@ -623,7 +623,7 @@ restoreItemAtPosition item parentId childIndex items =
                 ( before, after ) =
                     splitAt childIndex items
             in
-            before ++ [ item ] ++ after
+            before ++ (item :: after)
 
         Just pid ->
             List.map
@@ -635,7 +635,7 @@ restoreItemAtPosition item parentId childIndex items =
                                     ( before, after ) =
                                         splitAt childIndex data.children
                                 in
-                                ListItem { data | children = before ++ [ item ] ++ after }
+                                ListItem { data | children = before ++ (item :: after) }
 
                             else
                                 ListItem { data | children = restoreItemAtPosition item parentId childIndex data.children }
