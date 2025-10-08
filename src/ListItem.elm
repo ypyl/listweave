@@ -2,7 +2,7 @@ module ListItem exposing (..)
 
 import Regex
 import Set
-import TagsUtils exposing (isTagRegex, processContent)
+import TagsUtils exposing (isTagRegex)
 import Time exposing (Posix)
 
 
@@ -394,9 +394,9 @@ extractTags content =
     let
         lines = String.lines content
         blocks = TagsUtils.processContent lines
-        
+
         -- Only extract tags from non-code blocks
-        textBlocks = 
+        textBlocks =
             blocks
                 |> List.filter (\(isCode, _) -> not isCode)
                 |> List.concatMap (\(_, blockLines) -> blockLines)

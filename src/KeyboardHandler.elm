@@ -1,7 +1,7 @@
 module KeyboardHandler exposing (onKeyDown)
 
 import Clipboard
-import Html exposing (Html)
+import Html
 import Html.Events exposing (preventDefaultOn)
 import Json.Decode as D
 import ListItem exposing (ListItem, getContent)

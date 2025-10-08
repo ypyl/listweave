@@ -14,10 +14,9 @@ import NewItemButton
 import Regex
 import SearchToolbar
 import TagPopup
-import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex, processContent)
+import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Time exposing (Month(..), Posix, millisToPosix)
-import TagsUtils exposing (tagPrefix)
 
 
 
