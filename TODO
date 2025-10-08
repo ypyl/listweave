@@ -1,6 +1,6 @@
 - ✅ copy/paste - [implementation details](docs/copy-paste-implementation.md)
 - ✅ filter using tags - [requirements specification](docs/tag-filter-requirements.md)
-- ignore tags in code block
+- ✅ ignore tags in code block - [requirements specification](docs/ignore-tags-in-code-block-requirements.md) - IMPLEMENTED
 - export/import
 - storage (indexDB)
 - assert support (attach any file)

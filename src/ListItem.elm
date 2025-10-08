@@ -2,7 +2,7 @@ module ListItem exposing (..)
 
 import Regex
 import Set
-import TagsUtils exposing (isTagRegex)
+import TagsUtils exposing (isTagRegex, processContent)
 import Time exposing (Posix)
 
 
@@ -391,7 +391,18 @@ updateItemContentFn (ListItem current) content (ListItem item) =
 
 extractTags : String -> List String
 extractTags content =
-    Regex.find isTagRegex content
+    let
+        lines = String.lines content
+        blocks = TagsUtils.processContent lines
+        
+        -- Only extract tags from non-code blocks
+        textBlocks = 
+            blocks
+                |> List.filter (\(isCode, _) -> not isCode)
+                |> List.concatMap (\(_, blockLines) -> blockLines)
+                |> String.join "\n"
+    in
+    Regex.find isTagRegex textBlocks
         |> List.filterMap
             (\m ->
                 case m.submatches of

@@ -49,11 +49,14 @@ findCurrentWord before after pos text =
 
 isInsideTagBrackets : Int -> String -> Maybe ( String, String )
 isInsideTagBrackets cursorPos content =
-    focusedTag cursorPos content
-        |> Maybe.map
-            (\{ tag, position } ->
-                ( String.left position tag, tag )
-            )
+    if isInsideCodeBlock cursorPos content then
+        Nothing
+    else
+        focusedTag cursorPos content
+            |> Maybe.map
+                (\{ tag, position } ->
+                    ( String.left position tag, tag )
+                )
 
 
 isTagRegex : Regex.Regex
@@ -119,25 +122,90 @@ findPrev list current =
                 findPrev (y :: rest) current
 
 
+processContent : List String -> List ( Bool, List String )
+processContent content =
+    let
+        isCodeBlock line =
+            String.startsWith "```" line
+
+        processLines =
+            List.foldl
+                (\line ( currentLines, inCode, acc ) ->
+                    if isCodeBlock line then
+                        if inCode then
+                            -- End of code block, finalize the code block and reset
+                            ( [], False, acc ++ [ ( True, currentLines ) ] )
+                        else
+                            -- Start of code block, save previous lines as text block if any
+                            ( []
+                            , True
+                            , if List.isEmpty currentLines then
+                                acc
+                              else
+                                acc ++ [ ( False, currentLines ) ]
+                            )
+                    else if inCode then
+                        -- Inside code block, collect the line
+                        ( currentLines ++ [ line ], inCode, acc )
+                    else
+                        -- Regular text
+                        ( currentLines ++ [ line ], inCode, acc )
+                )
+                ( [], False, [] )
+                content
+    in
+    case processLines of
+        ( remainingLines, _, blocks ) ->
+            if List.isEmpty remainingLines then
+                blocks
+            else
+                blocks ++ [ ( False, remainingLines ) ]
+
+
+isInsideCodeBlock : Int -> String -> Bool
+isInsideCodeBlock cursorPos content =
+    let
+        lines = String.lines content
+        blocks = processContent lines
+        
+        -- Calculate character positions for each block
+        checkPosition pos remaining =
+            case remaining of
+                [] ->
+                    False
+                
+                (isCode, blockLines) :: rest ->
+                    let
+                        blockContent = String.join "\n" blockLines
+                        blockEnd = pos + String.length blockContent
+                    in
+                    if isCode && cursorPos >= pos && cursorPos <= blockEnd then
+                        True
+                    else
+                        checkPosition (blockEnd + 1) rest
+    in
+    checkPosition 0 blocks
+
+
 insertTagAtCursor : String -> String -> Int -> ( String, Int )
 insertTagAtCursor content tag cursorPos =
     let
         before = String.left cursorPos content
         after = String.dropLeft cursorPos content
-        
+
         tagStart =
             String.reverse before
                 |> String.indexes tagPrefix
                 |> List.head
                 |> Maybe.map (\i -> cursorPos - i - 1)
                 |> Maybe.withDefault cursorPos
-        
+
         newContent =
             String.left tagStart content
                 ++ tagPrefix
                 ++ tag
                 ++ after
-        
+
         newCaretPos =
             tagStart + String.length tagPrefix + String.length tag
     in

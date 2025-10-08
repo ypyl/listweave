@@ -14,7 +14,7 @@ import NewItemButton
 import Regex
 import SearchToolbar
 import TagPopup
-import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
+import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex, processContent)
 import Task
 import Time exposing (Month(..), Posix, millisToPosix)
 import TagsUtils exposing (tagPrefix)
@@ -70,7 +70,7 @@ initialModel =
             , children =
                 [ newListItem { id = 2, content = [ "Review requirements @todo" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
                 , newListItem { id = 7, content = [ "Schedule next meeting 2 @calendar" ], tags = [ "calendar" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
-                , newListItem { id = 3, content = [ "Schedule next meeting @calendar" ], tags = [ "calendar" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
+                , newListItem { id = 3, content = [ "Code example:", "```", "function test() {", "  // This @todo should not be clickable", "  return @value;", "}", "```", "But this @todo should work" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
                 ]
             }
         , newListItem
@@ -528,48 +528,7 @@ viewStaticItem items item =
             in
             on "click" (D.map2 (\x y -> EditItemClick item x y) clientXDecoder clientYDecoder)
 
-        isCodeBlock line =
-            String.startsWith "```" line
-
-        processContent content =
-            let
-                isInCodeBlock =
-                    List.foldl
-                        (\line ( currentLines, inCode, acc ) ->
-                            if isCodeBlock line then
-                                if inCode then
-                                    -- End of code block, finalize the code block and reset
-                                    ( [], False, acc ++ [ ( True, currentLines ) ] )
-
-                                else
-                                    -- Start of code block, save previous lines as text block if any
-                                    ( []
-                                    , True
-                                    , if List.isEmpty currentLines then
-                                        acc
-
-                                      else
-                                        acc ++ [ ( False, currentLines ) ]
-                                    )
-
-                            else if inCode then
-                                -- Inside code block, collect the line
-                                ( currentLines ++ [ line ], inCode, acc )
-
-                            else
-                                -- Regular text
-                                ( currentLines ++ [ line ], inCode, acc )
-                        )
-                        ( [], False, [] )
-                        content
-            in
-            case isInCodeBlock of
-                ( remainingLines, _, blocks ) ->
-                    if List.isEmpty remainingLines then
-                        blocks
-
-                    else
-                        blocks ++ [ ( False, remainingLines ) ]
+        contentBlocks = TagsUtils.processContent (getContent item)
 
         viewBlock ( isCode, lines ) =
             if isCode then
@@ -584,7 +543,7 @@ viewStaticItem items item =
                         , Html.Attributes.style "margin" "4px 0"
                         , Html.Attributes.style "font-family" "monospace"
                         ]
-                        (List.map (\line -> div [] (viewContent items item line)) lines)
+                        (List.map (\line -> div [] [ text line ]) lines)
                     ]
 
             else
@@ -606,7 +565,7 @@ viewStaticItem items item =
                 [ span [ Html.Attributes.style "color" "#aaa", Html.Attributes.style "line-height" "1.8" ] [ text "empty" ] ]
 
              else
-                List.map viewBlock (processContent (getContent item))
+                List.map viewBlock contentBlocks
             )
         ]
 

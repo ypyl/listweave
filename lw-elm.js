@@ -10754,12 +10754,12 @@ var $author$project$Main$initialModel = {
 							children: _List_Nil,
 							collapsed: true,
 							content: _List_fromArray(
-								['Schedule next meeting @calendar']),
+								['Code example:', '```', 'function test() {', '  // This @todo should not be clickable', '  return @value;', '}', '```', 'But this @todo should work']),
 							created: $elm$time$Time$millisToPosix(1757532035027),
 							editing: false,
 							id: 3,
 							tags: _List_fromArray(
-								['calendar'])
+								['todo'])
 						})
 					]),
 				collapsed: true,
@@ -11513,9 +11513,93 @@ var $author$project$TagsUtils$focusedTag = F2(
 					},
 					A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, content))));
 	});
+var $elm$core$String$lines = _String_lines;
+var $author$project$TagsUtils$processContent = function (content) {
+	var isCodeBlock = function (line) {
+		return A2($elm$core$String$startsWith, '```', line);
+	};
+	var processLines = A3(
+		$elm$core$List$foldl,
+		F2(
+			function (line, _v1) {
+				var currentLines = _v1.a;
+				var inCode = _v1.b;
+				var acc = _v1.c;
+				return isCodeBlock(line) ? (inCode ? _Utils_Tuple3(
+					_List_Nil,
+					false,
+					_Utils_ap(
+						acc,
+						_List_fromArray(
+							[
+								_Utils_Tuple2(true, currentLines)
+							]))) : _Utils_Tuple3(
+					_List_Nil,
+					true,
+					$elm$core$List$isEmpty(currentLines) ? acc : _Utils_ap(
+						acc,
+						_List_fromArray(
+							[
+								_Utils_Tuple2(false, currentLines)
+							])))) : (inCode ? _Utils_Tuple3(
+					_Utils_ap(
+						currentLines,
+						_List_fromArray(
+							[line])),
+					inCode,
+					acc) : _Utils_Tuple3(
+					_Utils_ap(
+						currentLines,
+						_List_fromArray(
+							[line])),
+					inCode,
+					acc));
+			}),
+		_Utils_Tuple3(_List_Nil, false, _List_Nil),
+		content);
+	var remainingLines = processLines.a;
+	var blocks = processLines.c;
+	return $elm$core$List$isEmpty(remainingLines) ? blocks : _Utils_ap(
+		blocks,
+		_List_fromArray(
+			[
+				_Utils_Tuple2(false, remainingLines)
+			]));
+};
+var $author$project$TagsUtils$isInsideCodeBlock = F2(
+	function (cursorPos, content) {
+		var lines = $elm$core$String$lines(content);
+		var checkPosition = F2(
+			function (pos, remaining) {
+				checkPosition:
+				while (true) {
+					if (!remaining.b) {
+						return false;
+					} else {
+						var _v1 = remaining.a;
+						var isCode = _v1.a;
+						var blockLines = _v1.b;
+						var rest = remaining.b;
+						var blockContent = A2($elm$core$String$join, '\n', blockLines);
+						var blockEnd = pos + $elm$core$String$length(blockContent);
+						if (isCode && ((_Utils_cmp(cursorPos, pos) > -1) && (_Utils_cmp(cursorPos, blockEnd) < 1))) {
+							return true;
+						} else {
+							var $temp$pos = blockEnd + 1,
+								$temp$remaining = rest;
+							pos = $temp$pos;
+							remaining = $temp$remaining;
+							continue checkPosition;
+						}
+					}
+				}
+			});
+		var blocks = $author$project$TagsUtils$processContent(lines);
+		return A2(checkPosition, 0, blocks);
+	});
 var $author$project$TagsUtils$isInsideTagBrackets = F2(
 	function (cursorPos, content) {
-		return A2(
+		return A2($author$project$TagsUtils$isInsideCodeBlock, cursorPos, content) ? $elm$core$Maybe$Nothing : A2(
 			$elm$core$Maybe$map,
 			function (_v0) {
 				var tag = _v0.tag;
@@ -11526,7 +11610,6 @@ var $author$project$TagsUtils$isInsideTagBrackets = F2(
 			},
 			A2($author$project$TagsUtils$focusedTag, cursorPos, content));
 	});
-var $elm$core$String$lines = _String_lines;
 var $author$project$ListItem$mapItem = F2(
 	function (fn, list) {
 		return A2(
@@ -12335,6 +12418,24 @@ var $elm$core$List$all = F2(
 			list);
 	});
 var $author$project$ListItem$extractTags = function (content) {
+	var lines = $elm$core$String$lines(content);
+	var blocks = $author$project$TagsUtils$processContent(lines);
+	var textBlocks = A2(
+		$elm$core$String$join,
+		'\n',
+		A2(
+			$elm$core$List$concatMap,
+			function (_v2) {
+				var blockLines = _v2.b;
+				return blockLines;
+			},
+			A2(
+				$elm$core$List$filter,
+				function (_v1) {
+					var isCode = _v1.a;
+					return !isCode;
+				},
+				blocks)));
 	return A2(
 		$elm$core$List$filterMap,
 		function (m) {
@@ -12346,7 +12447,7 @@ var $author$project$ListItem$extractTags = function (content) {
 				return $elm$core$Maybe$Nothing;
 			}
 		},
-		A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, content));
+		A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, textBlocks));
 };
 var $author$project$ListItem$updateItemContentFn = F3(
 	function (_v0, content, _v1) {
@@ -13634,9 +13735,9 @@ var $author$project$Main$viewContent = F3(
 	});
 var $author$project$Main$viewStaticItem = F2(
 	function (items, item) {
-		var viewBlock = function (_v2) {
-			var isCode = _v2.a;
-			var lines = _v2.b;
+		var viewBlock = function (_v0) {
+			var isCode = _v0.a;
+			var lines = _v0.b;
 			return isCode ? A2(
 				$elm$html$Html$div,
 				_List_Nil,
@@ -13661,7 +13762,10 @@ var $author$project$Main$viewStaticItem = F2(
 								return A2(
 									$elm$html$Html$div,
 									_List_Nil,
-									A3($author$project$Main$viewContent, items, item, line));
+									_List_fromArray(
+										[
+											$elm$html$Html$text(line)
+										]));
 							},
 							lines))
 					])) : A2(
@@ -13696,58 +13800,8 @@ var $author$project$Main$viewStaticItem = F2(
 					clientXDecoder,
 					clientYDecoder));
 		}();
-		var isCodeBlock = function (line) {
-			return A2($elm$core$String$startsWith, '```', line);
-		};
-		var processContent = function (content) {
-			var isInCodeBlock = A3(
-				$elm$core$List$foldl,
-				F2(
-					function (line, _v1) {
-						var currentLines = _v1.a;
-						var inCode = _v1.b;
-						var acc = _v1.c;
-						return isCodeBlock(line) ? (inCode ? _Utils_Tuple3(
-							_List_Nil,
-							false,
-							_Utils_ap(
-								acc,
-								_List_fromArray(
-									[
-										_Utils_Tuple2(true, currentLines)
-									]))) : _Utils_Tuple3(
-							_List_Nil,
-							true,
-							$elm$core$List$isEmpty(currentLines) ? acc : _Utils_ap(
-								acc,
-								_List_fromArray(
-									[
-										_Utils_Tuple2(false, currentLines)
-									])))) : (inCode ? _Utils_Tuple3(
-							_Utils_ap(
-								currentLines,
-								_List_fromArray(
-									[line])),
-							inCode,
-							acc) : _Utils_Tuple3(
-							_Utils_ap(
-								currentLines,
-								_List_fromArray(
-									[line])),
-							inCode,
-							acc));
-					}),
-				_Utils_Tuple3(_List_Nil, false, _List_Nil),
-				content);
-			var remainingLines = isInCodeBlock.a;
-			var blocks = isInCodeBlock.c;
-			return $elm$core$List$isEmpty(remainingLines) ? blocks : _Utils_ap(
-				blocks,
-				_List_fromArray(
-					[
-						_Utils_Tuple2(false, remainingLines)
-					]));
-		};
+		var contentBlocks = $author$project$TagsUtils$processContent(
+			$author$project$ListItem$getContent(item));
 		return A2(
 			$elm$html$Html$div,
 			_List_fromArray(
@@ -13781,11 +13835,7 @@ var $author$project$Main$viewStaticItem = F2(
 								[
 									$elm$html$Html$text('empty')
 								]))
-						]) : A2(
-						$elm$core$List$map,
-						viewBlock,
-						processContent(
-							$author$project$ListItem$getContent(item))))
+						]) : A2($elm$core$List$map, viewBlock, contentBlocks))
 				]));
 	});
 var $author$project$Main$viewListItem = F3(
