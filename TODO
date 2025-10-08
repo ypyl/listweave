@@ -1,0 +1,18 @@
+- ✅ copy/paste - [implementation details](docs/copy-paste-implementation.md)
+- ✅ filter using tags - [requirements specification](docs/tag-filter-requirements.md)
+- ignore tags in code block
+- export/import
+- storage (indexDB)
+- assert support (attach any file)
+- ZoomIn/ZoomOut
+    ALt ->
+    Alt <-
+- keyboard help
+
+## Component Refactoring
+- ✅ Extract TagPopup component from Main.elm - [requirements specification](docs/tagpopup-component-requirements.md)
+- Extract SearchToolbar component from Main.elm
+- Extract ContentRenderer component from Main.elm
+- Extract ClipboardManager component from Main.elm
+- Extract ListItemView component from Main.elm
+- Extract KeyboardHandler component from Main.elm

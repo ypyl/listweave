@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ListWeave</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="lw-elm.js"></script>
+    <script>
+      var app = Elm.Main.init({ node: document.getElementById("root") });
+
+      function getCaretCoordinates(textarea, position) {
+        // Create a mirror div
+        const div = document.createElement("div");
+        const style = getComputedStyle(textarea);
+        for (const prop of style) {
+          div.style[prop] = style[prop];
+        }
+
+        div.style.position = "absolute";
+        // div.style.visibility = "hidden";
+        div.style.whiteSpace = "pre-wrap";
+        div.style.wordWrap = "break-word";
+        div.style.overflow = "hidden";
+        div.style.width = textarea.offsetWidth + "px";
+
+        // Mirror scroll
+        div.scrollTop = textarea.scrollTop;
+        div.scrollLeft = textarea.scrollLeft;
+
+        // Insert text up to caret, ensuring we don't cut words in half
+        const fullText = textarea.value;
+        let text = fullText.substring(0, position);
+
+        // If we cut in the middle of a word, include the rest of the word
+        if (position < fullText.length && /\w/.test(fullText[position])) {
+          // Find the next non-word character (word boundary)
+          const rest = fullText.slice(position);
+          const nextBoundary = rest.search(/[^\w]/);
+          if (nextBoundary !== -1) {
+            text = fullText.substring(0, position + nextBoundary);
+          } else {
+            text = fullText;
+          }
+        }
+        div.textContent = text;
+
+        // Insert marker span
+        const span = document.createElement("div");
+        span.textContent = textarea.value.substring(position) || "."; // avoid empty
+        div.appendChild(span);
+
+        document.body.appendChild(div);
+
+        const rect = span.getBoundingClientRect();
+        const divRect = div.getBoundingClientRect();
+        const taRect = textarea.getBoundingClientRect();
+
+        document.body.removeChild(div);
+
+        return {
+          top: rect.top - divRect.top + taRect.top + textarea.scrollTop,
+          left: taRect.left,
+          width: textarea.offsetWidth,
+        };
+      }
+
+      app.ports.setCaret.subscribe(function (data) {
+        const id = data.id;
+        const pos = data.pos;
+        const input = document.getElementById("input-id-" + id);
+        if (input) {
+          input.focus();
+          input.setSelectionRange(pos, pos);
+          autoResize.call(input);
+        }
+      });
+
+      app.ports.resizeTextarea.subscribe(function (id) {
+        const input = document.getElementById("input-id-" + id);
+        if (input) {
+          autoResize.call(input);
+        }
+      });
+
+      app.ports.requestCursorPosition.subscribe(function (id) {
+        // Find the textarea element by its value
+        const textarea = document.getElementById("input-id-" + id);
+        if (!textarea) {
+          return;
+        }
+        const cursorPos = textarea.selectionStart;
+        const coords = getCaretCoordinates(textarea, cursorPos);
+
+        if (app.ports && app.ports.receiveCursorPosition) {
+          app.ports.receiveCursorPosition.send({
+            top: Math.ceil(coords.top),
+            left: Math.ceil(coords.left),
+            width: Math.ceil(coords.width),
+          });
+        }
+      });
+
+      app.ports.getPosition.subscribe(function (data) {
+        // data: { id: number, clientX: number, clientY: number }
+        const viewItemId = data.id;
+        const clientX = data.clientX;
+        const clientY = data.clientY;
+
+        const viewItem = document.getElementById("view-item-" + viewItemId);
+        if (!viewItem) {
+          return;
+        }
+
+        const contentDiv = viewItem.querySelector(".content-click-area");
+        if (!contentDiv) {
+          return;
+        }
+
+        const clickRange = document.caretRangeFromPoint
+          ? document.caretRangeFromPoint(clientX, clientY)
+          : document.caretPositionFromPoint?.(clientX, clientY);
+
+        if (!clickRange || !contentDiv.contains(clickRange.startContainer)) {
+          return;
+        }
+
+        const totalRange = document.createRange();
+        totalRange.selectNodeContents(contentDiv);
+        totalRange.setEnd(clickRange.startContainer, clickRange.startOffset);
+        const offset = totalRange.toString().length;
+
+        if (app.ports.clickedAt) {
+          app.ports.clickedAt.send({ id: viewItemId, pos: offset });
+        }
+      });
+
+      function autoResize() {
+        const lineHeight = 1.8;
+        const fontSize = parseFloat(getComputedStyle(this).fontSize);
+        const lines = this.value.split('\n').length;
+        const calculatedHeight = lines * lineHeight * fontSize;
+        this.style.height = calculatedHeight + "px";
+      }
+
+      window.addEventListener(
+        "resize",
+        () => {
+          const textareas = document.querySelectorAll("textarea");
+          textareas.forEach((textarea) => {
+            autoResize.call(textarea);
+          });
+        },
+        false
+      );
+    </script>
+  </body>
+</html>
