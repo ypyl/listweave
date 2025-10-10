@@ -41,6 +41,18 @@ port receiveCursorPosition : (D.Value -> msg) -> Sub msg
 port resizeTextarea : Int -> Cmd msg
 
 
+port getSearchInputPosition : () -> Cmd msg
+
+
+port setSearchInputCursor : Int -> Cmd msg
+
+
+port getCurrentCursorPosition : Int -> Cmd msg
+
+
+port receiveCurrentCursorPosition : (D.Value -> msg) -> Sub msg
+
+
 
 -- MODEL
 
@@ -49,10 +61,13 @@ type alias Model =
     { items : List ListItem
     , cursorPos : Maybe Int
     , caretTask : Maybe ( Int, Int )
+    , searchCursorTask : Maybe Int
+    , pendingTagInsertion : Maybe String
     , tagPopup : TagPopup.Model
     , searchToolbar : SearchToolbar.Model
     , noBlur : Bool
     , clipboard : Clipboard.Model
+    , selectedTags : List String
     }
 
 
@@ -87,10 +102,13 @@ initialModel =
         ]
     , cursorPos = Nothing
     , caretTask = Nothing
+    , searchCursorTask = Nothing
+    , pendingTagInsertion = Nothing
     , tagPopup = TagPopup.init
     , searchToolbar = SearchToolbar.init
     , noBlur = False
     , clipboard = Clipboard.init
+    , selectedTags = []
     }
 
 
@@ -115,7 +133,9 @@ type Msg
     | FocusResult (Result Browser.Dom.Error ())
     | ClickedAt { id : Int, pos : Int }
     | SetCaret Int Int
+    | SetSearchCursor Int
     | GotCursorPosition Int Int Int
+    | GotCurrentCursorPosition ListItem String Int
     | NoOp
     | MoveItemUp Int ListItem
     | SearchToolbarMsg SearchToolbar.Msg
@@ -127,6 +147,9 @@ type Msg
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
     | TagPopupMsg TagPopup.Msg
+    | SearchTagSelected String
+    | RemoveSelectedTag String
+    | ClearAllSelectedTags
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -136,7 +159,23 @@ update msg model =
             ( model, Cmd.none )
 
         TagPopupMsg tagPopupMsg ->
-            ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+            case tagPopupMsg of
+                TagPopup.HighlightTag tag ->
+                    if model.searchToolbar.showingTagPopup then
+                        -- Tag selection from search input
+                        ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup }, Cmd.none )
+                            |> (\(m, c) -> update (SearchTagSelected tag) m |> Tuple.mapSecond (\cmd -> Cmd.batch [c, cmd]))
+                    else
+                        -- Tag selection from textarea - get current cursor position
+                        case findEditingItem model.items of
+                            Just (editingItem, _) ->
+                                ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup, pendingTagInsertion = Just tag }, getCurrentCursorPosition (getId editingItem) )
+
+                            Nothing ->
+                                ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+
+                _ ->
+                    ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
 
         EditItemClick item x y ->
             ( model, getPosition { id = getId item, clientX = x, clientY = y } )
@@ -145,11 +184,49 @@ update msg model =
             ( { model | noBlur = not model.noBlur }, Cmd.none )
 
         SearchToolbarMsg searchToolbarMsg ->
-            let
-                ( updatedSearchToolbar, updatedItems ) =
-                    SearchToolbar.update searchToolbarMsg model.searchToolbar model.items
-            in
-            ( { model | searchToolbar = updatedSearchToolbar, items = updatedItems }, Cmd.none )
+            case searchToolbarMsg of
+                SearchToolbar.SearchKeyDown 13 _ _ -> -- Enter key
+                    case TagPopup.getHighlightedTag model.tagPopup of
+                        Just tag ->
+                            update (SearchTagSelected tag) model
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                SearchToolbar.SearchKeyDown 38 _ _ -> -- Up arrow
+                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateUp model.tagPopup }, Cmd.none )
+
+                SearchToolbar.SearchKeyDown 40 _ _ -> -- Down arrow
+                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateDown model.tagPopup }, Cmd.none )
+
+                _ ->
+                    let
+                        result =
+                            SearchToolbar.update searchToolbarMsg model.searchToolbar model.items
+
+                        updatedTagPopup =
+                            case result.tagPopupTags of
+                                Just tags ->
+                                    if List.isEmpty tags then
+                                        TagPopup.update TagPopup.Hide model.tagPopup
+                                    else
+                                        TagPopup.setTags tags model.tagPopup
+
+                                Nothing ->
+                                    TagPopup.update TagPopup.Hide model.tagPopup
+
+                        cmd =
+                            case result.tagPopupTags of
+                                Just tags ->
+                                    if not (List.isEmpty tags) then
+                                        getSearchInputPosition ()
+                                    else
+                                        Cmd.none
+
+                                Nothing ->
+                                    Cmd.none
+                    in
+                    ( { model | searchToolbar = result.model, items = result.items, tagPopup = updatedTagPopup }, cmd )
 
         ToggleCollapse item ->
             ( { model | items = mapItem (toggleCollapseFn item) model.items }
@@ -181,6 +258,13 @@ update msg model =
         SetCaret itemId pos ->
             ( { model | caretTask = Nothing }, setCaret { id = itemId, pos = pos } )
 
+        SetSearchCursor pos ->
+            ( { model | searchCursorTask = Nothing }, setSearchInputCursor pos )
+
+        GotCurrentCursorPosition item tag cursorPos ->
+            ( { model | pendingTagInsertion = Nothing }, Cmd.none )
+                |> (\(m, c) -> update (InsertSelectedTag item tag cursorPos) m |> Tuple.mapSecond (\cmd -> Cmd.batch [c, cmd]))
+
         UpdateItemContent item content cursorPos ->
             let
                 itemId =
@@ -205,6 +289,7 @@ update msg model =
                     ( { model
                         | items = mapItem (updateItemContentFn item content) model.items
                         , tagPopup = updatedTagPopup
+                        , noBlur = List.isEmpty matchingTags |> not
                       }
                     , Cmd.batch [ requestCursorPosition itemId, resizeTextarea itemId ]
                     )
@@ -310,6 +395,7 @@ update msg model =
             ( { model
                 | items = mapItem (updateItemContentFn item newContent) model.items
                 , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
+                , noBlur = False
                 , caretTask = Just ( getId item, newCaretPos )
               }
             , Cmd.none
@@ -387,30 +473,144 @@ update msg model =
             , Cmd.none
             )
 
+        SearchTagSelected tag ->
+            if String.isEmpty tag || List.member tag model.selectedTags then
+                ( model, Cmd.none )
+            else
+                let
+                    result = SearchToolbar.update (SearchToolbar.RemoveTagFromSearch tag) model.searchToolbar model.items
+                in
+                ( { model
+                    | selectedTags = model.selectedTags ++ [ tag ]
+                    , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
+                    , searchToolbar = result.model
+                    , searchCursorTask = result.cursorPosition
+                  }, Cmd.none )
+
+        RemoveSelectedTag tag ->
+            ( { model | selectedTags = List.filter ((/=) tag) model.selectedTags }, Cmd.none )
+
+        ClearAllSelectedTags ->
+            ( { model | selectedTags = [] }, Cmd.none )
+
+
+
+-- HELPERS
+
+
+findEditingItem : List ListItem -> Maybe (ListItem, Int)
+findEditingItem items =
+    let
+        findInList itemList =
+            case itemList of
+                [] ->
+                    Nothing
+
+                item :: rest ->
+                    if isEditing item then
+                        -- For now, return cursor position 0 - this could be enhanced to track actual cursor position
+                        Just (item, 0)
+                    else
+                        case findInList (getChildren item) of
+                            Just found ->
+                                Just found
+
+                            Nothing ->
+                                findInList rest
+    in
+    findInList items
 
 
 -- VIEW
 
 
-filterItems : String -> List ListItem -> List ListItem
-filterItems query items =
-    if String.isEmpty query then
+viewSelectedTags : List String -> Html Msg
+viewSelectedTags selectedTags =
+    if List.isEmpty selectedTags then
+        text ""
+    else
+        div
+            [ Html.Attributes.style "margin-bottom" "12px"
+            , Html.Attributes.style "display" "flex"
+            , Html.Attributes.style "flex-wrap" "wrap"
+            , Html.Attributes.style "gap" "6px"
+            , Html.Attributes.style "align-items" "center"
+            ]
+            (List.map viewTagChip selectedTags ++ [ viewClearAllButton ])
+
+
+viewTagChip : String -> Html Msg
+viewTagChip tag =
+    div
+        [ Html.Attributes.style "background" "#e3f2fd"
+        , Html.Attributes.style "border" "1px solid #90caf9"
+        , Html.Attributes.style "border-radius" "12px"
+        , Html.Attributes.style "padding" "4px 8px"
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "align-items" "center"
+        , Html.Attributes.style "gap" "4px"
+        , Html.Attributes.style "font-size" "12px"
+        ]
+        [ text ("@" ++ tag)
+        , span
+            [ onClick (RemoveSelectedTag tag)
+            , Html.Attributes.style "cursor" "pointer"
+            , Html.Attributes.style "color" "#666"
+            , Html.Attributes.style "font-weight" "bold"
+            , Html.Attributes.style "user-select" "none"
+            ]
+            [ text "×" ]
+        ]
+
+
+viewClearAllButton : Html Msg
+viewClearAllButton =
+    div
+        [ onClick ClearAllSelectedTags
+        , Html.Attributes.style "background" "#f5f5f5"
+        , Html.Attributes.style "border" "1px solid #ccc"
+        , Html.Attributes.style "border-radius" "4px"
+        , Html.Attributes.style "padding" "4px 8px"
+        , Html.Attributes.style "cursor" "pointer"
+        , Html.Attributes.style "font-size" "12px"
+        , Html.Attributes.style "user-select" "none"
+        ]
+        [ text "Clear all" ]
+
+
+filterItems : String -> List String -> List ListItem -> List ListItem
+filterItems query selectedTags items =
+    if String.isEmpty query && List.isEmpty selectedTags then
         items
 
     else
         let
+            isEmpty item = List.isEmpty (getContent item) || List.all String.isEmpty (getContent item)
+
             containsQuery item =
                 let
                     loweredQuery =
                         String.toLower query
 
                     contentMatches =
-                        List.any (String.contains loweredQuery) (List.map String.toLower (getContent item))
+                        if String.isEmpty query then
+                            True
+                        else
+                            List.any (String.contains loweredQuery) (List.map String.toLower (getContent item))
 
                     tagMatches =
-                        List.any (String.contains loweredQuery) (List.map String.toLower (getTags item))
+                        if String.isEmpty query then
+                            True
+                        else
+                            List.any (String.contains loweredQuery) (List.map String.toLower (getTags item))
+
+                    selectedTagsMatch =
+                        if List.isEmpty selectedTags then
+                            True
+                        else
+                            List.all (\selectedTag -> List.member selectedTag (getTags item)) selectedTags
                 in
-                contentMatches || tagMatches
+                (contentMatches || tagMatches) && selectedTagsMatch
 
             filterItemAndChildren item =
                 case item of
@@ -425,8 +625,26 @@ filterItems query items =
 
                                 filteredChildren ->
                                     Just (ListItem { data | children = filteredChildren })
+
+            filtered = List.filterMap filterItemAndChildren items
+
+            -- Find trailing empty items from original list
+            trailingEmpty =
+                let
+                    takeWhileEmpty list =
+                        case list of
+                            [] -> []
+                            item :: rest ->
+                                if isEmpty item then
+                                    item :: takeWhileEmpty rest
+                                else
+                                    []
+                in
+                List.reverse items
+                    |> takeWhileEmpty
+                    |> List.reverse
         in
-        List.filterMap filterItemAndChildren items
+        filtered ++ trailingEmpty
 
 
 view : Model -> Html Msg
@@ -439,7 +657,8 @@ view model =
         ]
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
             :: (SearchToolbar.view model.searchToolbar |> Html.map SearchToolbarMsg)
-            :: (List.map (viewListItem model 0) (filterItems (SearchToolbar.getSearchQuery model.searchToolbar) model.items) ++ [ NewItemButton.view CreateItemAtEnd ])
+            :: viewSelectedTags model.selectedTags
+            :: (List.map (viewListItem model 0) (filterItems (SearchToolbar.getSearchQuery model.searchToolbar) model.selectedTags model.items) ++ [ NewItemButton.view CreateItemAtEnd ])
         )
 
 
@@ -508,14 +727,21 @@ viewListItem model level item =
                     viewEditableItem model item
 
                   else
-                    viewStaticItem model.items item
+                    viewStaticItem model.items model.selectedTags item
                 ]
     in
-    div [ Html.Attributes.style "margin-bottom" "5px" ] (itemRow :: childrenBlock)
+    div
+        [ Html.Attributes.style "margin-bottom" "5px"
+        , Html.Attributes.style "background" "#f5f5f5"
+        , Html.Attributes.style "border" "1px solid #ccc"
+        , Html.Attributes.style "border-radius" "4px"
+        , Html.Attributes.style "padding" "4px 8px"
+        , Html.Attributes.style "font-size" "12px"
+        ] (itemRow :: childrenBlock)
 
 
-viewStaticItem : List ListItem -> ListItem -> Html Msg
-viewStaticItem items item =
+viewStaticItem : List ListItem -> List String -> ListItem -> Html Msg
+viewStaticItem items selectedTags item =
     let
         onClickCustom =
             let
@@ -553,7 +779,7 @@ viewStaticItem items item =
                                 [ Html.Attributes.style "white-space" "pre-wrap"
                                 , Html.Attributes.style "line-height" "1.8"
                                 ]
-                                (viewContent items item line)
+                                (viewContentWithSelectedTags items item line selectedTags)
                         )
                         lines
                     )
@@ -630,8 +856,8 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
         ]
 
 
-viewContent : List ListItem -> ListItem -> String -> List (Html Msg)
-viewContent items item content =
+viewContentWithSelectedTags : List ListItem -> ListItem -> String -> List String -> List (Html Msg)
+viewContentWithSelectedTags items item content selectedTags =
     let
         pieces =
             Regex.split isTagRegex content
@@ -644,11 +870,11 @@ viewContent items item content =
             [ text first ]
 
         _ ->
-            renderContent items item pieces matches
+            renderContentWithSelectedTags items item pieces matches selectedTags
 
 
-renderContent : List ListItem -> ListItem -> List String -> List Regex.Match -> List (Html Msg)
-renderContent items item pieces matches =
+renderContentWithSelectedTags : List ListItem -> ListItem -> List String -> List Regex.Match -> List String -> List (Html Msg)
+renderContentWithSelectedTags items item pieces matches selectedTags =
     case ( pieces, matches ) of
         ( p :: ps, m :: ms ) ->
             let
@@ -674,25 +900,35 @@ renderContent items item pieces matches =
 
                         Nothing ->
                             NoOp
+
+                isSelectedTag =
+                    List.member tag selectedTags
+
+                tagStyle =
+                    if isSelectedTag then
+                        [ Html.Attributes.style "background" "#ffeb3b"
+                        , Html.Attributes.style "color" "#000"
+                        , Html.Attributes.style "font-weight" "bold"
+                        ]
+                    else
+                        [ Html.Attributes.style "color" "#007acc" ]
             in
             [ text p
             , span
-                [ stopPropagationOn "click" (D.succeed ( clickMsg, True ))
-                , Html.Attributes.style "color" "#007acc"
-                , Html.Attributes.style "cursor" "pointer"
-                , Html.Attributes.style "user-select" "none"
-                , Html.Attributes.style "white-space" "nowrap"
-                ]
+                ([ stopPropagationOn "click" (D.succeed ( clickMsg, True ))
+                 , Html.Attributes.style "cursor" "pointer"
+                 , Html.Attributes.style "user-select" "none"
+                 , Html.Attributes.style "white-space" "nowrap"
+                 ] ++ tagStyle)
                 [ text m.match ]
             ]
-                ++ renderContent items item ps ms
+                ++ renderContentWithSelectedTags items item ps ms selectedTags
 
         ( p :: _, [] ) ->
             [ text p ]
 
         _ ->
             []
-
 
 
 -- MAIN
@@ -719,6 +955,13 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
+        , case model.searchCursorTask of
+            Just pos ->
+                Browser.Events.onAnimationFrame
+                    (\_ -> SetSearchCursor pos)
+
+            Nothing ->
+                Sub.none
         , receiveCursorPosition
             (\value ->
                 case D.decodeValue (D.map3 GotCursorPosition (D.field "top" D.int) (D.field "left" D.int) (D.field "width" D.int)) value of
@@ -727,5 +970,24 @@ subscriptions model =
 
                     Err _ ->
                         GotCursorPosition 0 0 0
+            )
+        , receiveCurrentCursorPosition
+            (\value ->
+                case D.decodeValue (D.map3 (\itemId tag cursorPos -> 
+                    case findEditingItem model.items of
+                        Just (editingItem, _) ->
+                            case model.pendingTagInsertion of
+                                Just pendingTag ->
+                                    GotCurrentCursorPosition editingItem pendingTag cursorPos
+                                Nothing ->
+                                    NoOp
+                        Nothing ->
+                            NoOp
+                    ) (D.field "itemId" D.int) (D.field "tag" D.string) (D.field "cursorPos" D.int)) value of
+                    Ok msg ->
+                        msg
+
+                    Err _ ->
+                        NoOp
             )
         ]

@@ -103,6 +103,45 @@
         }
       });
 
+      app.ports.getSearchInputPosition.subscribe(function () {
+        const searchInput = document.getElementById("search-input");
+        if (!searchInput) {
+          return;
+        }
+
+        const rect = searchInput.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+        if (app.ports && app.ports.receiveCursorPosition) {
+          app.ports.receiveCursorPosition.send({
+            top: Math.ceil(rect.bottom + scrollTop + 2),
+            left: Math.ceil(rect.left + scrollLeft),
+            width: Math.ceil(rect.width),
+          });
+        }
+      });
+
+      app.ports.setSearchInputCursor.subscribe(function (position) {
+        const searchInput = document.getElementById("search-input");
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.setSelectionRange(position, position);
+        }
+      });
+
+      app.ports.getCurrentCursorPosition.subscribe(function (itemId) {
+        const textarea = document.getElementById("input-id-" + itemId);
+        if (textarea && app.ports.receiveCurrentCursorPosition) {
+          const cursorPos = textarea.selectionStart;
+          app.ports.receiveCurrentCursorPosition.send({
+            itemId: itemId,
+            tag: "", // Will be handled by Elm
+            cursorPos: cursorPos
+          });
+        }
+      });
+
       app.ports.getPosition.subscribe(function (data) {
         // data: { id: number, clientX: number, clientY: number }
         const viewItemId = data.id;

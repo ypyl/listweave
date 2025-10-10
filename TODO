@@ -3,6 +3,9 @@
 - ✅ ignore tags in code block - [requirements specification](docs/ignore-tags-in-code-block-requirements.md) - IMPLEMENTED
 - export/import
 - storage (indexDB)
+- when addItem - two columns textarea - should be only
+- sorting by created/updated data
+- delete icon in the top-left corner
 - assert support (attach any file)
 - ZoomIn/ZoomOut
     ALt ->

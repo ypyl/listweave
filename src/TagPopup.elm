@@ -46,6 +46,7 @@ type Msg
     | NavigateUp
     | NavigateDown
     | HighlightTag String
+    | NoOp
 
 
 update : Msg -> Model -> Model
@@ -119,6 +120,9 @@ update msg model =
         HighlightTag tag ->
             { model | highlightedTag = Just tag }
 
+        NoOp ->
+            model
+
 
 
 -- VIEW
@@ -137,14 +141,16 @@ view model =
                     , Html.Attributes.style "top" (String.fromInt top ++ "px")
                     , Html.Attributes.style "left" (String.fromInt left ++ "px")
                     , Html.Attributes.style "width" (String.fromInt width ++ "px")
-                    , Html.Attributes.style "background" "#eee"
+                    , Html.Attributes.style "background" "#f5f5f5"
                     , Html.Attributes.style "border" "1px solid #ccc"
+                    , Html.Attributes.style "border-radius" "4px"
                     , Html.Attributes.style "display" "flex"
                     , Html.Attributes.style "flex-direction" "column"
-                    , Html.Attributes.style "gap" "5px"
-                    , Html.Attributes.style "padding" "5px"
+                    , Html.Attributes.style "gap" "2px"
+                    , Html.Attributes.style "padding" "4px"
                     , Html.Attributes.style "overflow-y" "auto"
-                    , stopPropagationOn "click" (D.succeed ( HighlightTag "", True ))
+                    , Html.Attributes.style "font-size" "12px"
+                    , stopPropagationOn "click" (D.succeed ( NoOp, True ))
                     ]
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
@@ -155,19 +161,20 @@ view model =
 viewPopupTag : Maybe String -> String -> Html Msg
 viewPopupTag currentHighlightedTag tag =
     div
-        [ onClick Hide
+        [ onClick (HighlightTag tag)
         , Html.Attributes.style "cursor" "pointer"
         , Html.Attributes.style "user-select" "none"
         , Html.Attributes.style "background"
             (if Just tag == currentHighlightedTag then
-                "#ddd"
+                "#e3f2fd"
 
              else
                 "transparent"
             )
         , Html.Attributes.style "color" "inherit"
-        , Html.Attributes.style "padding" "2px 4px"
-        , Html.Attributes.style "border-radius" "2px"
+        , Html.Attributes.style "padding" "4px 8px"
+        , Html.Attributes.style "border-radius" "4px"
+        , Html.Attributes.style "font-size" "12px"
         ]
         [ text tag ]
 
