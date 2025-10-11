@@ -1,5 +1,6 @@
 port module Main exposing (main)
 
+import Actions exposing (Action)
 import Browser
 import Browser.Dom
 import Browser.Events
@@ -9,11 +10,11 @@ import Html.Attributes exposing (id, rows, value)
 import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagationOn)
 import Json.Decode as D
 import KeyboardHandler
-import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, findNextItem, findNextTagItemId, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, toggleCollapseFn, updateItemContentFn)
+import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, filterItems, findEditingItem, findNextItem, findNextTagItemId, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
 import NewItemButton
 import Regex
-import SearchToolbar
-import TagPopup
+import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition)
+import TagPopup exposing (currentSource, isVisible)
 import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Time exposing (Month(..), Posix, millisToPosix)
@@ -61,7 +62,6 @@ type alias Model =
     { items : List ListItem
     , cursorPos : Maybe Int
     , caretTask : Maybe ( Int, Int )
-    , searchCursorTask : Maybe Int
     , pendingTagInsertion : Maybe String
     , tagPopup : TagPopup.Model
     , searchToolbar : SearchToolbar.Model
@@ -89,20 +89,19 @@ initialModel =
             }
         , newListItem
             { id = 4
-            , content = [ "Shopping List", "Milk @grocery", "Eggs @grocery", "Printer paper @office" ]
-            , tags = [ "grocery", "office" ]
+            , content = [ "Search Tutorial - How to use the search box", "Type text to search content across all items", "Use @tag to filter by specific tags (e.g., @todo)", "Selected tags appear as chips below search box" ]
+            , tags = [ "tag", "todo" ]
             , created = millisToPosix 1757532035027
             , collapsed = True
             , editing = False
             , children =
-                [ newListItem { id = 5, content = [ "Bananas @grocery" ], tags = [ "grocery" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
-                , newListItem { id = 6, content = [ "Stapler @office" ], tags = [ "office" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
+                [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
+                , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
                 ]
             }
         ]
     , cursorPos = Nothing
     , caretTask = Nothing
-    , searchCursorTask = Nothing
     , pendingTagInsertion = Nothing
     , tagPopup = TagPopup.init
     , searchToolbar = SearchToolbar.init
@@ -161,18 +160,23 @@ update msg model =
         TagPopupMsg tagPopupMsg ->
             case tagPopupMsg of
                 TagPopup.HighlightTag tag ->
-                    if model.searchToolbar.showingTagPopup then
-                        -- Tag selection from search input
-                        ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup }, Cmd.none )
-                            |> (\(m, c) -> update (SearchTagSelected tag) m |> Tuple.mapSecond (\cmd -> Cmd.batch [c, cmd]))
-                    else
-                        -- Tag selection from textarea - get current cursor position
-                        case findEditingItem model.items of
-                            Just (editingItem, _) ->
-                                ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup, pendingTagInsertion = Just tag }, getCurrentCursorPosition (getId editingItem) )
+                    case currentSource model.tagPopup of
+                        Just TagPopup.FromSearchToolbar ->
+                            -- Tag selection from search input
+                            ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup }, Cmd.none )
+                                |> (\( m, c ) -> update (SearchTagSelected tag) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
 
-                            Nothing ->
-                                ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+                        Just TagPopup.FromItem ->
+                            -- Tag selection from textarea - get current cursor position
+                            case findEditingItem model.items of
+                                Just ( editingItem, _ ) ->
+                                    ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup, pendingTagInsertion = Just tag }, getCurrentCursorPosition (getId editingItem) )
+
+                                Nothing ->
+                                    ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+
+                        _ ->
+                            ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
 
                 _ ->
                     ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
@@ -184,49 +188,64 @@ update msg model =
             ( { model | noBlur = not model.noBlur }, Cmd.none )
 
         SearchToolbarMsg searchToolbarMsg ->
-            case searchToolbarMsg of
-                SearchToolbar.SearchKeyDown 13 _ _ -> -- Enter key
-                    case TagPopup.getHighlightedTag model.tagPopup of
-                        Just tag ->
-                            update (SearchTagSelected tag) model
+            let
+                ( updatedSearchToolbarModel, action ) =
+                    SearchToolbar.update searchToolbarMsg model.searchToolbar
+
+                ( updatedModel, cmd ) =
+                    case action of
+                        Just act ->
+                            case act of
+                                Actions.SearchToolbarCollapseAll ->
+                                    ( { model | items = setAllCollapsed True model.items }, Cmd.none )
+
+                                Actions.SearchToolbarExpandAll ->
+                                    ( { model | items = setAllCollapsed False model.items }, Cmd.none )
+
+                                Actions.SearchToolbarKeyEnter ->
+                                    case TagPopup.getHighlightedTag model.tagPopup of
+                                        Just tag ->
+                                            update (SearchTagSelected tag) model
+
+                                        Nothing ->
+                                            ( model, Cmd.none )
+
+                                Actions.SearchToolbarKeyArrowUp ->
+                                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateUp model.tagPopup }, Cmd.none )
+
+                                Actions.SearchToolbarKeyArrowDown ->
+                                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateDown model.tagPopup }, Cmd.none )
+
+                                Actions.SearchToolbarQueryChanged query cursorPos ->
+                                    let
+                                        tagPopupTags =
+                                            isInsideTagBrackets cursorPos query
+                                                |> Maybe.map
+                                                    (\( tagSearchPrefix, _ ) ->
+                                                        getAllTags model.items
+                                                            |> List.filter (String.startsWith tagSearchPrefix)
+                                                    )
+
+                                        ( updatedTagPopup, updatedCmd ) =
+                                            case tagPopupTags of
+                                                Just tags ->
+                                                    if List.isEmpty tags then
+                                                        ( TagPopup.update TagPopup.Hide model.tagPopup, Cmd.none )
+
+                                                    else
+                                                        ( TagPopup.setTags ( tags, TagPopup.FromSearchToolbar ) model.tagPopup, getSearchInputPosition () )
+
+                                                Nothing ->
+                                                    ( TagPopup.update TagPopup.Hide model.tagPopup, Cmd.none )
+                                    in
+                                    ( { model | tagPopup = updatedTagPopup }
+                                    , updatedCmd
+                                    )
 
                         Nothing ->
                             ( model, Cmd.none )
-
-                SearchToolbar.SearchKeyDown 38 _ _ -> -- Up arrow
-                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateUp model.tagPopup }, Cmd.none )
-
-                SearchToolbar.SearchKeyDown 40 _ _ -> -- Down arrow
-                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateDown model.tagPopup }, Cmd.none )
-
-                _ ->
-                    let
-                        result =
-                            SearchToolbar.update searchToolbarMsg model.searchToolbar model.items
-
-                        updatedTagPopup =
-                            case result.tagPopupTags of
-                                Just tags ->
-                                    if List.isEmpty tags then
-                                        TagPopup.update TagPopup.Hide model.tagPopup
-                                    else
-                                        TagPopup.setTags tags model.tagPopup
-
-                                Nothing ->
-                                    TagPopup.update TagPopup.Hide model.tagPopup
-
-                        cmd =
-                            case result.tagPopupTags of
-                                Just tags ->
-                                    if not (List.isEmpty tags) then
-                                        getSearchInputPosition ()
-                                    else
-                                        Cmd.none
-
-                                Nothing ->
-                                    Cmd.none
-                    in
-                    ( { model | searchToolbar = result.model, items = result.items, tagPopup = updatedTagPopup }, cmd )
+            in
+            ( { updatedModel | searchToolbar = updatedSearchToolbarModel }, cmd )
 
         ToggleCollapse item ->
             ( { model | items = mapItem (toggleCollapseFn item) model.items }
@@ -259,11 +278,11 @@ update msg model =
             ( { model | caretTask = Nothing }, setCaret { id = itemId, pos = pos } )
 
         SetSearchCursor pos ->
-            ( { model | searchCursorTask = Nothing }, setSearchInputCursor pos )
+            ( { model | searchToolbar = resetUpdatedCursorPosition model.searchToolbar }, setSearchInputCursor pos )
 
         GotCurrentCursorPosition item tag cursorPos ->
             ( { model | pendingTagInsertion = Nothing }, Cmd.none )
-                |> (\(m, c) -> update (InsertSelectedTag item tag cursorPos) m |> Tuple.mapSecond (\cmd -> Cmd.batch [c, cmd]))
+                |> (\( m, c ) -> update (InsertSelectedTag item tag cursorPos) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
 
         UpdateItemContent item content cursorPos ->
             let
@@ -284,7 +303,7 @@ update msg model =
 
                             else
                                 -- Store tags temporarily - position will be set when GotCursorPosition arrives
-                                TagPopup.setTags matchingTags model.tagPopup
+                                TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
                     in
                     ( { model
                         | items = mapItem (updateItemContentFn item content) model.items
@@ -389,8 +408,11 @@ update msg model =
 
         InsertSelectedTag item tag cursorPos ->
             let
-                content = String.join "\n" (getContent item)
-                ( newContent, newCaretPos ) = TagsUtils.insertTagAtCursor content tag cursorPos
+                content =
+                    String.join "\n" (getContent item)
+
+                ( newContent, newCaretPos ) =
+                    TagsUtils.insertTagAtCursor content tag cursorPos
             in
             ( { model
                 | items = mapItem (updateItemContentFn item newContent) model.items
@@ -476,16 +498,14 @@ update msg model =
         SearchTagSelected tag ->
             if String.isEmpty tag || List.member tag model.selectedTags then
                 ( model, Cmd.none )
+
             else
-                let
-                    result = SearchToolbar.update (SearchToolbar.RemoveTagFromSearch tag) model.searchToolbar model.items
-                in
                 ( { model
                     | selectedTags = model.selectedTags ++ [ tag ]
                     , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
-                    , searchToolbar = result.model
-                    , searchCursorTask = result.cursorPosition
-                  }, Cmd.none )
+                  }
+                , Cmd.none
+                )
 
         RemoveSelectedTag tag ->
             ( { model | selectedTags = List.filter ((/=) tag) model.selectedTags }, Cmd.none )
@@ -498,27 +518,14 @@ update msg model =
 -- HELPERS
 
 
-findEditingItem : List ListItem -> Maybe (ListItem, Int)
-findEditingItem items =
+andThen : (model -> ( model, Cmd msg )) -> ( model, Cmd msg ) -> ( model, Cmd msg )
+andThen fn ( model, cmd ) =
     let
-        findInList itemList =
-            case itemList of
-                [] ->
-                    Nothing
-
-                item :: rest ->
-                    if isEditing item then
-                        -- For now, return cursor position 0 - this could be enhanced to track actual cursor position
-                        Just (item, 0)
-                    else
-                        case findInList (getChildren item) of
-                            Just found ->
-                                Just found
-
-                            Nothing ->
-                                findInList rest
+        ( nextModel, nextCmd ) =
+            fn model
     in
-    findInList items
+    ( nextModel, Cmd.batch [ cmd, nextCmd ] )
+
 
 
 -- VIEW
@@ -528,6 +535,7 @@ viewSelectedTags : List String -> Html Msg
 viewSelectedTags selectedTags =
     if List.isEmpty selectedTags then
         text ""
+
     else
         div
             [ Html.Attributes.style "margin-bottom" "12px"
@@ -578,75 +586,6 @@ viewClearAllButton =
         [ text "Clear all" ]
 
 
-filterItems : String -> List String -> List ListItem -> List ListItem
-filterItems query selectedTags items =
-    if String.isEmpty query && List.isEmpty selectedTags then
-        items
-
-    else
-        let
-            isEmpty item = List.isEmpty (getContent item) || List.all String.isEmpty (getContent item)
-
-            containsQuery item =
-                let
-                    loweredQuery =
-                        String.toLower query
-
-                    contentMatches =
-                        if String.isEmpty query then
-                            True
-                        else
-                            List.any (String.contains loweredQuery) (List.map String.toLower (getContent item))
-
-                    tagMatches =
-                        if String.isEmpty query then
-                            True
-                        else
-                            List.any (String.contains loweredQuery) (List.map String.toLower (getTags item))
-
-                    selectedTagsMatch =
-                        if List.isEmpty selectedTags then
-                            True
-                        else
-                            List.all (\selectedTag -> List.member selectedTag (getTags item)) selectedTags
-                in
-                (contentMatches || tagMatches) && selectedTagsMatch
-
-            filterItemAndChildren item =
-                case item of
-                    ListItem data ->
-                        if containsQuery item then
-                            Just (ListItem { data | children = List.filterMap filterItemAndChildren data.children })
-
-                        else
-                            case List.filterMap filterItemAndChildren data.children of
-                                [] ->
-                                    Nothing
-
-                                filteredChildren ->
-                                    Just (ListItem { data | children = filteredChildren })
-
-            filtered = List.filterMap filterItemAndChildren items
-
-            -- Find trailing empty items from original list
-            trailingEmpty =
-                let
-                    takeWhileEmpty list =
-                        case list of
-                            [] -> []
-                            item :: rest ->
-                                if isEmpty item then
-                                    item :: takeWhileEmpty rest
-                                else
-                                    []
-                in
-                List.reverse items
-                    |> takeWhileEmpty
-                    |> List.reverse
-        in
-        filtered ++ trailingEmpty
-
-
 view : Model -> Html Msg
 view model =
     div
@@ -656,7 +595,7 @@ view model =
         , onClick (TagPopupMsg TagPopup.Hide)
         ]
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
-            :: (SearchToolbar.view model.searchToolbar |> Html.map SearchToolbarMsg)
+            :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)
             :: viewSelectedTags model.selectedTags
             :: (List.map (viewListItem model 0) (filterItems (SearchToolbar.getSearchQuery model.searchToolbar) model.selectedTags model.items) ++ [ NewItemButton.view CreateItemAtEnd ])
         )
@@ -737,7 +676,8 @@ viewListItem model level item =
         , Html.Attributes.style "border-radius" "4px"
         , Html.Attributes.style "padding" "4px 8px"
         , Html.Attributes.style "font-size" "12px"
-        ] (itemRow :: childrenBlock)
+        ]
+        (itemRow :: childrenBlock)
 
 
 viewStaticItem : List ListItem -> List String -> ListItem -> Html Msg
@@ -753,7 +693,8 @@ viewStaticItem items selectedTags item =
             in
             on "click" (D.map2 (\x y -> EditItemClick item x y) clientXDecoder clientYDecoder)
 
-        contentBlocks = TagsUtils.processContent (getContent item)
+        contentBlocks =
+            TagsUtils.processContent (getContent item)
 
         viewBlock ( isCode, lines ) =
             if isCode then
@@ -910,6 +851,7 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
                         , Html.Attributes.style "color" "#000"
                         , Html.Attributes.style "font-weight" "bold"
                         ]
+
                     else
                         [ Html.Attributes.style "color" "#007acc" ]
             in
@@ -919,7 +861,9 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
                  , Html.Attributes.style "cursor" "pointer"
                  , Html.Attributes.style "user-select" "none"
                  , Html.Attributes.style "white-space" "nowrap"
-                 ] ++ tagStyle)
+                 ]
+                    ++ tagStyle
+                )
                 [ text m.match ]
             ]
                 ++ renderContentWithSelectedTags items item ps ms selectedTags
@@ -929,6 +873,7 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
 
         _ ->
             []
+
 
 
 -- MAIN
@@ -955,7 +900,7 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
-        , case model.searchCursorTask of
+        , case getUpdatedCursorPosition model.searchToolbar of
             Just pos ->
                 Browser.Events.onAnimationFrame
                     (\_ -> SetSearchCursor pos)
@@ -973,17 +918,28 @@ subscriptions model =
             )
         , receiveCurrentCursorPosition
             (\value ->
-                case D.decodeValue (D.map3 (\itemId tag cursorPos -> 
-                    case findEditingItem model.items of
-                        Just (editingItem, _) ->
-                            case model.pendingTagInsertion of
-                                Just pendingTag ->
-                                    GotCurrentCursorPosition editingItem pendingTag cursorPos
-                                Nothing ->
-                                    NoOp
-                        Nothing ->
-                            NoOp
-                    ) (D.field "itemId" D.int) (D.field "tag" D.string) (D.field "cursorPos" D.int)) value of
+                case
+                    D.decodeValue
+                        (D.map3
+                            (\itemId tag cursorPos ->
+                                case findEditingItem model.items of
+                                    Just ( editingItem, _ ) ->
+                                        case model.pendingTagInsertion of
+                                            Just pendingTag ->
+                                                GotCurrentCursorPosition editingItem pendingTag cursorPos
+
+                                            Nothing ->
+                                                NoOp
+
+                                    Nothing ->
+                                        NoOp
+                            )
+                            (D.field "itemId" D.int)
+                            (D.field "tag" D.string)
+                            (D.field "cursorPos" D.int)
+                        )
+                        value
+                of
                     Ok msg ->
                         msg
 

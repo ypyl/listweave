@@ -1,12 +1,28 @@
-module SearchToolbar exposing (Model, Msg(..), UpdateResult, init, update, view, getSearchQuery)
+module SearchToolbar exposing (Model, Msg, getSearchQuery, getUpdatedCursorPosition, init, resetUpdatedCursorPosition, update, view)
 
-import Html exposing (Html, button, div, input, text)
+import Actions exposing (Action(..))
+import Html exposing (Html, div, input, text)
 import Html.Attributes exposing (id, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onInput, preventDefaultOn)
+import Html.Events exposing (onClick, preventDefaultOn)
 import Json.Decode as D
-import ListItem exposing (ListItem, getAllTags, setAllCollapsed)
 import Regex
-import TagsUtils exposing (isInsideTagBrackets, isTagRegex)
+
+
+
+-- CONSTANTS
+
+
+tagRegex : Regex.Regex
+tagRegex =
+    Regex.fromString "@[a-zA-Z0-9-_]*"
+        |> Maybe.withDefault Regex.never
+
+
+whitespaceRegex : Regex.Regex
+whitespaceRegex =
+    Regex.fromString "\\s+"
+        |> Maybe.withDefault Regex.never
+
 
 
 -- MODEL
@@ -14,15 +30,21 @@ import TagsUtils exposing (isInsideTagBrackets, isTagRegex)
 
 type alias Model =
     { searchQuery : String
-    , showingTagPopup : Bool
+    , updatedCursorPosition : Maybe Int
     }
+
+
+getUpdatedCursorPosition : Model -> Maybe Int
+getUpdatedCursorPosition model =
+    model.updatedCursorPosition
 
 
 init : Model
 init =
     { searchQuery = ""
-    , showingTagPopup = False
+    , updatedCursorPosition = Nothing
     }
+
 
 
 -- UPDATE
@@ -32,112 +54,51 @@ type Msg
     = SearchQueryChanged String Int
     | CollapseAllClicked
     | ExpandAllClicked
-    | SearchKeyDown Int String Int
-    | HideTagPopup
-    | RemoveTagFromSearch String
+    | SearchKeyDown Int
 
 
-type alias UpdateResult =
-    { model : Model
-    , items : List ListItem
-    , tagPopupTags : Maybe (List String)
-    , extractedTags : List String
-    , cursorPosition : Maybe Int
-    }
-
-
-update : Msg -> Model -> List ListItem -> UpdateResult
-update msg model items =
+update : Msg -> Model -> ( Model, Maybe Action )
+update msg model =
     case msg of
         SearchQueryChanged query cursorPos ->
-            let
-                tagPopupTags =
-                    isInsideTagBrackets cursorPos query
-                        |> Maybe.map (\( tagSearchPrefix, _ ) ->
-                            getAllTags items
-                                |> List.filter (String.startsWith tagSearchPrefix)
-                        )
-            in
-            { model = { model | searchQuery = query, showingTagPopup = tagPopupTags /= Nothing }
-            , items = items
-            , tagPopupTags = tagPopupTags
-            , extractedTags = []
-            , cursorPosition = Nothing
-            }
+            ( { model | searchQuery = query }
+            , Just (Actions.SearchToolbarQueryChanged query cursorPos)
+            )
 
         CollapseAllClicked ->
-            { model = model, items = setAllCollapsed True items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
+            ( model, Just Actions.SearchToolbarCollapseAll )
 
         ExpandAllClicked ->
-            { model = model, items = setAllCollapsed False items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
+            ( model, Just Actions.SearchToolbarExpandAll )
 
-        SearchKeyDown key query cursorPos ->
+        SearchKeyDown key ->
             case key of
-                13 -> -- Enter key
-                    { model = model, items = items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
+                13 ->
+                    -- Enter key
+                    let
+                        ( cleanQuery, cursorPos ) =
+                            removeTagFromQueryWithPosition model.searchQuery
+                    in
+                    ( { model | searchQuery = cleanQuery, updatedCursorPosition = Just cursorPos }, Just Actions.SearchToolbarKeyEnter )
 
-                38 -> -- Up arrow
-                    { model = model, items = items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
+                38 ->
+                    -- Up arrow
+                    ( model, Just Actions.SearchToolbarKeyArrowUp )
 
-                40 -> -- Down arrow
-                    { model = model, items = items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
+                40 ->
+                    -- Down arrow
+                    ( model, Just Actions.SearchToolbarKeyArrowDown )
 
                 _ ->
-                    { model = model, items = items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
+                    ( model, Nothing )
 
-        HideTagPopup ->
-            { model = { model | showingTagPopup = False }, items = items, tagPopupTags = Nothing, extractedTags = [], cursorPosition = Nothing }
-
-        RemoveTagFromSearch selectedTag ->
-            let
-                ( cleanQuery, cursorPos ) = removeTagFromQueryWithPosition model.searchQuery selectedTag
-            in
-            { model = { model | searchQuery = cleanQuery, showingTagPopup = False }
-            , items = items
-            , tagPopupTags = Nothing
-            , extractedTags = []
-            , cursorPosition = Just cursorPos
-            }
-
-
-removeTagFromQueryWithPosition : String -> String -> ( String, Int )
-removeTagFromQueryWithPosition query selectedTag =
-    let
-        -- Find all @tag patterns in the query
-        tagRegex =
-            Regex.fromString "@[a-zA-Z0-9-_]*"
-                |> Maybe.withDefault Regex.never
-
-        matches = Regex.find tagRegex query
-
-        -- Find the last match (most recent tag being typed)
-        lastMatch = List.reverse matches |> List.head
-
-        ( cleanQuery, cursorPos ) =
-            case lastMatch of
-                Just match ->
-                    let
-                        beforeMatch = String.left match.index query
-                        afterMatch = String.dropLeft (match.index + String.length match.match) query
-                        cleaned = beforeMatch ++ afterMatch
-                    in
-                    ( cleaned, match.index )
-
-                Nothing ->
-                    ( query, String.length query )
-    in
-    ( cleanQuery
-        |> String.trim
-        |> Regex.replace (Regex.fromString "\\s+" |> Maybe.withDefault Regex.never) (\_ -> " ")
-    , cursorPos
-    )
 
 
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+view : Model -> Bool -> Html Msg
+view model listenKeydownEvents =
     div
         [ style "margin-bottom" "16px"
         , style "display" "flex"
@@ -171,27 +132,8 @@ view model =
             , id "search-input"
             , placeholder "Search... (type @tag to filter by tags)"
             , value model.searchQuery
-            , preventDefaultOn "input"
-                (D.map2
-                    (\value selectionStart ->
-                        ( SearchQueryChanged value selectionStart, False )
-                    )
-                    (D.field "target" (D.field "value" D.string))
-                    (D.field "target" (D.field "selectionStart" D.int))
-                )
-            , preventDefaultOn "keydown"
-                (D.map4
-                    (\key value selectionStart showingPopup ->
-                        let
-                            shouldPrevent = showingPopup && (key == 13 || key == 38 || key == 40)
-                        in
-                        ( SearchKeyDown key value selectionStart, shouldPrevent )
-                    )
-                    (D.field "keyCode" D.int)
-                    (D.field "target" (D.field "value" D.string))
-                    (D.field "target" (D.field "selectionStart" D.int))
-                    (D.succeed model.showingTagPopup)
-                )
+            , preventDefaultOn "input" inputDecoder
+            , preventDefaultOn "keydown" (keydownDecoder listenKeydownEvents)
             , style "background" "#f5f5f5"
             , style "border" "1px solid #ccc"
             , style "border-radius" "4px"
@@ -203,9 +145,77 @@ view model =
         ]
 
 
+
+-- DECODERS
+
+
+inputDecoder : D.Decoder ( Msg, Bool )
+inputDecoder =
+    D.map2
+        (\value selectionStart ->
+            ( SearchQueryChanged value selectionStart, False )
+        )
+        (D.field "target" (D.field "value" D.string))
+        (D.field "target" (D.field "selectionStart" D.int))
+
+
+keydownDecoder : Bool -> D.Decoder ( Msg, Bool )
+keydownDecoder listenKeydownEvents =
+    D.map
+        (\key ->
+            let
+                shouldPrevent =
+                    listenKeydownEvents && (key == 13 || key == 38 || key == 40)
+            in
+            ( SearchKeyDown key, shouldPrevent )
+        )
+        (D.field "keyCode" D.int)
+
+
+
 -- HELPERS
+
+
+removeTagFromQueryWithPosition : String -> ( String, Int )
+removeTagFromQueryWithPosition query =
+    let
+        matches =
+            Regex.find tagRegex query
+
+        -- Find the last match (most recent tag being typed)
+        lastMatch =
+            List.reverse matches |> List.head
+
+        ( cleanQuery, cursorPos ) =
+            case lastMatch of
+                Just match ->
+                    let
+                        beforeMatch =
+                            String.left match.index query
+
+                        afterMatch =
+                            String.dropLeft (match.index + String.length match.match) query
+
+                        cleaned =
+                            beforeMatch ++ afterMatch
+                    in
+                    ( cleaned, match.index )
+
+                Nothing ->
+                    ( query, String.length query )
+    in
+    ( cleanQuery
+        |> String.trim
+        |> Regex.replace whitespaceRegex (\_ -> " ")
+    , cursorPos
+    )
 
 
 getSearchQuery : Model -> String
 getSearchQuery model =
     model.searchQuery
+
+
+resetUpdatedCursorPosition : Model -> Model
+resetUpdatedCursorPosition model =
+    { model | updatedCursorPosition = Nothing }

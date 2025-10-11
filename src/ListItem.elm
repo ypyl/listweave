@@ -695,3 +695,96 @@ moveItemInTree moveFn target items =
                     list
     in
     applyMove items
+
+
+filterItems : String -> List String -> List ListItem -> List ListItem
+filterItems query selectedTags items =
+    if String.isEmpty query && List.isEmpty selectedTags then
+        items
+
+    else
+        let
+            isEmpty item = List.isEmpty (getContent item) || List.all String.isEmpty (getContent item)
+
+            containsQuery item =
+                let
+                    loweredQuery =
+                        String.toLower query
+
+                    contentMatches =
+                        if String.isEmpty query then
+                            True
+                        else
+                            List.any (String.contains loweredQuery) (List.map String.toLower (getContent item))
+
+                    tagMatches =
+                        if String.isEmpty query then
+                            True
+                        else
+                            List.any (String.contains loweredQuery) (List.map String.toLower (getTags item))
+
+                    selectedTagsMatch =
+                        if List.isEmpty selectedTags then
+                            True
+                        else
+                            List.all (\selectedTag -> List.member selectedTag (getTags item)) selectedTags
+                in
+                (contentMatches || tagMatches) && selectedTagsMatch
+
+            filterItemAndChildren item =
+                case item of
+                    ListItem data ->
+                        if containsQuery item then
+                            Just (ListItem { data | children = List.filterMap filterItemAndChildren data.children })
+
+                        else
+                            case List.filterMap filterItemAndChildren data.children of
+                                [] ->
+                                    Nothing
+
+                                filteredChildren ->
+                                    Just (ListItem { data | children = filteredChildren })
+
+            filtered = List.filterMap filterItemAndChildren items
+
+            -- Find trailing empty items from original list
+            trailingEmpty =
+                let
+                    takeWhileEmpty list =
+                        case list of
+                            [] -> []
+                            item :: rest ->
+                                if isEmpty item then
+                                    item :: takeWhileEmpty rest
+                                else
+                                    []
+                in
+                List.reverse items
+                    |> takeWhileEmpty
+                    |> List.reverse
+        in
+        filtered ++ trailingEmpty
+
+
+findEditingItem : List ListItem -> Maybe ( ListItem, Int )
+findEditingItem items =
+    let
+        findInList itemList =
+            case itemList of
+                [] ->
+                    Nothing
+
+                item :: rest ->
+                    if isEditing item then
+                        -- For now, return cursor position 0 - this could be enhanced to track actual cursor position
+                        Just ( item, 0 )
+
+                    else
+                        case findInList (getChildren item) of
+                            Just found ->
+                                Just found
+
+                            Nothing ->
+                                findInList rest
+    in
+    findInList items

@@ -1,16 +1,16 @@
-- ✅ copy/paste - [implementation details](docs/copy-paste-implementation.md)
-- ✅ filter using tags - [requirements specification](docs/tag-filter-requirements.md)
-- ✅ ignore tags in code block - [requirements specification](docs/ignore-tags-in-code-block-requirements.md) - IMPLEMENTED
+- refactor code
+- sorting by created/updated data
 - export/import
 - storage (indexDB)
 - when addItem - two columns textarea - should be only
-- sorting by created/updated data
 - delete icon in the top-left corner
 - assert support (attach any file)
 - ZoomIn/ZoomOut
     ALt ->
     Alt <-
 - keyboard help
+- search using OR instead of AND for words
+- highligh words which were found
 
 ## Component Refactoring
 - ✅ Extract TagPopup component from Main.elm - [requirements specification](docs/tagpopup-component-requirements.md)
@@ -19,3 +19,10 @@
 - ✅ Extract ClipboardManager component from Main.elm
 - Extract ListItemView component from Main.elm
 - ✅ Extract KeyboardHandler component from Main.elm
+
+
+## Tag Filtering in Search Input
+
+- ✅ copy/paste - [implementation details](docs/copy-paste-implementation.md)
+- ✅ filter using tags - [requirements specification](docs/tag-filter-requirements.md)
+- ✅ ignore tags in code block - [requirements specification](docs/ignore-tags-in-code-block-requirements.md) - IMPLEMENTED

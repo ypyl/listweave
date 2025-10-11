@@ -1,6 +1,7 @@
 module TagPopup exposing
     ( Model
     , Msg(..)
+    , Source(..)
     , getHighlightedTag
     , getTags
     , init
@@ -8,6 +9,7 @@ module TagPopup exposing
     , setTags
     , update
     , view
+    , currentSource
     )
 
 import Html exposing (Html, div, text)
@@ -21,11 +23,23 @@ import TagsUtils
 -- MODEL
 
 
+type Source
+    = FromSearchToolbar
+    | FromItem
+
+
 type alias Model =
     { position : Maybe ( Int, Int, Int ) -- top, left, width
     , tags : Maybe (List String)
     , highlightedTag : Maybe String
+    , source : Maybe Source
     }
+
+currentSource: Model -> Maybe Source
+currentSource model =
+    model.source
+
+
 
 
 init : Model
@@ -33,6 +47,7 @@ init =
     { position = Nothing
     , tags = Nothing
     , highlightedTag = Nothing
+    , source = Nothing
     }
 
 
@@ -73,6 +88,7 @@ update msg model =
                 | position = Nothing
                 , tags = Nothing
                 , highlightedTag = Nothing
+                , source = Nothing
             }
 
         NavigateUp ->
@@ -183,9 +199,9 @@ viewPopupTag currentHighlightedTag tag =
 -- PUBLIC HELPERS
 
 
-setTags : List String -> Model -> Model
-setTags tags model =
-    { model | tags = Just tags }
+setTags : (List String, Source) -> Model -> Model
+setTags (tags, source) model =
+    { model | tags = Just tags, source = Just source}
 
 
 isVisible : Model -> Bool
