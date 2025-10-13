@@ -1,4 +1,4 @@
-- sorting by created/updated data
+- sorting by created/updated data - [requirements specification](docs/sort-items-by-date-requirements.md)
 - export/import
 - storage (indexDB)
 - delete icon in the top-left corner

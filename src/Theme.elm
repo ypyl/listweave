@@ -6,6 +6,7 @@ import Html.Attributes exposing (style)
 
 -- COLORS
 
+colors : { background : String, border : String, borderSelected : String, text : String, textMuted : String, textPlaceholder : String, link : String, highlight : String, tagBackground : String, codeBackground : String }
 colors =
     { background = "#f5f5f5"
     , border = "#ccc"
@@ -22,6 +23,7 @@ colors =
 
 -- SPACING
 
+spacing : { xs : String, sm : String, md : String, lg : String, xl : String, xxl : String }
 spacing =
     { xs = "4px"
     , sm = "8px"
@@ -34,6 +36,7 @@ spacing =
 
 -- TYPOGRAPHY
 
+typography : { fontSize : String, lineHeight : String, fontFamily : String, fontFamilyMono : String }
 typography =
     { fontSize = "12px"
     , lineHeight = "1.8"
@@ -44,6 +47,7 @@ typography =
 
 -- LAYOUT
 
+layout : { maxWidth : String, borderRadius : String, borderRadiusLarge : String }
 layout =
     { maxWidth = "800px"
     , borderRadius = "4px"
@@ -53,12 +57,14 @@ layout =
 
 -- COMPONENT STYLES
 
+container : List (Html.Attribute msg)
 container =
     [ style "max-width" layout.maxWidth
     , style "margin" "0 auto"
     , style "padding" spacing.xl
     ]
 
+button : List (Html.Attribute msg)
 button =
     [ style "background" colors.background
     , style "border" ("1px solid " ++ colors.border)
@@ -69,6 +75,7 @@ button =
     , style "user-select" "none"
     ]
 
+input : List (Html.Attribute msg)
 input =
     [ style "background" colors.background
     , style "border" ("1px solid " ++ colors.border)
@@ -77,6 +84,7 @@ input =
     , style "font-size" typography.fontSize
     ]
 
+listItem : List (Html.Attribute msg)
 listItem =
     [ style "margin-bottom" "5px"
     , style "background" colors.background
@@ -86,15 +94,18 @@ listItem =
     , style "font-size" typography.fontSize
     ]
 
+listItemRow : List (Html.Attribute msg)
 listItemRow =
     [ style "display" "flex"
     , style "align-items" "flex-start"
     , style "max-width" "80%"
     ]
 
+listItemRowWithChildren : List (Html.Attribute msg)
 listItemRowWithChildren =
     listItemRow ++ [ style "margin-bottom" "5px" ]
 
+arrow : List (Html.Attribute msg)
 arrow =
     [ style "cursor" "pointer"
     , style "user-select" "none"
@@ -106,12 +117,14 @@ arrow =
     , style "line-height" typography.lineHeight
     ]
 
+arrowEmpty : List (Html.Attribute msg)
 arrowEmpty =
     [ style "width" spacing.xl
     , style "display" "inline-block"
     , style "line-height" typography.lineHeight
     ]
 
+bullet : List (Html.Attribute msg)
 bullet =
     [ style "width" spacing.xl
     , style "min-width" spacing.xl
@@ -122,6 +135,7 @@ bullet =
     , style "line-height" typography.lineHeight
     ]
 
+textarea : List (Html.Attribute msg)
 textarea =
     [ style "box-sizing" "border-box"
     , style "overflow-y" "hidden"
@@ -138,16 +152,19 @@ textarea =
     , style "line-height" typography.lineHeight
     ]
 
+content : List (Html.Attribute msg)
 content =
     [ style "white-space" "pre-wrap"
     , style "line-height" typography.lineHeight
     ]
 
+contentEmpty : List (Html.Attribute msg)
 contentEmpty =
     [ style "color" colors.textPlaceholder
     , style "line-height" typography.lineHeight
     ]
 
+codeBlock : List (Html.Attribute msg)
 codeBlock =
     [ style "display" "block"
     , style "white-space" "pre-wrap"
@@ -159,6 +176,7 @@ codeBlock =
     , style "font-family" typography.fontFamilyMono
     ]
 
+tag : List (Html.Attribute msg)
 tag =
     [ style "color" colors.link
     , style "cursor" "pointer"
@@ -166,6 +184,7 @@ tag =
     , style "white-space" "nowrap"
     ]
 
+tagSelected : List (Html.Attribute msg)
 tagSelected =
     tag ++
     [ style "background" colors.highlight
@@ -173,6 +192,7 @@ tagSelected =
     , style "font-weight" "bold"
     ]
 
+tagChip : List (Html.Attribute msg)
 tagChip =
     [ style "background" colors.tagBackground
     , style "border" ("1px solid " ++ colors.borderSelected)
@@ -184,6 +204,7 @@ tagChip =
     , style "font-size" typography.fontSize
     ]
 
+tagChipClose : List (Html.Attribute msg)
 tagChipClose =
     [ style "cursor" "pointer"
     , style "color" colors.textMuted
@@ -191,6 +212,7 @@ tagChipClose =
     , style "user-select" "none"
     ]
 
+selectedTagsContainer : List (Html.Attribute msg)
 selectedTagsContainer =
     [ style "margin-bottom" spacing.md
     , style "display" "flex"
@@ -199,6 +221,7 @@ selectedTagsContainer =
     , style "align-items" "center"
     ]
 
+searchToolbar : List (Html.Attribute msg)
 searchToolbar =
     [ style "margin-bottom" spacing.lg
     , style "display" "flex"
@@ -206,11 +229,13 @@ searchToolbar =
     , style "gap" spacing.sm
     ]
 
+searchInput : List (Html.Attribute msg)
 searchInput =
     input ++
     [ style "flex-grow" "1"
     ]
 
+popup : List (Html.Attribute msg)
 popup =
     [ style "position" "absolute"
     , style "background" colors.background
@@ -224,6 +249,7 @@ popup =
     , style "font-size" typography.fontSize
     ]
 
+popupItem : List (Html.Attribute msg)
 popupItem =
     [ style "cursor" "pointer"
     , style "user-select" "none"
@@ -233,12 +259,15 @@ popupItem =
     , style "font-size" typography.fontSize
     ]
 
+popupItemHighlighted : List (Html.Attribute msg)
 popupItemHighlighted =
     popupItem ++ [ style "background" colors.tagBackground ]
 
+popupItemNormal : List (Html.Attribute msg)
 popupItemNormal =
     popupItem ++ [ style "background" "transparent" ]
 
+flexGrow : List (Html.Attribute msg)
 flexGrow =
     [ style "flex-grow" "1" ]
 
