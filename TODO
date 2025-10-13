@@ -1,7 +1,6 @@
 - sorting by created/updated data
 - export/import
 - storage (indexDB)
-- when addItem - two columns textarea - should be only
 - delete icon in the top-left corner
 - assert support (attach any file)
 - ZoomIn/ZoomOut
@@ -10,6 +9,8 @@
 - keyboard help
 - search using OR instead of AND for words
 - highligh words which were found
+
+- ✅ when addItem - two columns textarea - should be only
 
 ## Component Refactoring
 - ✅ Extract TagPopup component from Main.elm - [requirements specification](docs/tagpopup-component-requirements.md)

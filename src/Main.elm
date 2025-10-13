@@ -84,10 +84,11 @@ initialModel =
             , collapsed = True
             , editing = False
             , created = millisToPosix 1757532035027
+            , updated = millisToPosix 1757532035027
             , children =
-                [ newListItem { id = 2, content = [ "Review requirements @todo" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
-                , newListItem { id = 7, content = [ "Schedule next meeting 2 @calendar" ], tags = [ "calendar" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
-                , newListItem { id = 3, content = [ "Code example:", "```", "function test() {", "  // This @todo should not be clickable", "  return @value;", "}", "```", "But this @todo should work" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
+                [ newListItem { id = 2, content = [ "Review requirements @todo" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 7, content = [ "Schedule next meeting 2 @calendar" ], tags = [ "calendar" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 3, content = [ "Code example:", "```", "function test() {", "  // This @todo should not be clickable", "  return @value;", "}", "```", "But this @todo should work" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
             }
         , newListItem
@@ -95,11 +96,12 @@ initialModel =
             , content = [ "Search Tutorial - How to use the search box", "Type text to search content across all items", "Use @tag to filter by specific tags (e.g., @todo)", "Selected tags appear as chips below search box" ]
             , tags = [ "tag", "todo" ]
             , created = millisToPosix 1757532035027
+            , updated = millisToPosix 1757532035027
             , collapsed = True
             , editing = False
             , children =
-                [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
-                , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027 }
+                [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
             }
         ]
@@ -122,6 +124,7 @@ type Msg
     = ToggleCollapse ListItem
     | EditItem Int
     | UpdateItemContent ListItem String Int
+    | UpdateItemContentWithTime ListItem String Int Posix
     | SaveItem ListItem
     | CreateItemAfter ListItem
     | CreateItemAfterWithTime ListItem Posix
@@ -144,6 +147,7 @@ type Msg
     | ToggleNoBlur
     | EditItemClick ListItem Int Int
     | InsertSelectedTag ListItem String Int
+    | InsertSelectedTagWithTime ListItem String Int Posix
     | NavigateToPreviousWithColumn ListItem Int
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
@@ -291,6 +295,9 @@ update msg model =
                 |> (\( m, c ) -> update (InsertSelectedTag item tag cursorPos) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
 
         UpdateItemContent item content cursorPos ->
+            ( model, Task.perform (UpdateItemContentWithTime item content cursorPos) Time.now )
+
+        UpdateItemContentWithTime item content cursorPos currentTime ->
             let
                 itemId =
                     getId item
@@ -312,7 +319,7 @@ update msg model =
                                 TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
                     in
                     ( { model
-                        | items = mapItem (updateItemContentFn item content) model.items
+                        | items = mapItem (updateItemContentFn item content currentTime) model.items
                         , tagPopup = updatedTagPopup
                         , noBlur = List.isEmpty matchingTags |> not
                       }
@@ -321,7 +328,7 @@ update msg model =
 
                 Nothing ->
                     ( { model
-                        | items = mapItem (updateItemContentFn item content) model.items
+                        | items = mapItem (updateItemContentFn item content currentTime) model.items
                         , tagPopup = hidePopup model.tagPopup
                       }
                     , resizeTextarea itemId
@@ -401,15 +408,18 @@ update msg model =
             ( { model | items = deleteItem item model.items }, Cmd.none )
 
         InsertSelectedTag item tag cursorPos ->
-            let
-                content =
-                    String.join "\n" (getContent item)
+            ( model, Task.perform (\currentTime ->
+                let
+                    content = String.join "\n" (getContent item)
+                    ( newContent, newCaretPos ) = TagsUtils.insertTagAtCursor content tag cursorPos
+                in
+                InsertSelectedTagWithTime item newContent newCaretPos currentTime
+              ) Time.now
+            )
 
-                ( newContent, newCaretPos ) =
-                    TagsUtils.insertTagAtCursor content tag cursorPos
-            in
+        InsertSelectedTagWithTime item newContent newCaretPos currentTime ->
             ( { model
-                | items = mapItem (updateItemContentFn item newContent) model.items
+                | items = mapItem (updateItemContentFn item newContent currentTime) model.items
                 , tagPopup = hidePopup model.tagPopup
                 , noBlur = False
                 , caretTask = Just ( getId item, newCaretPos )

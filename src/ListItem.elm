@@ -15,6 +15,7 @@ type ListItem
         , collapsed : Bool
         , editing : Bool
         , created : Posix
+        , updated : Posix
         }
 
 
@@ -88,12 +89,12 @@ getId (ListItem item) =
 
 newEmptyListItem : Posix -> Int -> ListItem
 newEmptyListItem posix id =
-    ListItem { id = id, content = [], tags = [], children = [], collapsed = True, editing = False, created = posix }
+    ListItem { id = id, content = [], tags = [], children = [], collapsed = True, editing = False, created = posix, updated = posix }
 
 
-newListItem : { a | id : Int, content : List String, tags : List String, children : List ListItem, collapsed : Bool, editing : Bool, created : Posix } -> ListItem
+newListItem : { a | id : Int, content : List String, tags : List String, children : List ListItem, collapsed : Bool, editing : Bool, created : Posix, updated : Posix } -> ListItem
 newListItem item =
-    ListItem { id = item.id, content = item.content, tags = item.tags, children = item.children, collapsed = item.collapsed, editing = item.editing, created = item.created }
+    ListItem { id = item.id, content = item.content, tags = item.tags, children = item.children, collapsed = item.collapsed, editing = item.editing, created = item.created, updated = item.updated }
 
 
 getContent : ListItem -> List String
@@ -104,6 +105,11 @@ getContent (ListItem record) =
 getTags : ListItem -> List String
 getTags (ListItem record) =
     record.tags
+
+
+getUpdated : ListItem -> Posix
+getUpdated (ListItem record) =
+    record.updated
 
 
 deleteItem : ListItem -> List ListItem -> List ListItem
@@ -366,8 +372,8 @@ editItemFn id (ListItem item) =
         ListItem { item | editing = False }
 
 
-updateItemContentFn : ListItem -> String -> ListItem -> ListItem
-updateItemContentFn (ListItem current) content (ListItem item) =
+updateItemContentFn : ListItem -> String -> Posix -> ListItem -> ListItem
+updateItemContentFn (ListItem current) content currentTime (ListItem item) =
     if item.id == current.id then
         let
             lines =
@@ -383,7 +389,7 @@ updateItemContentFn (ListItem current) content (ListItem item) =
             tags =
                 extractTags content
         in
-        ListItem { item | content = finalLines, tags = tags }
+        ListItem { item | content = finalLines, tags = tags, updated = currentTime }
 
     else
         ListItem item

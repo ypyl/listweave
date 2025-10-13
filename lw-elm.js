@@ -10713,7 +10713,7 @@ var $author$project$ListItem$ListItem = function (a) {
 };
 var $author$project$ListItem$newListItem = function (item) {
 	return $author$project$ListItem$ListItem(
-		{children: item.children, collapsed: item.collapsed, content: item.content, created: item.created, editing: item.editing, id: item.id, tags: item.tags});
+		{children: item.children, collapsed: item.collapsed, content: item.content, created: item.created, editing: item.editing, id: item.id, tags: item.tags, updated: item.updated});
 };
 var $author$project$Main$initialModel = {
 	caretTask: $elm$core$Maybe$Nothing,
@@ -10735,7 +10735,8 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 2,
 							tags: _List_fromArray(
-								['todo'])
+								['todo']),
+							updated: $elm$time$Time$millisToPosix(1757532035027)
 						}),
 						$author$project$ListItem$newListItem(
 						{
@@ -10747,7 +10748,8 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 7,
 							tags: _List_fromArray(
-								['calendar'])
+								['calendar']),
+							updated: $elm$time$Time$millisToPosix(1757532035027)
 						}),
 						$author$project$ListItem$newListItem(
 						{
@@ -10759,7 +10761,8 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 3,
 							tags: _List_fromArray(
-								['todo'])
+								['todo']),
+							updated: $elm$time$Time$millisToPosix(1757532035027)
 						})
 					]),
 				collapsed: true,
@@ -10769,7 +10772,8 @@ var $author$project$Main$initialModel = {
 				editing: false,
 				id: 1,
 				tags: _List_fromArray(
-					['todo', 'exercise'])
+					['todo', 'exercise']),
+				updated: $elm$time$Time$millisToPosix(1757532035027)
 			}),
 			$author$project$ListItem$newListItem(
 			{
@@ -10785,7 +10789,8 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 5,
 							tags: _List_fromArray(
-								['search'])
+								['search']),
+							updated: $elm$time$Time$millisToPosix(1757532035027)
 						}),
 						$author$project$ListItem$newListItem(
 						{
@@ -10797,7 +10802,8 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 6,
 							tags: _List_fromArray(
-								['tutorial'])
+								['tutorial']),
+							updated: $elm$time$Time$millisToPosix(1757532035027)
 						})
 					]),
 				collapsed: true,
@@ -10807,7 +10813,8 @@ var $author$project$Main$initialModel = {
 				editing: false,
 				id: 4,
 				tags: _List_fromArray(
-					['tag', 'todo'])
+					['tag', 'todo']),
+				updated: $elm$time$Time$millisToPosix(1757532035027)
 			})
 		]),
 	noBlur: false,
@@ -11126,6 +11133,10 @@ var $author$project$Main$InsertSelectedTag = F3(
 	function (a, b, c) {
 		return {$: 'InsertSelectedTag', a: a, b: b, c: c};
 	});
+var $author$project$Main$InsertSelectedTagWithTime = F4(
+	function (a, b, c, d) {
+		return {$: 'InsertSelectedTagWithTime', a: a, b: b, c: c, d: d};
+	});
 var $author$project$Main$SaveItem = function (a) {
 	return {$: 'SaveItem', a: a};
 };
@@ -11133,6 +11144,10 @@ var $author$project$Main$SearchTagSelected = function (a) {
 	return {$: 'SearchTagSelected', a: a};
 };
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
+var $author$project$Main$UpdateItemContentWithTime = F4(
+	function (a, b, c, d) {
+		return {$: 'UpdateItemContentWithTime', a: a, b: b, c: c, d: d};
+	});
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
 	function (resultToMessage, task) {
@@ -11472,7 +11487,7 @@ var $author$project$ListItem$indentItem = F2(
 var $author$project$ListItem$newEmptyListItem = F2(
 	function (posix, id) {
 		return $author$project$ListItem$ListItem(
-			{children: _List_Nil, collapsed: true, content: _List_Nil, created: posix, editing: false, id: id, tags: _List_Nil});
+			{children: _List_Nil, collapsed: true, content: _List_Nil, created: posix, editing: false, id: id, tags: _List_Nil, updated: posix});
 	});
 var $author$project$ListItem$insertItemAfter = F4(
 	function (after, newId, list, currentTime) {
@@ -12659,8 +12674,8 @@ var $author$project$ListItem$extractTags = function (content) {
 		},
 		A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, textBlocks));
 };
-var $author$project$ListItem$updateItemContentFn = F3(
-	function (_v0, content, _v1) {
+var $author$project$ListItem$updateItemContentFn = F4(
+	function (_v0, content, currentTime, _v1) {
 		var current = _v0.a;
 		var item = _v1.a;
 		if (_Utils_eq(item.id, current.id)) {
@@ -12670,7 +12685,7 @@ var $author$project$ListItem$updateItemContentFn = F3(
 			return $author$project$ListItem$ListItem(
 				_Utils_update(
 					item,
-					{content: finalLines, tags: tags}));
+					{content: finalLines, tags: tags, updated: currentTime}));
 		} else {
 			return $author$project$ListItem$ListItem(item);
 		}
@@ -12965,6 +12980,17 @@ var $author$project$Main$update = F2(
 					var item = msg.a;
 					var content = msg.b;
 					var cursorPos = msg.c;
+					return _Utils_Tuple2(
+						model,
+						A2(
+							$elm$core$Task$perform,
+							A3($author$project$Main$UpdateItemContentWithTime, item, content, cursorPos),
+							$elm$time$Time$now));
+				case 'UpdateItemContentWithTime':
+					var item = msg.a;
+					var content = msg.b;
+					var cursorPos = msg.c;
+					var currentTime = msg.d;
 					var itemId = $author$project$ListItem$getId(item);
 					var _v19 = A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, content);
 					if (_v19.$ === 'Just') {
@@ -12988,7 +13014,7 @@ var $author$project$Main$update = F2(
 								{
 									items: A2(
 										$author$project$ListItem$mapItem,
-										A2($author$project$ListItem$updateItemContentFn, item, content),
+										A3($author$project$ListItem$updateItemContentFn, item, content, currentTime),
 										model.items),
 									noBlur: !$elm$core$List$isEmpty(matchingTags),
 									tagPopup: updatedTagPopup
@@ -13006,7 +13032,7 @@ var $author$project$Main$update = F2(
 								{
 									items: A2(
 										$author$project$ListItem$mapItem,
-										A2($author$project$ListItem$updateItemContentFn, item, content),
+										A3($author$project$ListItem$updateItemContentFn, item, content, currentTime),
 										model.items),
 									tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 								}),
@@ -13192,13 +13218,26 @@ var $author$project$Main$update = F2(
 					var item = msg.a;
 					var tag = msg.b;
 					var cursorPos = msg.c;
-					var content = A2(
-						$elm$core$String$join,
-						'\n',
-						$author$project$ListItem$getContent(item));
-					var _v24 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
-					var newContent = _v24.a;
-					var newCaretPos = _v24.b;
+					return _Utils_Tuple2(
+						model,
+						A2(
+							$elm$core$Task$perform,
+							function (currentTime) {
+								var content = A2(
+									$elm$core$String$join,
+									'\n',
+									$author$project$ListItem$getContent(item));
+								var _v24 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
+								var newContent = _v24.a;
+								var newCaretPos = _v24.b;
+								return A4($author$project$Main$InsertSelectedTagWithTime, item, newContent, newCaretPos, currentTime);
+							},
+							$elm$time$Time$now));
+				case 'InsertSelectedTagWithTime':
+					var item = msg.a;
+					var newContent = msg.b;
+					var newCaretPos = msg.c;
+					var currentTime = msg.d;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -13209,7 +13248,7 @@ var $author$project$Main$update = F2(
 										newCaretPos)),
 								items: A2(
 									$author$project$ListItem$mapItem,
-									A2($author$project$ListItem$updateItemContentFn, item, newContent),
+									A3($author$project$ListItem$updateItemContentFn, item, newContent, currentTime),
 									model.items),
 								noBlur: false,
 								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
@@ -14483,4 +14522,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"UpdateItemContentWithTime":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"InsertSelectedTagWithTime":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
