@@ -17,6 +17,7 @@ import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosit
 import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
 import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
+import Theme
 import Time exposing (Month(..), Posix, millisToPosix)
 
 
@@ -532,36 +533,16 @@ viewSelectedTags selectedTags =
         text ""
 
     else
-        div
-            [ Html.Attributes.style "margin-bottom" "12px"
-            , Html.Attributes.style "display" "flex"
-            , Html.Attributes.style "flex-wrap" "wrap"
-            , Html.Attributes.style "gap" "6px"
-            , Html.Attributes.style "align-items" "center"
-            ]
+        div Theme.selectedTagsContainer
             (List.map viewTagChip selectedTags ++ [ viewClearAllButton ])
 
 
 viewTagChip : String -> Html Msg
 viewTagChip tag =
-    div
-        [ Html.Attributes.style "background" "#e3f2fd"
-        , Html.Attributes.style "border" "1px solid #90caf9"
-        , Html.Attributes.style "border-radius" "12px"
-        , Html.Attributes.style "padding" "4px 8px"
-        , Html.Attributes.style "display" "flex"
-        , Html.Attributes.style "align-items" "center"
-        , Html.Attributes.style "gap" "4px"
-        , Html.Attributes.style "font-size" "12px"
-        ]
+    div Theme.tagChip
         [ text ("@" ++ tag)
         , span
-            [ onClick (RemoveSelectedTag tag)
-            , Html.Attributes.style "cursor" "pointer"
-            , Html.Attributes.style "color" "#666"
-            , Html.Attributes.style "font-weight" "bold"
-            , Html.Attributes.style "user-select" "none"
-            ]
+            (onClick (RemoveSelectedTag tag) :: Theme.tagChipClose)
             [ text "×" ]
         ]
 
@@ -569,26 +550,14 @@ viewTagChip tag =
 viewClearAllButton : Html Msg
 viewClearAllButton =
     div
-        [ onClick ClearAllSelectedTags
-        , Html.Attributes.style "background" "#f5f5f5"
-        , Html.Attributes.style "border" "1px solid #ccc"
-        , Html.Attributes.style "border-radius" "4px"
-        , Html.Attributes.style "padding" "4px 8px"
-        , Html.Attributes.style "cursor" "pointer"
-        , Html.Attributes.style "font-size" "12px"
-        , Html.Attributes.style "user-select" "none"
-        ]
+        (onClick ClearAllSelectedTags :: Theme.button)
         [ text "Clear all" ]
 
 
 view : Model -> Html Msg
 view model =
     div
-        [ Html.Attributes.style "max-width" "800px"
-        , Html.Attributes.style "margin" "0 auto"
-        , Html.Attributes.style "padding" "20px"
-        , onClick (TagPopupMsg TagPopup.Hide)
-        ]
+        (onClick (TagPopupMsg TagPopup.Hide) :: Theme.container)
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)
             :: viewSelectedTags model.selectedTags
@@ -601,20 +570,11 @@ viewListItem model level item =
     let
         arrow =
             if getChildren item |> List.isEmpty then
-                span [ Html.Attributes.style "width" "20px", Html.Attributes.style "display" "inline-block", Html.Attributes.style "line-height" "1.8" ] []
+                span Theme.arrowEmpty []
 
             else
                 span
-                    [ onClick (ToggleCollapse item)
-                    , Html.Attributes.style "cursor" "pointer"
-                    , Html.Attributes.style "user-select" "none"
-                    , Html.Attributes.style "width" "20px"
-                    , Html.Attributes.style "min-width" "20px"
-                    , Html.Attributes.style "display" "inline-flex"
-                    , Html.Attributes.style "align-items" "center"
-                    , Html.Attributes.style "justify-content" "center"
-                    , Html.Attributes.style "line-height" "1.8"
-                    ]
+                    (onClick (ToggleCollapse item) :: Theme.arrow)
                     [ if isCollapsed item then
                         text "+"
 
@@ -631,32 +591,16 @@ viewListItem model level item =
 
         itemRow =
             let
-                styles =
-                    [ Html.Attributes.style "display" "flex"
-                    , Html.Attributes.style "align-items" "flex-start"
-                    , Html.Attributes.style "margin-left" (String.fromInt (level * 24) ++ "px")
-                    , Html.Attributes.style "max-width" "80%"
-                    ]
-
-                extraStyles =
+                baseStyles =
                     if List.isEmpty (getChildren item) then
-                        []
+                        Theme.listItemRow
 
                     else
-                        [ Html.Attributes.style "margin-bottom" "5px" ]
+                        Theme.listItemRowWithChildren
             in
-            div (styles ++ extraStyles)
+            div (Theme.indentStyle level ++ baseStyles)
                 [ arrow
-                , span
-                    [ Html.Attributes.style "width" "20px"
-                    , Html.Attributes.style "min-width" "20px"
-                    , Html.Attributes.style "display" "inline-flex"
-                    , Html.Attributes.style "align-items" "center"
-                    , Html.Attributes.style "justify-content" "center"
-                    , Html.Attributes.style "user-select" "none"
-                    , Html.Attributes.style "line-height" "1.8"
-                    ]
-                    [ text "•" ]
+                , span Theme.bullet [ text "•" ]
                 , if isEditing item then
                     viewEditableItem model item
 
@@ -664,14 +608,7 @@ viewListItem model level item =
                     viewStaticItem model.items model.selectedTags item
                 ]
     in
-    div
-        [ Html.Attributes.style "margin-bottom" "5px"
-        , Html.Attributes.style "background" "#f5f5f5"
-        , Html.Attributes.style "border" "1px solid #ccc"
-        , Html.Attributes.style "border-radius" "4px"
-        , Html.Attributes.style "padding" "4px 8px"
-        , Html.Attributes.style "font-size" "12px"
-        ]
+    div Theme.listItem
         (itemRow :: childrenBlock)
 
 
@@ -694,16 +631,7 @@ viewStaticItem items selectedTags item =
         viewBlock ( isCode, lines ) =
             if isCode then
                 div []
-                    [ code
-                        [ Html.Attributes.style "display" "block"
-                        , Html.Attributes.style "white-space" "pre-wrap"
-                        , Html.Attributes.style "line-height" "1.8"
-                        , Html.Attributes.style "background" "#f5f5f5"
-                        , Html.Attributes.style "padding" "8px"
-                        , Html.Attributes.style "border-radius" "4px"
-                        , Html.Attributes.style "margin" "4px 0"
-                        , Html.Attributes.style "font-family" "monospace"
-                        ]
+                    [ code Theme.codeBlock
                         (List.map (\line -> div [] [ text line ]) lines)
                     ]
 
@@ -711,19 +639,16 @@ viewStaticItem items selectedTags item =
                 div []
                     (List.map
                         (\line ->
-                            div
-                                [ Html.Attributes.style "white-space" "pre-wrap"
-                                , Html.Attributes.style "line-height" "1.8"
-                                ]
+                            div Theme.content
                                 (viewContentWithSelectedTags items item line selectedTags)
                         )
                         lines
                     )
     in
-    div [ id ("view-item-" ++ String.fromInt (getId item)), Html.Attributes.tabindex -1, Html.Attributes.style "flex-grow" "1" ]
+    div (id ("view-item-" ++ String.fromInt (getId item)) :: Html.Attributes.tabindex -1 :: Theme.flexGrow)
         [ div [ Html.Attributes.class "content-click-area", onClickCustom ]
             (if List.isEmpty (getContent item) then
-                [ span [ Html.Attributes.style "color" "#aaa", Html.Attributes.style "line-height" "1.8" ] [ text "empty" ] ]
+                [ span Theme.contentEmpty [ text "empty" ] ]
 
              else
                 List.map viewBlock contentBlocks
@@ -753,11 +678,11 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
             , onNoOp = NoOp
             }
     in
-    div [ Html.Attributes.style "flex-grow" "1" ]
+    div Theme.flexGrow
         [ textarea
-            [ Html.Attributes.id ("input-id-" ++ String.fromInt (getId item))
-            , value (String.join "\n" (getContent item))
-            , preventDefaultOn "input"
+            ([ Html.Attributes.id ("input-id-" ++ String.fromInt (getId item))
+             , value (String.join "\n" (getContent item))
+             , preventDefaultOn "input"
                 (D.map2
                     (\value selectionStart ->
                         ( GetCurrentTime (UpdateItemContent item value selectionStart), False )
@@ -765,29 +690,18 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
                     (D.field "target" (D.field "value" D.string))
                     (D.field "target" (D.field "selectionStart" D.int))
                 )
-            , onBlur
+             , onBlur
                 (if noBlur then
                     NoOp
 
                  else
                     SaveItem item
                 )
-            , KeyboardHandler.onKeyDown keyboardConfig item
-            , rows (max 1 (List.length (getContent item)))
-            , Html.Attributes.style "box-sizing" "border-box"
-            , Html.Attributes.style "overflow-y" "hidden"
-            , Html.Attributes.style "resize" "none"
-            , Html.Attributes.style "border" "none"
-            , Html.Attributes.style "outline" "none"
-            , Html.Attributes.style "background" "transparent"
-            , Html.Attributes.style "width" "100%"
-            , Html.Attributes.style "font-family" "inherit"
-            , Html.Attributes.style "font-size" "inherit"
-            , Html.Attributes.style "padding" "0"
-            , Html.Attributes.style "margin" "0"
-            , Html.Attributes.style "display" "block"
-            , Html.Attributes.style "line-height" "1.8"
-            ]
+             , KeyboardHandler.onKeyDown keyboardConfig item
+             , rows (max 1 (List.length (getContent item)))
+             ]
+                ++ Theme.textarea
+            )
             []
         ]
 
@@ -827,23 +741,14 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
 
                 tagStyle =
                     if isSelectedTag then
-                        [ Html.Attributes.style "background" "#ffeb3b"
-                        , Html.Attributes.style "color" "#000"
-                        , Html.Attributes.style "font-weight" "bold"
-                        ]
+                        Theme.tagSelected
 
                     else
-                        [ Html.Attributes.style "color" "#007acc" ]
+                        Theme.tag
             in
             [ text p
             , span
-                ([ stopPropagationOn "click" (D.succeed ( AddTagToSelected tag, True ))
-                 , Html.Attributes.style "cursor" "pointer"
-                 , Html.Attributes.style "user-select" "none"
-                 , Html.Attributes.style "white-space" "nowrap"
-                 ]
-                    ++ tagStyle
-                )
+                (stopPropagationOn "click" (D.succeed ( AddTagToSelected tag, True )) :: tagStyle)
                 [ text m.match ]
             ]
                 ++ renderContentWithSelectedTags items item ps ms selectedTags

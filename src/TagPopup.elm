@@ -22,6 +22,7 @@ import Html.Attributes
 import Html.Events exposing (onClick, stopPropagationOn)
 import Json.Decode as D
 import TagsUtils
+import Theme
 
 
 
@@ -183,21 +184,7 @@ view model =
 
             else
                 div
-                    [ Html.Attributes.style "position" "absolute"
-                    , Html.Attributes.style "top" (String.fromInt top ++ "px")
-                    , Html.Attributes.style "left" (String.fromInt left ++ "px")
-                    , Html.Attributes.style "width" (String.fromInt width ++ "px")
-                    , Html.Attributes.style "background" "#f5f5f5"
-                    , Html.Attributes.style "border" "1px solid #ccc"
-                    , Html.Attributes.style "border-radius" "4px"
-                    , Html.Attributes.style "display" "flex"
-                    , Html.Attributes.style "flex-direction" "column"
-                    , Html.Attributes.style "gap" "2px"
-                    , Html.Attributes.style "padding" "4px"
-                    , Html.Attributes.style "overflow-y" "auto"
-                    , Html.Attributes.style "font-size" "12px"
-                    , stopPropagationOn "click" (D.succeed ( NoOp, True ))
-                    ]
+                    (stopPropagationOn "click" (D.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
         _ ->
@@ -206,22 +193,15 @@ view model =
 
 viewPopupTag : Maybe String -> String -> Html Msg
 viewPopupTag currentHighlightedTag tag =
+    let
+        styles =
+            if Just tag == currentHighlightedTag then
+                Theme.popupItemHighlighted
+            else
+                Theme.popupItemNormal
+    in
     div
-        [ onClick (HighlightTag tag)
-        , Html.Attributes.style "cursor" "pointer"
-        , Html.Attributes.style "user-select" "none"
-        , Html.Attributes.style "background"
-            (if Just tag == currentHighlightedTag then
-                "#e3f2fd"
-
-             else
-                "transparent"
-            )
-        , Html.Attributes.style "color" "inherit"
-        , Html.Attributes.style "padding" "4px 8px"
-        , Html.Attributes.style "border-radius" "4px"
-        , Html.Attributes.style "font-size" "12px"
-        ]
+        (onClick (HighlightTag tag) :: styles)
         [ text tag ]
 
 

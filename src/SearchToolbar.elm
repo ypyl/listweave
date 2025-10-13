@@ -2,10 +2,11 @@ module SearchToolbar exposing (Model, Msg, getSearchQuery, getUpdatedCursorPosit
 
 import Actions exposing (SearchToolbarAction(..))
 import Html exposing (Html, div, input, text)
-import Html.Attributes exposing (id, placeholder, style, type_, value)
+import Html.Attributes exposing (id, placeholder, type_, value)
 import Html.Events exposing (onClick, preventDefaultOn)
 import Json.Decode as D
 import Regex
+import Theme
 
 
 
@@ -99,48 +100,21 @@ update msg model =
 
 view : Model -> Bool -> Html Msg
 view model listenKeydownEvents =
-    div
-        [ style "margin-bottom" "16px"
-        , style "display" "flex"
-        , style "align-items" "center"
-        , style "gap" "8px"
-        ]
+    div Theme.searchToolbar
         [ div
-            [ onClick CollapseAllClicked
-            , style "background" "#f5f5f5"
-            , style "border" "1px solid #ccc"
-            , style "border-radius" "4px"
-            , style "padding" "4px 8px"
-            , style "cursor" "pointer"
-            , style "font-size" "12px"
-            , style "user-select" "none"
-            ]
+            (onClick CollapseAllClicked :: Theme.button)
             [ text "Collapse All" ]
         , div
-            [ onClick ExpandAllClicked
-            , style "background" "#f5f5f5"
-            , style "border" "1px solid #ccc"
-            , style "border-radius" "4px"
-            , style "padding" "4px 8px"
-            , style "cursor" "pointer"
-            , style "font-size" "12px"
-            , style "user-select" "none"
-            ]
+            (onClick ExpandAllClicked :: Theme.button)
             [ text "Expand All" ]
         , input
-            [ type_ "text"
+            ([ type_ "text"
             , id "search-input"
             , placeholder "Search... (type @tag to filter by tags)"
             , value model.searchQuery
             , preventDefaultOn "input" inputDecoder
             , preventDefaultOn "keydown" (keydownDecoder listenKeydownEvents)
-            , style "background" "#f5f5f5"
-            , style "border" "1px solid #ccc"
-            , style "border-radius" "4px"
-            , style "padding" "4px 8px"
-            , style "font-size" "12px"
-            , style "flex-grow" "1"
-            ]
+            ] ++ Theme.searchInput)
             []
         ]
 

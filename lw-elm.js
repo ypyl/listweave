@@ -11126,9 +11126,9 @@ var $author$project$TagPopup$FromSearchToolbar = {$: 'FromSearchToolbar'};
 var $author$project$Main$GetCurrentTime = function (a) {
 	return {$: 'GetCurrentTime', a: a};
 };
-var $author$project$Main$InsertSelectedTagWithTime = F4(
+var $author$project$Main$InsertSelectedTag = F4(
 	function (a, b, c, d) {
-		return {$: 'InsertSelectedTagWithTime', a: a, b: b, c: c, d: d};
+		return {$: 'InsertSelectedTag', a: a, b: b, c: c, d: d};
 	});
 var $author$project$Main$SaveItem = function (a) {
 	return {$: 'SaveItem', a: a};
@@ -12958,7 +12958,7 @@ var $author$project$Main$update = F2(
 							A2(
 								$author$project$Main$update,
 								$author$project$Main$GetCurrentTime(
-									A3($author$project$Main$InsertSelectedTagWithTime, item, tag, cursorPos)),
+									A3($author$project$Main$InsertSelectedTag, item, tag, cursorPos)),
 								m));
 					}(
 						_Utils_Tuple2(
@@ -13188,7 +13188,7 @@ var $author$project$Main$update = F2(
 								items: A2($author$project$ListItem$deleteItem, item, model.items)
 							}),
 						$elm$core$Platform$Cmd$none);
-				case 'InsertSelectedTagWithTime':
+				case 'InsertSelectedTag':
 					var item = msg.a;
 					var tag = msg.b;
 					var cursorPos = msg.c;
@@ -13364,6 +13364,14 @@ var $author$project$Main$SearchToolbarMsg = function (a) {
 var $author$project$Main$TagPopupMsg = function (a) {
 	return {$: 'TagPopupMsg', a: a};
 };
+var $author$project$Theme$layout = {borderRadius: '4px', borderRadiusLarge: '12px', maxWidth: '800px'};
+var $author$project$Theme$spacing = {lg: '16px', md: '12px', sm: '8px', xl: '20px', xs: '4px', xxl: '24px'};
+var $author$project$Theme$container = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'max-width', $author$project$Theme$layout.maxWidth),
+		A2($elm$html$Html$Attributes$style, 'margin', '0 auto'),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xl)
+	]);
 var $author$project$ListItem$getTags = function (_v0) {
 	var record = _v0.a;
 	return record.tags;
@@ -13465,24 +13473,37 @@ var $author$project$TagPopup$isVisible = function (model) {
 		return false;
 	}
 };
+var $author$project$Theme$colors = {background: '#f5f5f5', border: '#ccc', borderSelected: '#90caf9', codeBackground: '#f5f5f5', highlight: '#ffeb3b', link: '#007acc', tagBackground: '#e3f2fd', text: '#000', textMuted: '#666', textPlaceholder: '#aaa'};
+var $author$project$Theme$typography = {fontFamily: 'inherit', fontFamilyMono: 'monospace', fontSize: '12px', lineHeight: '1.8'};
+var $author$project$Theme$button = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.border),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
+		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none')
+	]);
 var $author$project$NewItemButton$view = function (onClickMsg) {
 	return A2(
 		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Events$onClick(onClickMsg),
-				A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-				A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-				A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-				A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-				A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-				A2($elm$html$Html$Attributes$style, 'font-size', '12px'),
-				A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
+		A2(
+			$elm$core$List$cons,
+			$elm$html$Html$Events$onClick(onClickMsg),
+			A2(
+				$elm$core$List$cons,
 				A2($elm$html$Html$Attributes$style, 'margin-left', '20px'),
-				A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
-				A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
-				A2($elm$html$Html$Attributes$style, 'justify-content', 'center')
-			]),
+				A2(
+					$elm$core$List$cons,
+					A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
+					A2(
+						$elm$core$List$cons,
+						A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+						A2(
+							$elm$core$List$cons,
+							A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
+							$author$project$Theme$button))))),
 		_List_fromArray(
 			[
 				$elm$html$Html$text('+ Add Item')
@@ -13535,101 +13556,141 @@ var $elm$html$Html$Events$preventDefaultOn = F2(
 			event,
 			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
 	});
+var $author$project$Theme$input = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.border),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize)
+	]);
+var $author$project$Theme$searchInput = _Utils_ap(
+	$author$project$Theme$input,
+	_List_fromArray(
+		[
+			A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
+		]));
+var $author$project$Theme$searchToolbar = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'margin-bottom', $author$project$Theme$spacing.lg),
+		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+		A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+		A2($elm$html$Html$Attributes$style, 'gap', $author$project$Theme$spacing.sm)
+	]);
 var $author$project$SearchToolbar$view = F2(
 	function (model, listenKeydownEvents) {
 		return A2(
 			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'margin-bottom', '16px'),
-					A2($elm$html$Html$Attributes$style, 'display', 'flex'),
-					A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
-					A2($elm$html$Html$Attributes$style, 'gap', '8px')
-				]),
+			$author$project$Theme$searchToolbar,
 			_List_fromArray(
 				[
 					A2(
 					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick($author$project$SearchToolbar$CollapseAllClicked),
-							A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-							A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-							A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-							A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-							A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-							A2($elm$html$Html$Attributes$style, 'font-size', '12px'),
-							A2($elm$html$Html$Attributes$style, 'user-select', 'none')
-						]),
+					A2(
+						$elm$core$List$cons,
+						$elm$html$Html$Events$onClick($author$project$SearchToolbar$CollapseAllClicked),
+						$author$project$Theme$button),
 					_List_fromArray(
 						[
 							$elm$html$Html$text('Collapse All')
 						])),
 					A2(
 					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Events$onClick($author$project$SearchToolbar$ExpandAllClicked),
-							A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-							A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-							A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-							A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-							A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-							A2($elm$html$Html$Attributes$style, 'font-size', '12px'),
-							A2($elm$html$Html$Attributes$style, 'user-select', 'none')
-						]),
+					A2(
+						$elm$core$List$cons,
+						$elm$html$Html$Events$onClick($author$project$SearchToolbar$ExpandAllClicked),
+						$author$project$Theme$button),
 					_List_fromArray(
 						[
 							$elm$html$Html$text('Expand All')
 						])),
 					A2(
 					$elm$html$Html$input,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$type_('text'),
-							$elm$html$Html$Attributes$id('search-input'),
-							$elm$html$Html$Attributes$placeholder('Search... (type @tag to filter by tags)'),
-							$elm$html$Html$Attributes$value(model.searchQuery),
-							A2($elm$html$Html$Events$preventDefaultOn, 'input', $author$project$SearchToolbar$inputDecoder),
-							A2(
-							$elm$html$Html$Events$preventDefaultOn,
-							'keydown',
-							$author$project$SearchToolbar$keydownDecoder(listenKeydownEvents)),
-							A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-							A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-							A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-							A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-							A2($elm$html$Html$Attributes$style, 'font-size', '12px'),
-							A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
-						]),
+					_Utils_ap(
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$type_('text'),
+								$elm$html$Html$Attributes$id('search-input'),
+								$elm$html$Html$Attributes$placeholder('Search... (type @tag to filter by tags)'),
+								$elm$html$Html$Attributes$value(model.searchQuery),
+								A2($elm$html$Html$Events$preventDefaultOn, 'input', $author$project$SearchToolbar$inputDecoder),
+								A2(
+								$elm$html$Html$Events$preventDefaultOn,
+								'keydown',
+								$author$project$SearchToolbar$keydownDecoder(listenKeydownEvents))
+							]),
+						$author$project$Theme$searchInput),
 					_List_Nil)
 				]));
 	});
 var $author$project$TagPopup$NoOp = {$: 'NoOp'};
+var $author$project$Theme$popup = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'position', 'absolute'),
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.border),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+		A2($elm$html$Html$Attributes$style, 'flex-direction', 'column'),
+		A2($elm$html$Html$Attributes$style, 'gap', '2px'),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs),
+		A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto'),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize)
+	]);
+var $author$project$Theme$positionStyle = F3(
+	function (top, left, width) {
+		return _List_fromArray(
+			[
+				A2(
+				$elm$html$Html$Attributes$style,
+				'top',
+				$elm$core$String$fromInt(top) + 'px'),
+				A2(
+				$elm$html$Html$Attributes$style,
+				'left',
+				$elm$core$String$fromInt(left) + 'px'),
+				A2(
+				$elm$html$Html$Attributes$style,
+				'width',
+				$elm$core$String$fromInt(width) + 'px')
+			]);
+	});
 var $author$project$TagPopup$HighlightTag = function (a) {
 	return {$: 'HighlightTag', a: a};
 };
+var $author$project$Theme$popupItem = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
+		A2($elm$html$Html$Attributes$style, 'color', 'inherit'),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize)
+	]);
+var $author$project$Theme$popupItemHighlighted = _Utils_ap(
+	$author$project$Theme$popupItem,
+	_List_fromArray(
+		[
+			A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.tagBackground)
+		]));
+var $author$project$Theme$popupItemNormal = _Utils_ap(
+	$author$project$Theme$popupItem,
+	_List_fromArray(
+		[
+			A2($elm$html$Html$Attributes$style, 'background', 'transparent')
+		]));
 var $author$project$TagPopup$viewPopupTag = F2(
 	function (currentHighlightedTag, tag) {
+		var styles = _Utils_eq(
+			$elm$core$Maybe$Just(tag),
+			currentHighlightedTag) ? $author$project$Theme$popupItemHighlighted : $author$project$Theme$popupItemNormal;
 		return A2(
 			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onClick(
+			A2(
+				$elm$core$List$cons,
+				$elm$html$Html$Events$onClick(
 					$author$project$TagPopup$HighlightTag(tag)),
-					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-					A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
-					A2(
-					$elm$html$Html$Attributes$style,
-					'background',
-					_Utils_eq(
-						$elm$core$Maybe$Just(tag),
-						currentHighlightedTag) ? '#e3f2fd' : 'transparent'),
-					A2($elm$html$Html$Attributes$style, 'color', 'inherit'),
-					A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-					A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-					A2($elm$html$Html$Attributes$style, 'font-size', '12px')
-				]),
+				styles),
 			_List_fromArray(
 				[
 					$elm$html$Html$text(tag)
@@ -13645,36 +13706,16 @@ var $author$project$TagPopup$view = function (model) {
 		var matchingTags = _v0.b.a;
 		return $elm$core$List$isEmpty(matchingTags) ? $elm$html$Html$text('') : A2(
 			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'position', 'absolute'),
-					A2(
-					$elm$html$Html$Attributes$style,
-					'top',
-					$elm$core$String$fromInt(top) + 'px'),
-					A2(
-					$elm$html$Html$Attributes$style,
-					'left',
-					$elm$core$String$fromInt(left) + 'px'),
-					A2(
-					$elm$html$Html$Attributes$style,
-					'width',
-					$elm$core$String$fromInt(width) + 'px'),
-					A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-					A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-					A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-					A2($elm$html$Html$Attributes$style, 'display', 'flex'),
-					A2($elm$html$Html$Attributes$style, 'flex-direction', 'column'),
-					A2($elm$html$Html$Attributes$style, 'gap', '2px'),
-					A2($elm$html$Html$Attributes$style, 'padding', '4px'),
-					A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto'),
-					A2($elm$html$Html$Attributes$style, 'font-size', '12px'),
-					A2(
+			A2(
+				$elm$core$List$cons,
+				A2(
 					$elm$html$Html$Events$stopPropagationOn,
 					'click',
 					$elm$json$Json$Decode$succeed(
-						_Utils_Tuple2($author$project$TagPopup$NoOp, true)))
-				]),
+						_Utils_Tuple2($author$project$TagPopup$NoOp, true))),
+				_Utils_ap(
+					A3($author$project$Theme$positionStyle, top, left, width),
+					$author$project$Theme$popup)),
 			A2(
 				$elm$core$List$map,
 				$author$project$TagPopup$viewPopupTag(model.highlightedTag),
@@ -13686,10 +13727,67 @@ var $author$project$TagPopup$view = function (model) {
 var $author$project$Main$ToggleCollapse = function (a) {
 	return {$: 'ToggleCollapse', a: a};
 };
+var $author$project$Theme$arrow = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
+		A2($elm$html$Html$Attributes$style, 'width', $author$project$Theme$spacing.xl),
+		A2($elm$html$Html$Attributes$style, 'min-width', $author$project$Theme$spacing.xl),
+		A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
+		A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+		A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
+var $author$project$Theme$arrowEmpty = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'width', $author$project$Theme$spacing.xl),
+		A2($elm$html$Html$Attributes$style, 'display', 'inline-block'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
+var $author$project$Theme$bullet = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'width', $author$project$Theme$spacing.xl),
+		A2($elm$html$Html$Attributes$style, 'min-width', $author$project$Theme$spacing.xl),
+		A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
+		A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+		A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
+var $author$project$Theme$indentStyle = function (level) {
+	return _List_fromArray(
+		[
+			A2(
+			$elm$html$Html$Attributes$style,
+			'margin-left',
+			$elm$core$String$fromInt(level * 24) + 'px')
+		]);
+};
 var $author$project$ListItem$isCollapsed = function (_v0) {
 	var item = _v0.a;
 	return item.collapsed;
 };
+var $author$project$Theme$listItem = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'margin-bottom', '5px'),
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.border),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize)
+	]);
+var $author$project$Theme$listItemRow = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+		A2($elm$html$Html$Attributes$style, 'align-items', 'flex-start'),
+		A2($elm$html$Html$Attributes$style, 'max-width', '80%')
+	]);
+var $author$project$Theme$listItemRowWithChildren = _Utils_ap(
+	$author$project$Theme$listItemRow,
+	_List_fromArray(
+		[
+			A2($elm$html$Html$Attributes$style, 'margin-bottom', '5px')
+		]));
 var $author$project$Main$ClipboardMsg = function (a) {
 	return {$: 'ClipboardMsg', a: a};
 };
@@ -13735,6 +13833,10 @@ var $author$project$Main$UpdateItemContent = F4(
 	function (a, b, c, d) {
 		return {$: 'UpdateItemContent', a: a, b: b, c: c, d: d};
 	});
+var $author$project$Theme$flexGrow = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
+	]);
 var $elm$html$Html$Events$onBlur = function (msg) {
 	return A2(
 		$elm$html$Html$Events$on,
@@ -13976,6 +14078,22 @@ var $elm$html$Html$Attributes$rows = function (n) {
 		$elm$core$String$fromInt(n));
 };
 var $elm$html$Html$textarea = _VirtualDom_node('textarea');
+var $author$project$Theme$textarea = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
+		A2($elm$html$Html$Attributes$style, 'overflow-y', 'hidden'),
+		A2($elm$html$Html$Attributes$style, 'resize', 'none'),
+		A2($elm$html$Html$Attributes$style, 'border', 'none'),
+		A2($elm$html$Html$Attributes$style, 'outline', 'none'),
+		A2($elm$html$Html$Attributes$style, 'background', 'transparent'),
+		A2($elm$html$Html$Attributes$style, 'width', '100%'),
+		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamily),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize),
+		A2($elm$html$Html$Attributes$style, 'padding', '0'),
+		A2($elm$html$Html$Attributes$style, 'margin', '0'),
+		A2($elm$html$Html$Attributes$style, 'display', 'block'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
 var $author$project$Main$viewEditableItem = F2(
 	function (_v0, item) {
 		var noBlur = _v0.noBlur;
@@ -13993,7 +14111,7 @@ var $author$project$Main$viewEditableItem = F2(
 			onInsertSelectedTag: F3(
 				function (targetItem, tag, cursorPos) {
 					return $author$project$Main$GetCurrentTime(
-						A3($author$project$Main$InsertSelectedTagWithTime, targetItem, tag, cursorPos));
+						A3($author$project$Main$InsertSelectedTag, targetItem, tag, cursorPos));
 				}),
 			onMoveItemDown: $author$project$Main$MoveItemDown,
 			onMoveItemUp: $author$project$Main$MoveItemUp,
@@ -14013,67 +14131,53 @@ var $author$project$Main$viewEditableItem = F2(
 		};
 		return A2(
 			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
-				]),
+			$author$project$Theme$flexGrow,
 			_List_fromArray(
 				[
 					A2(
 					$elm$html$Html$textarea,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$id(
-							'input-id-' + $elm$core$String$fromInt(
-								$author$project$ListItem$getId(item))),
-							$elm$html$Html$Attributes$value(
-							A2(
-								$elm$core$String$join,
-								'\n',
-								$author$project$ListItem$getContent(item))),
-							A2(
-							$elm$html$Html$Events$preventDefaultOn,
-							'input',
-							A3(
-								$elm$json$Json$Decode$map2,
-								F2(
-									function (value, selectionStart) {
-										return _Utils_Tuple2(
-											$author$project$Main$GetCurrentTime(
-												A3($author$project$Main$UpdateItemContent, item, value, selectionStart)),
-											false);
-									}),
+					_Utils_ap(
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$id(
+								'input-id-' + $elm$core$String$fromInt(
+									$author$project$ListItem$getId(item))),
+								$elm$html$Html$Attributes$value(
 								A2(
-									$elm$json$Json$Decode$field,
-									'target',
-									A2($elm$json$Json$Decode$field, 'value', $elm$json$Json$Decode$string)),
+									$elm$core$String$join,
+									'\n',
+									$author$project$ListItem$getContent(item))),
 								A2(
-									$elm$json$Json$Decode$field,
-									'target',
-									A2($elm$json$Json$Decode$field, 'selectionStart', $elm$json$Json$Decode$int)))),
-							$elm$html$Html$Events$onBlur(
-							noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
-							A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item),
-							$elm$html$Html$Attributes$rows(
-							A2(
-								$elm$core$Basics$max,
-								1,
-								$elm$core$List$length(
-									$author$project$ListItem$getContent(item)))),
-							A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
-							A2($elm$html$Html$Attributes$style, 'overflow-y', 'hidden'),
-							A2($elm$html$Html$Attributes$style, 'resize', 'none'),
-							A2($elm$html$Html$Attributes$style, 'border', 'none'),
-							A2($elm$html$Html$Attributes$style, 'outline', 'none'),
-							A2($elm$html$Html$Attributes$style, 'background', 'transparent'),
-							A2($elm$html$Html$Attributes$style, 'width', '100%'),
-							A2($elm$html$Html$Attributes$style, 'font-family', 'inherit'),
-							A2($elm$html$Html$Attributes$style, 'font-size', 'inherit'),
-							A2($elm$html$Html$Attributes$style, 'padding', '0'),
-							A2($elm$html$Html$Attributes$style, 'margin', '0'),
-							A2($elm$html$Html$Attributes$style, 'display', 'block'),
-							A2($elm$html$Html$Attributes$style, 'line-height', '1.8')
-						]),
+								$elm$html$Html$Events$preventDefaultOn,
+								'input',
+								A3(
+									$elm$json$Json$Decode$map2,
+									F2(
+										function (value, selectionStart) {
+											return _Utils_Tuple2(
+												$author$project$Main$GetCurrentTime(
+													A3($author$project$Main$UpdateItemContent, item, value, selectionStart)),
+												false);
+										}),
+									A2(
+										$elm$json$Json$Decode$field,
+										'target',
+										A2($elm$json$Json$Decode$field, 'value', $elm$json$Json$Decode$string)),
+									A2(
+										$elm$json$Json$Decode$field,
+										'target',
+										A2($elm$json$Json$Decode$field, 'selectionStart', $elm$json$Json$Decode$int)))),
+								$elm$html$Html$Events$onBlur(
+								noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
+								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item),
+								$elm$html$Html$Attributes$rows(
+								A2(
+									$elm$core$Basics$max,
+									1,
+									$elm$core$List$length(
+										$author$project$ListItem$getContent(item))))
+							]),
+						$author$project$Theme$textarea),
 					_List_Nil)
 				]));
 	});
@@ -14081,6 +14185,27 @@ var $author$project$Main$EditItemClick = F3(
 	function (a, b, c) {
 		return {$: 'EditItemClick', a: a, b: b, c: c};
 	});
+var $author$project$Theme$codeBlock = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'display', 'block'),
+		A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight),
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.codeBackground),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.sm),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'margin', $author$project$Theme$spacing.xs + ' 0'),
+		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamilyMono)
+	]);
+var $author$project$Theme$content = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
+var $author$project$Theme$contentEmpty = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.textPlaceholder),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
 var $elm$html$Html$Attributes$tabindex = function (n) {
 	return A2(
 		_VirtualDom_attribute,
@@ -14090,6 +14215,21 @@ var $elm$html$Html$Attributes$tabindex = function (n) {
 var $author$project$Main$AddTagToSelected = function (a) {
 	return {$: 'AddTagToSelected', a: a};
 };
+var $author$project$Theme$tag = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.link),
+		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
+		A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap')
+	]);
+var $author$project$Theme$tagSelected = _Utils_ap(
+	$author$project$Theme$tag,
+	_List_fromArray(
+		[
+			A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.highlight),
+			A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.text),
+			A2($elm$html$Html$Attributes$style, 'font-weight', 'bold')
+		]));
 var $author$project$Main$renderContentWithSelectedTags = F5(
 	function (items, item, pieces, matches, selectedTags) {
 		var _v0 = _Utils_Tuple2(pieces, matches);
@@ -14111,35 +14251,22 @@ var $author$project$Main$renderContentWithSelectedTags = F5(
 					}
 				}();
 				var isSelectedTag = A2($elm$core$List$member, tag, selectedTags);
-				var tagStyle = isSelectedTag ? _List_fromArray(
-					[
-						A2($elm$html$Html$Attributes$style, 'background', '#ffeb3b'),
-						A2($elm$html$Html$Attributes$style, 'color', '#000'),
-						A2($elm$html$Html$Attributes$style, 'font-weight', 'bold')
-					]) : _List_fromArray(
-					[
-						A2($elm$html$Html$Attributes$style, 'color', '#007acc')
-					]);
+				var tagStyle = isSelectedTag ? $author$project$Theme$tagSelected : $author$project$Theme$tag;
 				return _Utils_ap(
 					_List_fromArray(
 						[
 							$elm$html$Html$text(p),
 							A2(
 							$elm$html$Html$span,
-							_Utils_ap(
-								_List_fromArray(
-									[
-										A2(
-										$elm$html$Html$Events$stopPropagationOn,
-										'click',
-										$elm$json$Json$Decode$succeed(
-											_Utils_Tuple2(
-												$author$project$Main$AddTagToSelected(tag),
-												true))),
-										A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-										A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
-										A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap')
-									]),
+							A2(
+								$elm$core$List$cons,
+								A2(
+									$elm$html$Html$Events$stopPropagationOn,
+									'click',
+									$elm$json$Json$Decode$succeed(
+										_Utils_Tuple2(
+											$author$project$Main$AddTagToSelected(tag),
+											true))),
 								tagStyle),
 							_List_fromArray(
 								[
@@ -14186,17 +14313,7 @@ var $author$project$Main$viewStaticItem = F3(
 					[
 						A2(
 						$elm$html$Html$code,
-						_List_fromArray(
-							[
-								A2($elm$html$Html$Attributes$style, 'display', 'block'),
-								A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
-								A2($elm$html$Html$Attributes$style, 'line-height', '1.8'),
-								A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-								A2($elm$html$Html$Attributes$style, 'padding', '8px'),
-								A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-								A2($elm$html$Html$Attributes$style, 'margin', '4px 0'),
-								A2($elm$html$Html$Attributes$style, 'font-family', 'monospace')
-							]),
+						$author$project$Theme$codeBlock,
 						A2(
 							$elm$core$List$map,
 							function (line) {
@@ -14217,11 +14334,7 @@ var $author$project$Main$viewStaticItem = F3(
 					function (line) {
 						return A2(
 							$elm$html$Html$div,
-							_List_fromArray(
-								[
-									A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
-									A2($elm$html$Html$Attributes$style, 'line-height', '1.8')
-								]),
+							$author$project$Theme$content,
 							A4($author$project$Main$viewContentWithSelectedTags, items, item, line, selectedTags));
 					},
 					lines));
@@ -14245,14 +14358,15 @@ var $author$project$Main$viewStaticItem = F3(
 			$author$project$ListItem$getContent(item));
 		return A2(
 			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$id(
+			A2(
+				$elm$core$List$cons,
+				$elm$html$Html$Attributes$id(
 					'view-item-' + $elm$core$String$fromInt(
 						$author$project$ListItem$getId(item))),
+				A2(
+					$elm$core$List$cons,
 					$elm$html$Html$Attributes$tabindex(-1),
-					A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
-				]),
+					$author$project$Theme$flexGrow)),
 			_List_fromArray(
 				[
 					A2(
@@ -14267,11 +14381,7 @@ var $author$project$Main$viewStaticItem = F3(
 						[
 							A2(
 							$elm$html$Html$span,
-							_List_fromArray(
-								[
-									A2($elm$html$Html$Attributes$style, 'color', '#aaa'),
-									A2($elm$html$Html$Attributes$style, 'line-height', '1.8')
-								]),
+							$author$project$Theme$contentEmpty,
 							_List_fromArray(
 								[
 									$elm$html$Html$text('empty')
@@ -14286,67 +14396,31 @@ var $author$project$Main$viewListItem = F3(
 			A2($author$project$Main$viewListItem, model, level + 1),
 			$author$project$ListItem$getChildren(item));
 		var arrow = $elm$core$List$isEmpty(
-			$author$project$ListItem$getChildren(item)) ? A2(
+			$author$project$ListItem$getChildren(item)) ? A2($elm$html$Html$span, $author$project$Theme$arrowEmpty, _List_Nil) : A2(
 			$elm$html$Html$span,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'width', '20px'),
-					A2($elm$html$Html$Attributes$style, 'display', 'inline-block'),
-					A2($elm$html$Html$Attributes$style, 'line-height', '1.8')
-				]),
-			_List_Nil) : A2(
-			$elm$html$Html$span,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onClick(
+			A2(
+				$elm$core$List$cons,
+				$elm$html$Html$Events$onClick(
 					$author$project$Main$ToggleCollapse(item)),
-					A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-					A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
-					A2($elm$html$Html$Attributes$style, 'width', '20px'),
-					A2($elm$html$Html$Attributes$style, 'min-width', '20px'),
-					A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
-					A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
-					A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
-					A2($elm$html$Html$Attributes$style, 'line-height', '1.8')
-				]),
+				$author$project$Theme$arrow),
 			_List_fromArray(
 				[
 					$author$project$ListItem$isCollapsed(item) ? $elm$html$Html$text('+') : $elm$html$Html$text('-')
 				]));
 		var itemRow = function () {
-			var styles = _List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'display', 'flex'),
-					A2($elm$html$Html$Attributes$style, 'align-items', 'flex-start'),
-					A2(
-					$elm$html$Html$Attributes$style,
-					'margin-left',
-					$elm$core$String$fromInt(level * 24) + 'px'),
-					A2($elm$html$Html$Attributes$style, 'max-width', '80%')
-				]);
-			var extraStyles = $elm$core$List$isEmpty(
-				$author$project$ListItem$getChildren(item)) ? _List_Nil : _List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'margin-bottom', '5px')
-				]);
+			var baseStyles = $elm$core$List$isEmpty(
+				$author$project$ListItem$getChildren(item)) ? $author$project$Theme$listItemRow : $author$project$Theme$listItemRowWithChildren;
 			return A2(
 				$elm$html$Html$div,
-				_Utils_ap(styles, extraStyles),
+				_Utils_ap(
+					$author$project$Theme$indentStyle(level),
+					baseStyles),
 				_List_fromArray(
 					[
 						arrow,
 						A2(
 						$elm$html$Html$span,
-						_List_fromArray(
-							[
-								A2($elm$html$Html$Attributes$style, 'width', '20px'),
-								A2($elm$html$Html$Attributes$style, 'min-width', '20px'),
-								A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
-								A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
-								A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
-								A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
-								A2($elm$html$Html$Attributes$style, 'line-height', '1.8')
-							]),
+						$author$project$Theme$bullet,
 						_List_fromArray(
 							[
 								$elm$html$Html$text('•')
@@ -14356,31 +14430,24 @@ var $author$project$Main$viewListItem = F3(
 		}();
 		return A2(
 			$elm$html$Html$div,
-			_List_fromArray(
-				[
-					A2($elm$html$Html$Attributes$style, 'margin-bottom', '5px'),
-					A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-					A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-					A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-					A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-					A2($elm$html$Html$Attributes$style, 'font-size', '12px')
-				]),
+			$author$project$Theme$listItem,
 			A2($elm$core$List$cons, itemRow, childrenBlock));
 	});
+var $author$project$Theme$selectedTagsContainer = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'margin-bottom', $author$project$Theme$spacing.md),
+		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+		A2($elm$html$Html$Attributes$style, 'flex-wrap', 'wrap'),
+		A2($elm$html$Html$Attributes$style, 'gap', '6px'),
+		A2($elm$html$Html$Attributes$style, 'align-items', 'center')
+	]);
 var $author$project$Main$ClearAllSelectedTags = {$: 'ClearAllSelectedTags'};
 var $author$project$Main$viewClearAllButton = A2(
 	$elm$html$Html$div,
-	_List_fromArray(
-		[
-			$elm$html$Html$Events$onClick($author$project$Main$ClearAllSelectedTags),
-			A2($elm$html$Html$Attributes$style, 'background', '#f5f5f5'),
-			A2($elm$html$Html$Attributes$style, 'border', '1px solid #ccc'),
-			A2($elm$html$Html$Attributes$style, 'border-radius', '4px'),
-			A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-			A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-			A2($elm$html$Html$Attributes$style, 'font-size', '12px'),
-			A2($elm$html$Html$Attributes$style, 'user-select', 'none')
-		]),
+	A2(
+		$elm$core$List$cons,
+		$elm$html$Html$Events$onClick($author$project$Main$ClearAllSelectedTags),
+		$author$project$Theme$button),
 	_List_fromArray(
 		[
 			$elm$html$Html$text('Clear all')
@@ -14388,34 +14455,38 @@ var $author$project$Main$viewClearAllButton = A2(
 var $author$project$Main$RemoveSelectedTag = function (a) {
 	return {$: 'RemoveSelectedTag', a: a};
 };
+var $author$project$Theme$tagChip = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.tagBackground),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.borderSelected),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadiusLarge),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
+		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
+		A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+		A2($elm$html$Html$Attributes$style, 'gap', $author$project$Theme$spacing.xs),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize)
+	]);
+var $author$project$Theme$tagChipClose = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+		A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.textMuted),
+		A2($elm$html$Html$Attributes$style, 'font-weight', 'bold'),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none')
+	]);
 var $author$project$Main$viewTagChip = function (tag) {
 	return A2(
 		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				A2($elm$html$Html$Attributes$style, 'background', '#e3f2fd'),
-				A2($elm$html$Html$Attributes$style, 'border', '1px solid #90caf9'),
-				A2($elm$html$Html$Attributes$style, 'border-radius', '12px'),
-				A2($elm$html$Html$Attributes$style, 'padding', '4px 8px'),
-				A2($elm$html$Html$Attributes$style, 'display', 'flex'),
-				A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
-				A2($elm$html$Html$Attributes$style, 'gap', '4px'),
-				A2($elm$html$Html$Attributes$style, 'font-size', '12px')
-			]),
+		$author$project$Theme$tagChip,
 		_List_fromArray(
 			[
 				$elm$html$Html$text('@' + tag),
 				A2(
 				$elm$html$Html$span,
-				_List_fromArray(
-					[
-						$elm$html$Html$Events$onClick(
+				A2(
+					$elm$core$List$cons,
+					$elm$html$Html$Events$onClick(
 						$author$project$Main$RemoveSelectedTag(tag)),
-						A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-						A2($elm$html$Html$Attributes$style, 'color', '#666'),
-						A2($elm$html$Html$Attributes$style, 'font-weight', 'bold'),
-						A2($elm$html$Html$Attributes$style, 'user-select', 'none')
-					]),
+					$author$project$Theme$tagChipClose),
 				_List_fromArray(
 					[
 						$elm$html$Html$text('×')
@@ -14425,14 +14496,7 @@ var $author$project$Main$viewTagChip = function (tag) {
 var $author$project$Main$viewSelectedTags = function (selectedTags) {
 	return $elm$core$List$isEmpty(selectedTags) ? $elm$html$Html$text('') : A2(
 		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				A2($elm$html$Html$Attributes$style, 'margin-bottom', '12px'),
-				A2($elm$html$Html$Attributes$style, 'display', 'flex'),
-				A2($elm$html$Html$Attributes$style, 'flex-wrap', 'wrap'),
-				A2($elm$html$Html$Attributes$style, 'gap', '6px'),
-				A2($elm$html$Html$Attributes$style, 'align-items', 'center')
-			]),
+		$author$project$Theme$selectedTagsContainer,
 		_Utils_ap(
 			A2($elm$core$List$map, $author$project$Main$viewTagChip, selectedTags),
 			_List_fromArray(
@@ -14441,14 +14505,11 @@ var $author$project$Main$viewSelectedTags = function (selectedTags) {
 var $author$project$Main$view = function (model) {
 	return A2(
 		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				A2($elm$html$Html$Attributes$style, 'max-width', '800px'),
-				A2($elm$html$Html$Attributes$style, 'margin', '0 auto'),
-				A2($elm$html$Html$Attributes$style, 'padding', '20px'),
-				$elm$html$Html$Events$onClick(
-				$author$project$Main$TagPopupMsg($author$project$TagPopup$Hide))
-			]),
+		A2(
+			$elm$core$List$cons,
+			$elm$html$Html$Events$onClick(
+				$author$project$Main$TagPopupMsg($author$project$TagPopup$Hide)),
+			$author$project$Theme$container),
 		A2(
 			$elm$core$List$cons,
 			A2(
@@ -14492,4 +14553,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTagWithTime":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
