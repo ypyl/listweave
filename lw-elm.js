@@ -11225,49 +11225,6 @@ var $author$project$ListItem$editItemFn = F2(
 				item,
 				{editing: false}));
 	});
-var $elm$core$List$any = F2(
-	function (isOkay, list) {
-		any:
-		while (true) {
-			if (!list.b) {
-				return false;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (isOkay(x)) {
-					return true;
-				} else {
-					var $temp$isOkay = isOkay,
-						$temp$list = xs;
-					isOkay = $temp$isOkay;
-					list = $temp$list;
-					continue any;
-				}
-			}
-		}
-	});
-var $author$project$ListItem$containsItem = F2(
-	function (id, _v0) {
-		var item = _v0.a;
-		return _Utils_eq(item.id, id) ? true : A2(
-			$elm$core$List$any,
-			$author$project$ListItem$containsItem(id),
-			item.children);
-	});
-var $author$project$ListItem$expandToItem = function (id) {
-	return $elm$core$List$map(
-		function (item) {
-			var _v0 = item;
-			var record = _v0.a;
-			return A2($author$project$ListItem$containsItem, id, item) ? $author$project$ListItem$ListItem(
-				_Utils_update(
-					record,
-					{
-						children: A2($author$project$ListItem$expandToItem, id, record.children),
-						collapsed: false
-					})) : item;
-		});
-};
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -11749,6 +11706,27 @@ var $elm$core$Tuple$mapSecond = F2(
 		return _Utils_Tuple2(
 			x,
 			func(y));
+	});
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
 	});
 var $elm$core$List$member = F2(
 	function (x, xs) {
@@ -13135,20 +13113,6 @@ var $author$project$Main$update = F2(
 								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 							}),
 						$elm$core$Platform$Cmd$none);
-				case 'GoToItem':
-					var id = msg.a;
-					var inputId = 'view-item-' + $elm$core$String$fromInt(id);
-					var expandedModel = _Utils_update(
-						model,
-						{
-							items: A2($author$project$ListItem$expandToItem, id, model.items)
-						});
-					return _Utils_Tuple2(
-						expandedModel,
-						A2(
-							$elm$core$Task$attempt,
-							$author$project$Main$FocusResult,
-							$elm$browser$Browser$Dom$focus(inputId)));
 				case 'CreateItemAfter':
 					var item = msg.a;
 					return _Utils_Tuple2(
@@ -13368,11 +13332,23 @@ var $author$project$Main$update = F2(
 									model.selectedTags)
 							}),
 						$elm$core$Platform$Cmd$none);
-				default:
+				case 'ClearAllSelectedTags':
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{selectedTags: _List_Nil}),
+						$elm$core$Platform$Cmd$none);
+				default:
+					var tag = msg.a;
+					return ($elm$core$String$isEmpty(tag) || A2($elm$core$List$member, tag, model.selectedTags)) ? _Utils_Tuple2(model, $elm$core$Platform$Cmd$none) : _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								selectedTags: _Utils_ap(
+									model.selectedTags,
+									_List_fromArray(
+										[tag]))
+							}),
 						$elm$core$Platform$Cmd$none);
 			}
 		}
@@ -14100,69 +14076,9 @@ var $elm$html$Html$Attributes$tabindex = function (n) {
 		'tabIndex',
 		$elm$core$String$fromInt(n));
 };
-var $author$project$Main$GoToItem = function (a) {
-	return {$: 'GoToItem', a: a};
+var $author$project$Main$AddTagToSelected = function (a) {
+	return {$: 'AddTagToSelected', a: a};
 };
-var $author$project$ListItem$flattenItems = function (items) {
-	return A2(
-		$elm$core$List$concatMap,
-		function (item) {
-			return A2(
-				$elm$core$List$cons,
-				item,
-				$author$project$ListItem$flattenItems(
-					function () {
-						var _v0 = item;
-						var i = _v0.a;
-						return i.children;
-					}()));
-		},
-		items);
-};
-var $elm$core$Basics$modBy = _Basics_modBy;
-var $author$project$ListItem$findNextTagItemId = F3(
-	function (_v0, tag, items) {
-		var current = _v0.a;
-		var flat = $author$project$ListItem$flattenItems(items);
-		var tagged = A2(
-			$elm$core$List$filter,
-			function (_v4) {
-				var i = _v4.a;
-				return A2($elm$core$List$member, tag, i.tags);
-			},
-			flat);
-		var ids = A2(
-			$elm$core$List$map,
-			function (_v3) {
-				var i = _v3.a;
-				return i.id;
-			},
-			tagged);
-		var idx = A2($author$project$ListItem$elemIndex, current.id, ids);
-		var len = $elm$core$List$length(ids);
-		var _v1 = _Utils_Tuple2(ids, idx);
-		_v1$0:
-		while (true) {
-			if (_v1.b.$ === 'Nothing') {
-				if (!_v1.a.b) {
-					break _v1$0;
-				} else {
-					var _v2 = _v1.b;
-					return $elm$core$List$head(ids);
-				}
-			} else {
-				if (!_v1.a.b) {
-					break _v1$0;
-				} else {
-					var i = _v1.b.a;
-					var nextIdx = A2($elm$core$Basics$modBy, len, i + 1);
-					return $elm$core$List$head(
-						A2($elm$core$List$drop, nextIdx, ids));
-				}
-			}
-		}
-		return $elm$core$Maybe$Nothing;
-	});
 var $author$project$Main$renderContentWithSelectedTags = F5(
 	function (items, item, pieces, matches, selectedTags) {
 		var _v0 = _Utils_Tuple2(pieces, matches);
@@ -14175,15 +14091,14 @@ var $author$project$Main$renderContentWithSelectedTags = F5(
 				var m = _v2.a;
 				var ms = _v2.b;
 				var tag = function () {
-					var _v4 = m.submatches;
-					if (_v4.b && (_v4.a.$ === 'Just')) {
-						var t = _v4.a.a;
+					var _v3 = m.submatches;
+					if (_v3.b && (_v3.a.$ === 'Just')) {
+						var t = _v3.a.a;
 						return t;
 					} else {
 						return '';
 					}
 				}();
-				var nextId = (tag !== '') ? A3($author$project$ListItem$findNextTagItemId, item, tag, items) : $elm$core$Maybe$Nothing;
 				var isSelectedTag = A2($elm$core$List$member, tag, selectedTags);
 				var tagStyle = isSelectedTag ? _List_fromArray(
 					[
@@ -14194,14 +14109,6 @@ var $author$project$Main$renderContentWithSelectedTags = F5(
 					[
 						A2($elm$html$Html$Attributes$style, 'color', '#007acc')
 					]);
-				var clickMsg = function () {
-					if (nextId.$ === 'Just') {
-						var nid = nextId.a;
-						return $author$project$Main$GoToItem(nid);
-					} else {
-						return $author$project$Main$NoOp;
-					}
-				}();
 				return _Utils_ap(
 					_List_fromArray(
 						[
@@ -14215,7 +14122,9 @@ var $author$project$Main$renderContentWithSelectedTags = F5(
 										$elm$html$Html$Events$stopPropagationOn,
 										'click',
 										$elm$json$Json$Decode$succeed(
-											_Utils_Tuple2(clickMsg, true))),
+											_Utils_Tuple2(
+												$author$project$Main$AddTagToSelected(tag),
+												true))),
 										A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
 										A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
 										A2($elm$html$Html$Attributes$style, 'white-space', 'nowrap')
@@ -14228,8 +14137,8 @@ var $author$project$Main$renderContentWithSelectedTags = F5(
 						]),
 					A5($author$project$Main$renderContentWithSelectedTags, items, item, ps, ms, selectedTags));
 			} else {
-				var _v5 = _v0.a;
-				var p = _v5.a;
+				var _v4 = _v0.a;
+				var p = _v4.a;
 				return _List_fromArray(
 					[
 						$elm$html$Html$text(p)
@@ -14571,4 +14480,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"SaveItem":["ListItem.ListItem"],"GoToItem":["Basics.Int"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

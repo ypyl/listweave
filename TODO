@@ -1,4 +1,3 @@
-- refactor code
 - sorting by created/updated data
 - export/import
 - storage (indexDB)

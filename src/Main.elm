@@ -10,7 +10,7 @@ import Html.Attributes exposing (id, rows, value)
 import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagationOn)
 import Json.Decode as D
 import KeyboardHandler
-import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, filterItems, findEditingItem, findNextItem, findNextTagItemId, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
+import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, filterItems, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
 import NewItemButton
 import Regex
 import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition)
@@ -123,7 +123,6 @@ type Msg
     | EditItem Int
     | UpdateItemContent ListItem String Int
     | SaveItem ListItem
-    | GoToItem Int
     | CreateItemAfter ListItem
     | CreateItemAfterWithTime ListItem Posix
     | CreateItemAtEnd
@@ -152,6 +151,7 @@ type Msg
     | SearchTagSelected String
     | RemoveSelectedTag String
     | ClearAllSelectedTags
+    | AddTagToSelected String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -359,18 +359,6 @@ update msg model =
                 , Cmd.none
                 )
 
-        GoToItem id ->
-            let
-                expandedModel =
-                    { model | items = expandToItem id model.items }
-
-                inputId =
-                    "view-item-" ++ String.fromInt id
-            in
-            ( expandedModel
-            , Task.attempt FocusResult (Browser.Dom.focus inputId)
-            )
-
         CreateItemAfter item ->
             ( model, Task.perform (CreateItemAfterWithTime item) Time.now )
 
@@ -518,6 +506,12 @@ update msg model =
 
         ClearAllSelectedTags ->
             ( { model | selectedTags = [] }, Cmd.none )
+
+        AddTagToSelected tag ->
+            if String.isEmpty tag || List.member tag model.selectedTags then
+                ( model, Cmd.none )
+            else
+                ( { model | selectedTags = model.selectedTags ++ [ tag ] }, Cmd.none )
 
 
 
@@ -833,21 +827,6 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
                         _ ->
                             ""
 
-                nextId =
-                    if tag /= "" then
-                        findNextTagItemId item tag items
-
-                    else
-                        Nothing
-
-                clickMsg =
-                    case nextId of
-                        Just nid ->
-                            GoToItem nid
-
-                        Nothing ->
-                            NoOp
-
                 isSelectedTag =
                     List.member tag selectedTags
 
@@ -863,7 +842,7 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
             in
             [ text p
             , span
-                ([ stopPropagationOn "click" (D.succeed ( clickMsg, True ))
+                ([ stopPropagationOn "click" (D.succeed ( AddTagToSelected tag, True ))
                  , Html.Attributes.style "cursor" "pointer"
                  , Html.Attributes.style "user-select" "none"
                  , Html.Attributes.style "white-space" "nowrap"
