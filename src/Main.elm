@@ -778,7 +778,7 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
                     SaveItem item
                 )
             , KeyboardHandler.onKeyDown keyboardConfig item
-            , rows (List.length (getContent item))
+            , rows (max 1 (List.length (getContent item)))
             , Html.Attributes.style "box-sizing" "border-box"
             , Html.Attributes.style "overflow-y" "hidden"
             , Html.Attributes.style "resize" "none"

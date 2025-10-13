@@ -14047,8 +14047,11 @@ var $author$project$Main$viewEditableItem = F2(
 							noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
 							A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item),
 							$elm$html$Html$Attributes$rows(
-							$elm$core$List$length(
-								$author$project$ListItem$getContent(item))),
+							A2(
+								$elm$core$Basics$max,
+								1,
+								$elm$core$List$length(
+									$author$project$ListItem$getContent(item)))),
 							A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
 							A2($elm$html$Html$Attributes$style, 'overflow-y', 'hidden'),
 							A2($elm$html$Html$Attributes$style, 'resize', 'none'),
