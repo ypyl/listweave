@@ -11111,16 +11111,10 @@ var $author$project$Main$subscriptions = function (model) {
 				})
 			]));
 };
-var $author$project$Main$CreateItemAfter = function (a) {
-	return {$: 'CreateItemAfter', a: a};
-};
-var $author$project$Main$CreateItemAfterWithTime = F2(
+var $author$project$Main$CreateItemAfter = F2(
 	function (a, b) {
-		return {$: 'CreateItemAfterWithTime', a: a, b: b};
+		return {$: 'CreateItemAfter', a: a, b: b};
 	});
-var $author$project$Main$CreateItemAtEndWithTime = function (a) {
-	return {$: 'CreateItemAtEndWithTime', a: a};
-};
 var $author$project$Main$EditItem = function (a) {
 	return {$: 'EditItem', a: a};
 };
@@ -11129,10 +11123,9 @@ var $author$project$Main$FocusResult = function (a) {
 };
 var $author$project$TagPopup$FromItem = {$: 'FromItem'};
 var $author$project$TagPopup$FromSearchToolbar = {$: 'FromSearchToolbar'};
-var $author$project$Main$InsertSelectedTag = F3(
-	function (a, b, c) {
-		return {$: 'InsertSelectedTag', a: a, b: b, c: c};
-	});
+var $author$project$Main$GetCurrentTime = function (a) {
+	return {$: 'GetCurrentTime', a: a};
+};
 var $author$project$Main$InsertSelectedTagWithTime = F4(
 	function (a, b, c, d) {
 		return {$: 'InsertSelectedTagWithTime', a: a, b: b, c: c, d: d};
@@ -11144,10 +11137,6 @@ var $author$project$Main$SearchTagSelected = function (a) {
 	return {$: 'SearchTagSelected', a: a};
 };
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
-var $author$project$Main$UpdateItemContentWithTime = F4(
-	function (a, b, c, d) {
-		return {$: 'UpdateItemContentWithTime', a: a, b: b, c: c, d: d};
-	});
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
 	function (resultToMessage, task) {
@@ -12968,7 +12957,8 @@ var $author$project$Main$update = F2(
 							},
 							A2(
 								$author$project$Main$update,
-								A3($author$project$Main$InsertSelectedTag, item, tag, cursorPos),
+								$author$project$Main$GetCurrentTime(
+									A3($author$project$Main$InsertSelectedTagWithTime, item, tag, cursorPos)),
 								m));
 					}(
 						_Utils_Tuple2(
@@ -12977,16 +12967,6 @@ var $author$project$Main$update = F2(
 								{pendingTagInsertion: $elm$core$Maybe$Nothing}),
 							$elm$core$Platform$Cmd$none));
 				case 'UpdateItemContent':
-					var item = msg.a;
-					var content = msg.b;
-					var cursorPos = msg.c;
-					return _Utils_Tuple2(
-						model,
-						A2(
-							$elm$core$Task$perform,
-							A3($author$project$Main$UpdateItemContentWithTime, item, content, cursorPos),
-							$elm$time$Time$now));
-				case 'UpdateItemContentWithTime':
 					var item = msg.a;
 					var content = msg.b;
 					var cursorPos = msg.c;
@@ -13141,14 +13121,6 @@ var $author$project$Main$update = F2(
 						$elm$core$Platform$Cmd$none);
 				case 'CreateItemAfter':
 					var item = msg.a;
-					return _Utils_Tuple2(
-						model,
-						A2(
-							$elm$core$Task$perform,
-							$author$project$Main$CreateItemAfterWithTime(item),
-							$elm$time$Time$now));
-				case 'CreateItemAfterWithTime':
-					var item = msg.a;
 					var currentTime = msg.b;
 					var newId = $author$project$ListItem$getNextId(model.items);
 					var newItems = A2(
@@ -13165,10 +13137,6 @@ var $author$project$Main$update = F2(
 							$elm$browser$Browser$Dom$focus(
 								'input-id-' + $elm$core$String$fromInt(newId))));
 				case 'CreateItemAtEnd':
-					return _Utils_Tuple2(
-						model,
-						A2($elm$core$Task$perform, $author$project$Main$CreateItemAtEndWithTime, $elm$time$Time$now));
-				case 'CreateItemAtEndWithTime':
 					var currentTime = msg.a;
 					var newId = $author$project$ListItem$getNextId(model.items);
 					var newModel = _Utils_update(
@@ -13191,6 +13159,11 @@ var $author$project$Main$update = F2(
 							$author$project$Main$FocusResult,
 							$elm$browser$Browser$Dom$focus(
 								'input-id-' + $elm$core$String$fromInt(newId))));
+				case 'GetCurrentTime':
+					var msgFn = msg.a;
+					return _Utils_Tuple2(
+						model,
+						A2($elm$core$Task$perform, msgFn, $elm$time$Time$now));
 				case 'SaveAndCreateAfter':
 					var item = msg.a;
 					var _v23 = A2(
@@ -13198,7 +13171,8 @@ var $author$project$Main$update = F2(
 						$author$project$Main$SaveItem(item),
 						model);
 					var afterSave = _v23.a;
-					var $temp$msg = $author$project$Main$CreateItemAfter(item),
+					var $temp$msg = $author$project$Main$GetCurrentTime(
+						$author$project$Main$CreateItemAfter(item)),
 						$temp$model = afterSave;
 					msg = $temp$msg;
 					model = $temp$model;
@@ -13214,30 +13188,18 @@ var $author$project$Main$update = F2(
 								items: A2($author$project$ListItem$deleteItem, item, model.items)
 							}),
 						$elm$core$Platform$Cmd$none);
-				case 'InsertSelectedTag':
+				case 'InsertSelectedTagWithTime':
 					var item = msg.a;
 					var tag = msg.b;
 					var cursorPos = msg.c;
-					return _Utils_Tuple2(
-						model,
-						A2(
-							$elm$core$Task$perform,
-							function (currentTime) {
-								var content = A2(
-									$elm$core$String$join,
-									'\n',
-									$author$project$ListItem$getContent(item));
-								var _v24 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
-								var newContent = _v24.a;
-								var newCaretPos = _v24.b;
-								return A4($author$project$Main$InsertSelectedTagWithTime, item, newContent, newCaretPos, currentTime);
-							},
-							$elm$time$Time$now));
-				case 'InsertSelectedTagWithTime':
-					var item = msg.a;
-					var newContent = msg.b;
-					var newCaretPos = msg.c;
 					var currentTime = msg.d;
+					var content = A2(
+						$elm$core$String$join,
+						'\n',
+						$author$project$ListItem$getContent(item));
+					var _v24 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
+					var newContent = _v24.a;
+					var newCaretPos = _v24.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -13392,7 +13354,9 @@ var $author$project$Main$update = F2(
 			}
 		}
 	});
-var $author$project$Main$CreateItemAtEnd = {$: 'CreateItemAtEnd'};
+var $author$project$Main$CreateItemAtEnd = function (a) {
+	return {$: 'CreateItemAtEnd', a: a};
+};
 var $author$project$TagPopup$Hide = {$: 'Hide'};
 var $author$project$Main$SearchToolbarMsg = function (a) {
 	return {$: 'SearchToolbarMsg', a: a};
@@ -13767,9 +13731,9 @@ var $author$project$Clipboard$PasteItem = F2(
 var $author$project$Main$SaveAndCreateAfter = function (a) {
 	return {$: 'SaveAndCreateAfter', a: a};
 };
-var $author$project$Main$UpdateItemContent = F3(
-	function (a, b, c) {
-		return {$: 'UpdateItemContent', a: a, b: b, c: c};
+var $author$project$Main$UpdateItemContent = F4(
+	function (a, b, c, d) {
+		return {$: 'UpdateItemContent', a: a, b: b, c: c, d: d};
 	});
 var $elm$html$Html$Events$onBlur = function (msg) {
 	return A2(
@@ -14026,7 +13990,11 @@ var $author$project$Main$viewEditableItem = F2(
 			},
 			onDeleteItem: $author$project$Main$DeleteItem,
 			onIndentItem: $author$project$Main$IndentItem,
-			onInsertSelectedTag: $author$project$Main$InsertSelectedTag,
+			onInsertSelectedTag: F3(
+				function (targetItem, tag, cursorPos) {
+					return $author$project$Main$GetCurrentTime(
+						A3($author$project$Main$InsertSelectedTagWithTime, targetItem, tag, cursorPos));
+				}),
 			onMoveItemDown: $author$project$Main$MoveItemDown,
 			onMoveItemUp: $author$project$Main$MoveItemUp,
 			onNavigateToNextWithColumn: $author$project$Main$NavigateToNextWithColumn,
@@ -14071,7 +14039,8 @@ var $author$project$Main$viewEditableItem = F2(
 								F2(
 									function (value, selectionStart) {
 										return _Utils_Tuple2(
-											A3($author$project$Main$UpdateItemContent, item, value, selectionStart),
+											$author$project$Main$GetCurrentTime(
+												A3($author$project$Main$UpdateItemContent, item, value, selectionStart)),
 											false);
 									}),
 								A2(
@@ -14509,7 +14478,8 @@ var $author$project$Main$view = function (model) {
 								model.items)),
 						_List_fromArray(
 							[
-								$author$project$NewItemButton$view($author$project$Main$CreateItemAtEnd)
+								$author$project$NewItemButton$view(
+								$author$project$Main$GetCurrentTime($author$project$Main$CreateItemAtEnd))
 							]))))));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
@@ -14522,4 +14492,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"UpdateItemContentWithTime":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"InsertSelectedTagWithTime":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTagWithTime":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

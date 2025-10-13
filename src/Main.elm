@@ -14,13 +14,10 @@ import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, fi
 import NewItemButton
 import Regex
 import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition)
-import TagPopup exposing (currentSource, isVisible, navigateUp)
+import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
 import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Time exposing (Month(..), Posix, millisToPosix)
-import TagPopup exposing (navigateDown)
-import TagPopup exposing (hidePopup)
-import TagPopup exposing (showPopup)
 
 
 
@@ -123,13 +120,11 @@ initialModel =
 type Msg
     = ToggleCollapse ListItem
     | EditItem Int
-    | UpdateItemContent ListItem String Int
-    | UpdateItemContentWithTime ListItem String Int Posix
+    | UpdateItemContent ListItem String Int Posix
     | SaveItem ListItem
-    | CreateItemAfter ListItem
-    | CreateItemAfterWithTime ListItem Posix
-    | CreateItemAtEnd
-    | CreateItemAtEndWithTime Posix
+    | CreateItemAfter ListItem Posix
+    | CreateItemAtEnd Posix
+    | GetCurrentTime (Posix -> Msg)
     | IndentItem Int ListItem
     | OutdentItem Int ListItem
     | DeleteItem ListItem
@@ -146,8 +141,7 @@ type Msg
     | MoveItemDown Int ListItem
     | ToggleNoBlur
     | EditItemClick ListItem Int Int
-    | InsertSelectedTag ListItem String Int
-    | InsertSelectedTagWithTime ListItem String Int Posix
+    | InsertSelectedTag ListItem String Int Posix
     | NavigateToPreviousWithColumn ListItem Int
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
@@ -292,12 +286,9 @@ update msg model =
 
         GotCurrentCursorPosition item tag cursorPos ->
             ( { model | pendingTagInsertion = Nothing }, Cmd.none )
-                |> (\( m, c ) -> update (InsertSelectedTag item tag cursorPos) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
+                |> (\( m, c ) -> update (GetCurrentTime (InsertSelectedTag item tag cursorPos)) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
 
-        UpdateItemContent item content cursorPos ->
-            ( model, Task.perform (UpdateItemContentWithTime item content cursorPos) Time.now )
-
-        UpdateItemContentWithTime item content cursorPos currentTime ->
+        UpdateItemContent item content cursorPos currentTime ->
             let
                 itemId =
                     getId item
@@ -315,7 +306,6 @@ update msg model =
                                 hidePopup model.tagPopup
 
                             else
-                                -- Store tags temporarily - position will be set when GotCursorPosition arrives
                                 TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
                     in
                     ( { model
@@ -366,10 +356,7 @@ update msg model =
                 , Cmd.none
                 )
 
-        CreateItemAfter item ->
-            ( model, Task.perform (CreateItemAfterWithTime item) Time.now )
-
-        CreateItemAfterWithTime item currentTime ->
+        CreateItemAfter item currentTime ->
             let
                 newId =
                     getNextId model.items
@@ -381,10 +368,7 @@ update msg model =
             , Task.attempt FocusResult (Browser.Dom.focus ("input-id-" ++ String.fromInt newId))
             )
 
-        CreateItemAtEnd ->
-            ( model, Task.perform CreateItemAtEndWithTime Time.now )
-
-        CreateItemAtEndWithTime currentTime ->
+        CreateItemAtEnd currentTime ->
             let
                 newId =
                     getNextId model.items
@@ -394,12 +378,15 @@ update msg model =
             in
             ( newModel, Task.attempt FocusResult (Browser.Dom.focus ("input-id-" ++ String.fromInt newId)) )
 
+        GetCurrentTime msgFn ->
+            ( model, Task.perform msgFn Time.now )
+
         SaveAndCreateAfter item ->
             let
                 ( afterSave, _ ) =
                     update (SaveItem item) model
             in
-            update (CreateItemAfter item) afterSave
+            update (GetCurrentTime (CreateItemAfter item)) afterSave
 
         FocusResult _ ->
             ( model, Cmd.none )
@@ -407,17 +394,14 @@ update msg model =
         DeleteItem item ->
             ( { model | items = deleteItem item model.items }, Cmd.none )
 
-        InsertSelectedTag item tag cursorPos ->
-            ( model, Task.perform (\currentTime ->
-                let
-                    content = String.join "\n" (getContent item)
-                    ( newContent, newCaretPos ) = TagsUtils.insertTagAtCursor content tag cursorPos
-                in
-                InsertSelectedTagWithTime item newContent newCaretPos currentTime
-              ) Time.now
-            )
+        InsertSelectedTag item tag cursorPos currentTime ->
+            let
+                content =
+                    String.join "\n" (getContent item)
 
-        InsertSelectedTagWithTime item newContent newCaretPos currentTime ->
+                ( newContent, newCaretPos ) =
+                    TagsUtils.insertTagAtCursor content tag cursorPos
+            in
             ( { model
                 | items = mapItem (updateItemContentFn item newContent currentTime) model.items
                 , tagPopup = hidePopup model.tagPopup
@@ -520,6 +504,7 @@ update msg model =
         AddTagToSelected tag ->
             if String.isEmpty tag || List.member tag model.selectedTags then
                 ( model, Cmd.none )
+
             else
                 ( { model | selectedTags = model.selectedTags ++ [ tag ] }, Cmd.none )
 
@@ -607,7 +592,7 @@ view model =
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)
             :: viewSelectedTags model.selectedTags
-            :: (List.map (viewListItem model 0) (filterItems (SearchToolbar.getSearchQuery model.searchToolbar) model.selectedTags model.items) ++ [ NewItemButton.view CreateItemAtEnd ])
+            :: (List.map (viewListItem model 0) (filterItems (SearchToolbar.getSearchQuery model.searchToolbar) model.selectedTags model.items) ++ [ NewItemButton.view (GetCurrentTime CreateItemAtEnd) ])
         )
 
 
@@ -757,7 +742,7 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
             , onCutItem = \targetItem -> ClipboardMsg (Clipboard.CutItem targetItem items)
             , onPasteItem = \targetItem -> ClipboardMsg (Clipboard.PasteItem targetItem items)
             , onDeleteItem = DeleteItem
-            , onInsertSelectedTag = InsertSelectedTag
+            , onInsertSelectedTag = \targetItem tag cursorPos -> GetCurrentTime (InsertSelectedTag targetItem tag cursorPos)
             , onSaveAndCreateAfter = SaveAndCreateAfter
             , onIndentItem = IndentItem
             , onOutdentItem = OutdentItem
@@ -775,7 +760,7 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
             , preventDefaultOn "input"
                 (D.map2
                     (\value selectionStart ->
-                        ( UpdateItemContent item value selectionStart, False )
+                        ( GetCurrentTime (UpdateItemContent item value selectionStart), False )
                     )
                     (D.field "target" (D.field "value" D.string))
                     (D.field "target" (D.field "selectionStart" D.int))
