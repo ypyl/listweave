@@ -1,6 +1,6 @@
 module SearchToolbar exposing (Model, Msg, getSearchQuery, getUpdatedCursorPosition, init, resetUpdatedCursorPosition, update, view)
 
-import Actions exposing (Action(..))
+import Actions exposing (SearchToolbarAction(..))
 import Html exposing (Html, div, input, text)
 import Html.Attributes exposing (id, placeholder, style, type_, value)
 import Html.Events exposing (onClick, preventDefaultOn)
@@ -57,19 +57,19 @@ type Msg
     | SearchKeyDown Int
 
 
-update : Msg -> Model -> ( Model, Maybe Action )
+update : Msg -> Model -> ( Model, Maybe SearchToolbarAction )
 update msg model =
     case msg of
         SearchQueryChanged query cursorPos ->
             ( { model | searchQuery = query }
-            , Just (Actions.SearchToolbarQueryChanged query cursorPos)
+            , Just (Actions.QueryChanged query cursorPos)
             )
 
         CollapseAllClicked ->
-            ( model, Just Actions.SearchToolbarCollapseAll )
+            ( model, Just Actions.CollapseAll )
 
         ExpandAllClicked ->
-            ( model, Just Actions.SearchToolbarExpandAll )
+            ( model, Just Actions.ExpandAll )
 
         SearchKeyDown key ->
             case key of
@@ -79,15 +79,15 @@ update msg model =
                         ( cleanQuery, cursorPos ) =
                             removeTagFromQueryWithPosition model.searchQuery
                     in
-                    ( { model | searchQuery = cleanQuery, updatedCursorPosition = Just cursorPos }, Just Actions.SearchToolbarKeyEnter )
+                    ( { model | searchQuery = cleanQuery, updatedCursorPosition = Just cursorPos }, Just Actions.KeyEnter )
 
                 38 ->
                     -- Up arrow
-                    ( model, Just Actions.SearchToolbarKeyArrowUp )
+                    ( model, Just Actions.KeyArrowUp )
 
                 40 ->
                     -- Down arrow
-                    ( model, Just Actions.SearchToolbarKeyArrowDown )
+                    ( model, Just Actions.KeyArrowDown )
 
                 _ ->
                     ( model, Nothing )

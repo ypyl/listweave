@@ -1,6 +1,6 @@
 port module Main exposing (main)
 
-import Actions exposing (Action)
+import Actions exposing (SearchToolbarAction)
 import Browser
 import Browser.Dom
 import Browser.Events
@@ -14,10 +14,13 @@ import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, fi
 import NewItemButton
 import Regex
 import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition)
-import TagPopup exposing (currentSource, isVisible)
+import TagPopup exposing (currentSource, isVisible, navigateUp)
 import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Time exposing (Month(..), Posix, millisToPosix)
+import TagPopup exposing (navigateDown)
+import TagPopup exposing (hidePopup)
+import TagPopup exposing (showPopup)
 
 
 
@@ -158,28 +161,31 @@ update msg model =
             ( model, Cmd.none )
 
         TagPopupMsg tagPopupMsg ->
-            case tagPopupMsg of
-                TagPopup.HighlightTag tag ->
+            let
+                ( updatedmodel, action ) =
+                    TagPopup.update tagPopupMsg model.tagPopup
+            in
+            case action of
+                Just (Actions.HighlightTag tag) ->
                     case currentSource model.tagPopup of
                         Just TagPopup.FromSearchToolbar ->
                             -- Tag selection from search input
-                            ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup }, Cmd.none )
-                                |> (\( m, c ) -> update (SearchTagSelected tag) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
+                            update (SearchTagSelected tag) { model | tagPopup = updatedmodel }
 
                         Just TagPopup.FromItem ->
                             -- Tag selection from textarea - get current cursor position
                             case findEditingItem model.items of
                                 Just ( editingItem, _ ) ->
-                                    ( { model | tagPopup = TagPopup.update TagPopup.Hide model.tagPopup, pendingTagInsertion = Just tag }, getCurrentCursorPosition (getId editingItem) )
+                                    ( { model | tagPopup = updatedmodel, pendingTagInsertion = Just tag }, getCurrentCursorPosition (getId editingItem) )
 
                                 Nothing ->
-                                    ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+                                    ( { model | tagPopup = updatedmodel }, Cmd.none )
 
                         _ ->
-                            ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+                            ( { model | tagPopup = updatedmodel }, Cmd.none )
 
                 _ ->
-                    ( { model | tagPopup = TagPopup.update tagPopupMsg model.tagPopup }, Cmd.none )
+                    ( { model | tagPopup = updatedmodel }, Cmd.none )
 
         EditItemClick item x y ->
             ( model, getPosition { id = getId item, clientX = x, clientY = y } )
@@ -196,13 +202,13 @@ update msg model =
                     case action of
                         Just act ->
                             case act of
-                                Actions.SearchToolbarCollapseAll ->
+                                Actions.CollapseAll ->
                                     ( { model | items = setAllCollapsed True model.items }, Cmd.none )
 
-                                Actions.SearchToolbarExpandAll ->
+                                Actions.ExpandAll ->
                                     ( { model | items = setAllCollapsed False model.items }, Cmd.none )
 
-                                Actions.SearchToolbarKeyEnter ->
+                                Actions.KeyEnter ->
                                     case TagPopup.getHighlightedTag model.tagPopup of
                                         Just tag ->
                                             update (SearchTagSelected tag) model
@@ -210,13 +216,13 @@ update msg model =
                                         Nothing ->
                                             ( model, Cmd.none )
 
-                                Actions.SearchToolbarKeyArrowUp ->
-                                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateUp model.tagPopup }, Cmd.none )
+                                Actions.KeyArrowUp ->
+                                    ( { model | tagPopup = navigateUp model.tagPopup }, Cmd.none )
 
-                                Actions.SearchToolbarKeyArrowDown ->
-                                    ( { model | tagPopup = TagPopup.update TagPopup.NavigateDown model.tagPopup }, Cmd.none )
+                                Actions.KeyArrowDown ->
+                                    ( { model | tagPopup = navigateDown model.tagPopup }, Cmd.none )
 
-                                Actions.SearchToolbarQueryChanged query cursorPos ->
+                                Actions.QueryChanged query cursorPos ->
                                     let
                                         tagPopupTags =
                                             isInsideTagBrackets cursorPos query
@@ -230,13 +236,13 @@ update msg model =
                                             case tagPopupTags of
                                                 Just tags ->
                                                     if List.isEmpty tags then
-                                                        ( TagPopup.update TagPopup.Hide model.tagPopup, Cmd.none )
+                                                        ( hidePopup model.tagPopup, Cmd.none )
 
                                                     else
                                                         ( TagPopup.setTags ( tags, TagPopup.FromSearchToolbar ) model.tagPopup, getSearchInputPosition () )
 
                                                 Nothing ->
-                                                    ( TagPopup.update TagPopup.Hide model.tagPopup, Cmd.none )
+                                                    ( hidePopup model.tagPopup, Cmd.none )
                                     in
                                     ( { model | tagPopup = updatedTagPopup }
                                     , updatedCmd
@@ -299,7 +305,7 @@ update msg model =
 
                         updatedTagPopup =
                             if List.isEmpty matchingTags then
-                                TagPopup.update TagPopup.Hide model.tagPopup
+                                hidePopup model.tagPopup
 
                             else
                                 -- Store tags temporarily - position will be set when GotCursorPosition arrives
@@ -316,7 +322,7 @@ update msg model =
                 Nothing ->
                     ( { model
                         | items = mapItem (updateItemContentFn item content) model.items
-                        , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
+                        , tagPopup = hidePopup model.tagPopup
                       }
                     , resizeTextarea itemId
                     )
@@ -336,7 +342,7 @@ update msg model =
         GotCursorPosition top left width ->
             case TagPopup.getTags model.tagPopup of
                 Just tags ->
-                    ( { model | tagPopup = TagPopup.update (TagPopup.Show ( top, left, width ) tags) model.tagPopup }, Cmd.none )
+                    ( { model | tagPopup = showPopup ( top, left, width ) tags model.tagPopup }, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -348,7 +354,7 @@ update msg model =
             else
                 ( { model
                     | items = mapItem (saveItemFn item) model.items
-                    , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
+                    , tagPopup = hidePopup model.tagPopup
                   }
                 , Cmd.none
                 )
@@ -416,7 +422,7 @@ update msg model =
             in
             ( { model
                 | items = mapItem (updateItemContentFn item newContent) model.items
-                , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
+                , tagPopup = hidePopup model.tagPopup
                 , noBlur = False
                 , caretTask = Just ( getId item, newCaretPos )
               }
@@ -502,7 +508,7 @@ update msg model =
             else
                 ( { model
                     | selectedTags = model.selectedTags ++ [ tag ]
-                    , tagPopup = TagPopup.update TagPopup.Hide model.tagPopup
+                    , tagPopup = hidePopup model.tagPopup
                   }
                 , Cmd.none
                 )
@@ -592,7 +598,7 @@ view model =
         [ Html.Attributes.style "max-width" "800px"
         , Html.Attributes.style "margin" "0 auto"
         , Html.Attributes.style "padding" "20px"
-        , onClick (TagPopupMsg TagPopup.Hide)
+        , onClick (TagPopupMsg TagPopup.hidePopupMsg)
         ]
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)

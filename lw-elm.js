@@ -11122,23 +11122,16 @@ var $author$project$Main$FocusResult = function (a) {
 };
 var $author$project$TagPopup$FromItem = {$: 'FromItem'};
 var $author$project$TagPopup$FromSearchToolbar = {$: 'FromSearchToolbar'};
-var $author$project$TagPopup$Hide = {$: 'Hide'};
 var $author$project$Main$InsertSelectedTag = F3(
 	function (a, b, c) {
 		return {$: 'InsertSelectedTag', a: a, b: b, c: c};
 	});
-var $author$project$TagPopup$NavigateDown = {$: 'NavigateDown'};
-var $author$project$TagPopup$NavigateUp = {$: 'NavigateUp'};
 var $author$project$Main$SaveItem = function (a) {
 	return {$: 'SaveItem', a: a};
 };
 var $author$project$Main$SearchTagSelected = function (a) {
 	return {$: 'SearchTagSelected', a: a};
 };
-var $author$project$TagPopup$Show = F2(
-	function (a, b) {
-		return {$: 'Show', a: a, b: b};
-	});
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
@@ -11455,6 +11448,11 @@ var $author$project$Main$getSearchInputPosition = _Platform_outgoingPort(
 	});
 var $author$project$TagPopup$getTags = function (model) {
 	return model.tags;
+};
+var $author$project$TagPopup$hidePopup = function (model) {
+	return _Utils_update(
+		model,
+		{highlightedTag: $elm$core$Maybe$Nothing, position: $elm$core$Maybe$Nothing, source: $elm$core$Maybe$Nothing, tags: $elm$core$Maybe$Nothing});
 };
 var $author$project$ListItem$indentItem = F2(
 	function (item, list) {
@@ -11851,6 +11849,133 @@ var $author$project$ListItem$moveItemUp = F2(
 				}),
 			items);
 	});
+var $author$project$TagsUtils$findNext = F2(
+	function (list, current) {
+		findNext:
+		while (true) {
+			if (!list.b) {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (_Utils_eq(x, current)) {
+					if (!xs.b) {
+						return $elm$core$List$head(list);
+					} else {
+						var next = xs.a;
+						return $elm$core$Maybe$Just(next);
+					}
+				} else {
+					var $temp$list = xs,
+						$temp$current = current;
+					list = $temp$list;
+					current = $temp$current;
+					continue findNext;
+				}
+			}
+		}
+	});
+var $author$project$TagPopup$navigateDown = function (model) {
+	var _v0 = _Utils_Tuple2(model.tags, model.highlightedTag);
+	if (_v0.a.$ === 'Just') {
+		if (_v0.b.$ === 'Just') {
+			var tags = _v0.a.a;
+			var current = _v0.b.a;
+			var _v1 = A2($author$project$TagsUtils$findNext, tags, current);
+			if (_v1.$ === 'Just') {
+				var next = _v1.a;
+				return _Utils_update(
+					model,
+					{
+						highlightedTag: $elm$core$Maybe$Just(next)
+					});
+			} else {
+				return model;
+			}
+		} else {
+			var tags = _v0.a.a;
+			var _v2 = _v0.b;
+			var _v3 = $elm$core$List$head(tags);
+			if (_v3.$ === 'Just') {
+				var firstTag = _v3.a;
+				return _Utils_update(
+					model,
+					{
+						highlightedTag: $elm$core$Maybe$Just(firstTag)
+					});
+			} else {
+				return model;
+			}
+		}
+	} else {
+		return model;
+	}
+};
+var $author$project$TagsUtils$findPrev = F2(
+	function (list, current) {
+		findPrev:
+		while (true) {
+			if (!list.b) {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				if (!list.b.b) {
+					var x = list.a;
+					return _Utils_eq(x, current) ? $elm$core$List$head(
+						$elm$core$List$reverse(list)) : $elm$core$Maybe$Nothing;
+				} else {
+					var x = list.a;
+					var _v1 = list.b;
+					var y = _v1.a;
+					var rest = _v1.b;
+					if (_Utils_eq(y, current)) {
+						return $elm$core$Maybe$Just(x);
+					} else {
+						var $temp$list = A2($elm$core$List$cons, y, rest),
+							$temp$current = current;
+						list = $temp$list;
+						current = $temp$current;
+						continue findPrev;
+					}
+				}
+			}
+		}
+	});
+var $author$project$TagPopup$navigateUp = function (model) {
+	var _v0 = _Utils_Tuple2(model.tags, model.highlightedTag);
+	if (_v0.a.$ === 'Just') {
+		if (_v0.b.$ === 'Just') {
+			var tags = _v0.a.a;
+			var current = _v0.b.a;
+			var _v1 = A2($author$project$TagsUtils$findPrev, tags, current);
+			if (_v1.$ === 'Just') {
+				var prev = _v1.a;
+				return _Utils_update(
+					model,
+					{
+						highlightedTag: $elm$core$Maybe$Just(prev)
+					});
+			} else {
+				return model;
+			}
+		} else {
+			var tags = _v0.a.a;
+			var _v2 = _v0.b;
+			var _v3 = $elm$core$List$head(tags);
+			if (_v3.$ === 'Just') {
+				var firstTag = _v3.a;
+				return _Utils_update(
+					model,
+					{
+						highlightedTag: $elm$core$Maybe$Just(firstTag)
+					});
+			} else {
+				return model;
+			}
+		}
+	} else {
+		return model;
+	}
+};
 var $elm$time$Time$Name = function (a) {
 	return {$: 'Name', a: a};
 };
@@ -12018,6 +12143,24 @@ var $author$project$TagPopup$setTags = F2(
 			model,
 			{
 				source: $elm$core$Maybe$Just(source),
+				tags: $elm$core$Maybe$Just(tags)
+			});
+	});
+var $author$project$TagPopup$showPopup = F3(
+	function (position, tags, model) {
+		var selectedTag = function () {
+			if (tags.b) {
+				var t = tags.a;
+				return $elm$core$Maybe$Just(t);
+			} else {
+				return $elm$core$Maybe$Nothing;
+			}
+		}();
+		return _Utils_update(
+			model,
+			{
+				highlightedTag: selectedTag,
+				position: $elm$core$Maybe$Just(position),
 				tags: $elm$core$Maybe$Just(tags)
 			});
 	});
@@ -12368,14 +12511,14 @@ var $author$project$Clipboard$update = F2(
 				}
 		}
 	});
-var $author$project$Actions$SearchToolbarCollapseAll = {$: 'SearchToolbarCollapseAll'};
-var $author$project$Actions$SearchToolbarExpandAll = {$: 'SearchToolbarExpandAll'};
-var $author$project$Actions$SearchToolbarKeyArrowDown = {$: 'SearchToolbarKeyArrowDown'};
-var $author$project$Actions$SearchToolbarKeyArrowUp = {$: 'SearchToolbarKeyArrowUp'};
-var $author$project$Actions$SearchToolbarKeyEnter = {$: 'SearchToolbarKeyEnter'};
-var $author$project$Actions$SearchToolbarQueryChanged = F2(
+var $author$project$Actions$CollapseAll = {$: 'CollapseAll'};
+var $author$project$Actions$ExpandAll = {$: 'ExpandAll'};
+var $author$project$Actions$KeyArrowDown = {$: 'KeyArrowDown'};
+var $author$project$Actions$KeyArrowUp = {$: 'KeyArrowUp'};
+var $author$project$Actions$KeyEnter = {$: 'KeyEnter'};
+var $author$project$Actions$QueryChanged = F2(
 	function (a, b) {
-		return {$: 'SearchToolbarQueryChanged', a: a, b: b};
+		return {$: 'QueryChanged', a: a, b: b};
 	});
 var $elm$regex$Regex$replace = _Regex_replaceAtMost(_Regex_infinity);
 var $author$project$SearchToolbar$tagRegex = A2(
@@ -12429,15 +12572,15 @@ var $author$project$SearchToolbar$update = F2(
 						model,
 						{searchQuery: query}),
 					$elm$core$Maybe$Just(
-						A2($author$project$Actions$SearchToolbarQueryChanged, query, cursorPos)));
+						A2($author$project$Actions$QueryChanged, query, cursorPos)));
 			case 'CollapseAllClicked':
 				return _Utils_Tuple2(
 					model,
-					$elm$core$Maybe$Just($author$project$Actions$SearchToolbarCollapseAll));
+					$elm$core$Maybe$Just($author$project$Actions$CollapseAll));
 			case 'ExpandAllClicked':
 				return _Utils_Tuple2(
 					model,
-					$elm$core$Maybe$Just($author$project$Actions$SearchToolbarExpandAll));
+					$elm$core$Maybe$Just($author$project$Actions$ExpandAll));
 			default:
 				var key = msg.a;
 				switch (key) {
@@ -12452,179 +12595,51 @@ var $author$project$SearchToolbar$update = F2(
 									searchQuery: cleanQuery,
 									updatedCursorPosition: $elm$core$Maybe$Just(cursorPos)
 								}),
-							$elm$core$Maybe$Just($author$project$Actions$SearchToolbarKeyEnter));
+							$elm$core$Maybe$Just($author$project$Actions$KeyEnter));
 					case 38:
 						return _Utils_Tuple2(
 							model,
-							$elm$core$Maybe$Just($author$project$Actions$SearchToolbarKeyArrowUp));
+							$elm$core$Maybe$Just($author$project$Actions$KeyArrowUp));
 					case 40:
 						return _Utils_Tuple2(
 							model,
-							$elm$core$Maybe$Just($author$project$Actions$SearchToolbarKeyArrowDown));
+							$elm$core$Maybe$Just($author$project$Actions$KeyArrowDown));
 					default:
 						return _Utils_Tuple2(model, $elm$core$Maybe$Nothing);
 				}
 		}
 	});
-var $author$project$TagsUtils$findNext = F2(
-	function (list, current) {
-		findNext:
-		while (true) {
-			if (!list.b) {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var x = list.a;
-				var xs = list.b;
-				if (_Utils_eq(x, current)) {
-					if (!xs.b) {
-						return $elm$core$List$head(list);
-					} else {
-						var next = xs.a;
-						return $elm$core$Maybe$Just(next);
-					}
-				} else {
-					var $temp$list = xs,
-						$temp$current = current;
-					list = $temp$list;
-					current = $temp$current;
-					continue findNext;
-				}
-			}
-		}
-	});
-var $author$project$TagsUtils$findPrev = F2(
-	function (list, current) {
-		findPrev:
-		while (true) {
-			if (!list.b) {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				if (!list.b.b) {
-					var x = list.a;
-					return _Utils_eq(x, current) ? $elm$core$List$head(
-						$elm$core$List$reverse(list)) : $elm$core$Maybe$Nothing;
-				} else {
-					var x = list.a;
-					var _v1 = list.b;
-					var y = _v1.a;
-					var rest = _v1.b;
-					if (_Utils_eq(y, current)) {
-						return $elm$core$Maybe$Just(x);
-					} else {
-						var $temp$list = A2($elm$core$List$cons, y, rest),
-							$temp$current = current;
-						list = $temp$list;
-						current = $temp$current;
-						continue findPrev;
-					}
-				}
-			}
-		}
-	});
+var $author$project$Actions$HighlightTag = function (a) {
+	return {$: 'HighlightTag', a: a};
+};
 var $author$project$TagPopup$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
-			case 'Show':
-				var position = msg.a;
-				var tags = msg.b;
-				var selectedTag = function () {
-					if (tags.b) {
-						var t = tags.a;
-						return $elm$core$Maybe$Just(t);
-					} else {
-						return $elm$core$Maybe$Nothing;
-					}
-				}();
-				return _Utils_update(
-					model,
-					{
-						highlightedTag: selectedTag,
-						position: $elm$core$Maybe$Just(position),
-						tags: $elm$core$Maybe$Just(tags)
-					});
 			case 'Hide':
-				return _Utils_update(
-					model,
-					{highlightedTag: $elm$core$Maybe$Nothing, position: $elm$core$Maybe$Nothing, source: $elm$core$Maybe$Nothing, tags: $elm$core$Maybe$Nothing});
+				return _Utils_Tuple2(
+					$author$project$TagPopup$hidePopup(model),
+					$elm$core$Maybe$Nothing);
 			case 'NavigateUp':
-				var _v2 = _Utils_Tuple2(model.tags, model.highlightedTag);
-				if (_v2.a.$ === 'Just') {
-					if (_v2.b.$ === 'Just') {
-						var tags = _v2.a.a;
-						var current = _v2.b.a;
-						var _v3 = A2($author$project$TagsUtils$findPrev, tags, current);
-						if (_v3.$ === 'Just') {
-							var prev = _v3.a;
-							return _Utils_update(
-								model,
-								{
-									highlightedTag: $elm$core$Maybe$Just(prev)
-								});
-						} else {
-							return model;
-						}
-					} else {
-						var tags = _v2.a.a;
-						var _v4 = _v2.b;
-						var _v5 = $elm$core$List$head(tags);
-						if (_v5.$ === 'Just') {
-							var firstTag = _v5.a;
-							return _Utils_update(
-								model,
-								{
-									highlightedTag: $elm$core$Maybe$Just(firstTag)
-								});
-						} else {
-							return model;
-						}
-					}
-				} else {
-					return model;
-				}
+				return _Utils_Tuple2(
+					$author$project$TagPopup$navigateUp(model),
+					$elm$core$Maybe$Nothing);
 			case 'NavigateDown':
-				var _v6 = _Utils_Tuple2(model.tags, model.highlightedTag);
-				if (_v6.a.$ === 'Just') {
-					if (_v6.b.$ === 'Just') {
-						var tags = _v6.a.a;
-						var current = _v6.b.a;
-						var _v7 = A2($author$project$TagsUtils$findNext, tags, current);
-						if (_v7.$ === 'Just') {
-							var next = _v7.a;
-							return _Utils_update(
-								model,
-								{
-									highlightedTag: $elm$core$Maybe$Just(next)
-								});
-						} else {
-							return model;
-						}
-					} else {
-						var tags = _v6.a.a;
-						var _v8 = _v6.b;
-						var _v9 = $elm$core$List$head(tags);
-						if (_v9.$ === 'Just') {
-							var firstTag = _v9.a;
-							return _Utils_update(
-								model,
-								{
-									highlightedTag: $elm$core$Maybe$Just(firstTag)
-								});
-						} else {
-							return model;
-						}
-					}
-				} else {
-					return model;
-				}
+				return _Utils_Tuple2(
+					$author$project$TagPopup$navigateDown(model),
+					$elm$core$Maybe$Nothing);
 			case 'HighlightTag':
 				var tag = msg.a;
-				return _Utils_update(
-					model,
-					{
-						highlightedTag: $elm$core$Maybe$Just(tag)
-					});
+				var hidenPopup = $author$project$TagPopup$hidePopup(model);
+				return _Utils_Tuple2(
+					_Utils_update(
+						hidenPopup,
+						{
+							highlightedTag: $elm$core$Maybe$Just(tag)
+						}),
+					$elm$core$Maybe$Just(
+						$author$project$Actions$HighlightTag(tag)));
 			default:
-				return model;
+				return _Utils_Tuple2(model, $elm$core$Maybe$Nothing);
 		}
 	});
 var $elm$core$List$all = F2(
@@ -12691,36 +12706,24 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				case 'TagPopupMsg':
 					var tagPopupMsg = msg.a;
-					if (tagPopupMsg.$ === 'HighlightTag') {
-						var tag = tagPopupMsg.a;
-						var _v2 = $author$project$TagPopup$currentSource(model.tagPopup);
-						if (_v2.$ === 'Just') {
-							if (_v2.a.$ === 'FromSearchToolbar') {
-								var _v3 = _v2.a;
-								return function (_v4) {
-									var m = _v4.a;
-									var c = _v4.b;
-									return A2(
-										$elm$core$Tuple$mapSecond,
-										function (cmd) {
-											return $elm$core$Platform$Cmd$batch(
-												_List_fromArray(
-													[c, cmd]));
-										},
-										A2(
-											$author$project$Main$update,
-											$author$project$Main$SearchTagSelected(tag),
-											m));
-								}(
-									_Utils_Tuple2(
-										_Utils_update(
-											model,
-											{
-												tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup)
-											}),
-										$elm$core$Platform$Cmd$none));
+					var _v1 = A2($author$project$TagPopup$update, tagPopupMsg, model.tagPopup);
+					var updatedmodel = _v1.a;
+					var action = _v1.b;
+					if (action.$ === 'Just') {
+						var tag = action.a.a;
+						var _v3 = $author$project$TagPopup$currentSource(model.tagPopup);
+						if (_v3.$ === 'Just') {
+							if (_v3.a.$ === 'FromSearchToolbar') {
+								var _v4 = _v3.a;
+								var $temp$msg = $author$project$Main$SearchTagSelected(tag),
+									$temp$model = _Utils_update(
+									model,
+									{tagPopup: updatedmodel});
+								msg = $temp$msg;
+								model = $temp$model;
+								continue update;
 							} else {
-								var _v5 = _v2.a;
+								var _v5 = _v3.a;
 								var _v6 = $author$project$ListItem$findEditingItem(model.items);
 								if (_v6.$ === 'Just') {
 									var _v7 = _v6.a;
@@ -12730,7 +12733,7 @@ var $author$project$Main$update = F2(
 											model,
 											{
 												pendingTagInsertion: $elm$core$Maybe$Just(tag),
-												tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup)
+												tagPopup: updatedmodel
 											}),
 										$author$project$Main$getCurrentCursorPosition(
 											$author$project$ListItem$getId(editingItem)));
@@ -12738,9 +12741,7 @@ var $author$project$Main$update = F2(
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
-											{
-												tagPopup: A2($author$project$TagPopup$update, tagPopupMsg, model.tagPopup)
-											}),
+											{tagPopup: updatedmodel}),
 										$elm$core$Platform$Cmd$none);
 								}
 							}
@@ -12748,18 +12749,14 @@ var $author$project$Main$update = F2(
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
-									{
-										tagPopup: A2($author$project$TagPopup$update, tagPopupMsg, model.tagPopup)
-									}),
+									{tagPopup: updatedmodel}),
 								$elm$core$Platform$Cmd$none);
 						}
 					} else {
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{
-									tagPopup: A2($author$project$TagPopup$update, tagPopupMsg, model.tagPopup)
-								}),
+								{tagPopup: updatedmodel}),
 							$elm$core$Platform$Cmd$none);
 					}
 				case 'EditItemClick':
@@ -12789,7 +12786,7 @@ var $author$project$Main$update = F2(
 						if (action.$ === 'Just') {
 							var act = action.a;
 							switch (act.$) {
-								case 'SearchToolbarCollapseAll':
+								case 'CollapseAll':
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
@@ -12797,7 +12794,7 @@ var $author$project$Main$update = F2(
 												items: A2($author$project$ListItem$setAllCollapsed, true, model.items)
 											}),
 										$elm$core$Platform$Cmd$none);
-								case 'SearchToolbarExpandAll':
+								case 'ExpandAll':
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
@@ -12805,7 +12802,7 @@ var $author$project$Main$update = F2(
 												items: A2($author$project$ListItem$setAllCollapsed, false, model.items)
 											}),
 										$elm$core$Platform$Cmd$none);
-								case 'SearchToolbarKeyEnter':
+								case 'KeyEnter':
 									var _v12 = $author$project$TagPopup$getHighlightedTag(model.tagPopup);
 									if (_v12.$ === 'Just') {
 										var tag = _v12.a;
@@ -12816,20 +12813,20 @@ var $author$project$Main$update = F2(
 									} else {
 										return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 									}
-								case 'SearchToolbarKeyArrowUp':
+								case 'KeyArrowUp':
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
 											{
-												tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$NavigateUp, model.tagPopup)
+												tagPopup: $author$project$TagPopup$navigateUp(model.tagPopup)
 											}),
 										$elm$core$Platform$Cmd$none);
-								case 'SearchToolbarKeyArrowDown':
+								case 'KeyArrowDown':
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
 											{
-												tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$NavigateDown, model.tagPopup)
+												tagPopup: $author$project$TagPopup$navigateDown(model.tagPopup)
 											}),
 										$elm$core$Platform$Cmd$none);
 								default:
@@ -12849,7 +12846,7 @@ var $author$project$Main$update = F2(
 										if (tagPopupTags.$ === 'Just') {
 											var tags = tagPopupTags.a;
 											return $elm$core$List$isEmpty(tags) ? _Utils_Tuple2(
-												A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup),
+												$author$project$TagPopup$hidePopup(model.tagPopup),
 												$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
 												A2(
 													$author$project$TagPopup$setTags,
@@ -12858,7 +12855,7 @@ var $author$project$Main$update = F2(
 												$author$project$Main$getSearchInputPosition(_Utils_Tuple0));
 										} else {
 											return _Utils_Tuple2(
-												A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup),
+												$author$project$TagPopup$hidePopup(model.tagPopup),
 												$elm$core$Platform$Cmd$none);
 										}
 									}();
@@ -13003,7 +13000,7 @@ var $author$project$Main$update = F2(
 								$elm$core$List$filter,
 								$elm$core$String$startsWith(tagSearchPrefix),
 								$author$project$ListItem$getAllTags(model.items)));
-						var updatedTagPopup = $elm$core$List$isEmpty(matchingTags) ? A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup) : A2(
+						var updatedTagPopup = $elm$core$List$isEmpty(matchingTags) ? $author$project$TagPopup$hidePopup(model.tagPopup) : A2(
 							$author$project$TagPopup$setTags,
 							_Utils_Tuple2(matchingTags, $author$project$TagPopup$FromItem),
 							model.tagPopup);
@@ -13033,7 +13030,7 @@ var $author$project$Main$update = F2(
 										$author$project$ListItem$mapItem,
 										A2($author$project$ListItem$updateItemContentFn, item, content),
 										model.items),
-									tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup)
+									tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 								}),
 							$author$project$Main$resizeTextarea(itemId));
 					}
@@ -13108,12 +13105,10 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								model,
 								{
-									tagPopup: A2(
-										$author$project$TagPopup$update,
-										A2(
-											$author$project$TagPopup$Show,
-											_Utils_Tuple3(top, left, width),
-											tags),
+									tagPopup: A3(
+										$author$project$TagPopup$showPopup,
+										_Utils_Tuple3(top, left, width),
+										tags,
 										model.tagPopup)
 								}),
 							$elm$core$Platform$Cmd$none);
@@ -13137,7 +13132,7 @@ var $author$project$Main$update = F2(
 									$author$project$ListItem$mapItem,
 									$author$project$ListItem$saveItemFn(item),
 									model.items),
-								tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup)
+								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 							}),
 						$elm$core$Platform$Cmd$none);
 				case 'GoToItem':
@@ -13253,7 +13248,7 @@ var $author$project$Main$update = F2(
 									A2($author$project$ListItem$updateItemContentFn, item, newContent),
 									model.items),
 								noBlur: false,
-								tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup)
+								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 							}),
 						$elm$core$Platform$Cmd$none);
 				case 'NavigateToPreviousWithColumn':
@@ -13358,7 +13353,7 @@ var $author$project$Main$update = F2(
 									model.selectedTags,
 									_List_fromArray(
 										[tag])),
-								tagPopup: A2($author$project$TagPopup$update, $author$project$TagPopup$Hide, model.tagPopup)
+								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 							}),
 						$elm$core$Platform$Cmd$none);
 				case 'RemoveSelectedTag':
@@ -13481,6 +13476,8 @@ var $author$project$ListItem$filterItems = F3(
 var $author$project$SearchToolbar$getSearchQuery = function (model) {
 	return model.searchQuery;
 };
+var $author$project$TagPopup$Hide = {$: 'Hide'};
+var $author$project$TagPopup$hidePopupMsg = $author$project$TagPopup$Hide;
 var $author$project$TagPopup$isVisible = function (model) {
 	var _v0 = _Utils_Tuple2(model.position, model.tags);
 	if ((_v0.a.$ === 'Just') && (_v0.b.$ === 'Just')) {
@@ -13800,6 +13797,10 @@ var $author$project$KeyboardHandler$keyFromCode = function (code) {
 			return $author$project$KeyboardHandler$Other(code);
 	}
 };
+var $author$project$TagPopup$NavigateDown = {$: 'NavigateDown'};
+var $author$project$TagPopup$navigateDownMsg = $author$project$TagPopup$NavigateDown;
+var $author$project$TagPopup$NavigateUp = {$: 'NavigateUp'};
+var $author$project$TagPopup$navigateUpMsg = $author$project$TagPopup$NavigateUp;
 var $author$project$KeyboardHandler$onKeyDown = F2(
 	function (config, item) {
 		var valueDecoder = A2(
@@ -13888,7 +13889,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										return _Utils_Tuple2(config.onNoOp, false);
 									} else {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$Hide),
+											config.onTagPopupMsg($author$project$TagPopup$hidePopupMsg),
 											false);
 									}
 								case 'Right':
@@ -13897,7 +13898,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										return _Utils_Tuple2(config.onNoOp, false);
 									} else {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$Hide),
+											config.onTagPopupMsg($author$project$TagPopup$hidePopupMsg),
 											false);
 									}
 								case 'Escape':
@@ -13909,7 +13910,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 									} else {
 										if (_v5.b) {
 											return _Utils_Tuple2(
-												config.onTagPopupMsg($author$project$TagPopup$Hide),
+												config.onTagPopupMsg($author$project$TagPopup$hidePopupMsg),
 												true);
 										} else {
 											return _Utils_Tuple2(config.onNoOp, false);
@@ -13918,7 +13919,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 								case 'Down':
 									if ($author$project$TagPopup$isVisible(config.tagPopup)) {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$NavigateDown),
+											config.onTagPopupMsg($author$project$TagPopup$navigateDownMsg),
 											true);
 									} else {
 										var lines = $elm$core$String$lines(value);
@@ -13948,7 +13949,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 								case 'Up':
 									if ($author$project$TagPopup$isVisible(config.tagPopup)) {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$NavigateUp),
+											config.onTagPopupMsg($author$project$TagPopup$navigateUpMsg),
 											true);
 									} else {
 										var currentLineIndex = function (n) {
@@ -14529,7 +14530,7 @@ var $author$project$Main$view = function (model) {
 				A2($elm$html$Html$Attributes$style, 'margin', '0 auto'),
 				A2($elm$html$Html$Attributes$style, 'padding', '20px'),
 				$elm$html$Html$Events$onClick(
-				$author$project$Main$TagPopupMsg($author$project$TagPopup$Hide))
+				$author$project$Main$TagPopupMsg($author$project$TagPopup$hidePopupMsg))
 			]),
 		A2(
 			$elm$core$List$cons,
@@ -14573,4 +14574,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"SaveItem":["ListItem.ListItem"],"GoToItem":["Basics.Int"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Show":["( Basics.Int, Basics.Int, Basics.Int )","List.List String.String"],"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int"],"SaveItem":["ListItem.ListItem"],"GoToItem":["Basics.Int"],"CreateItemAfter":["ListItem.ListItem"],"CreateItemAfterWithTime":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":[],"CreateItemAtEndWithTime":["Time.Posix"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"SearchTagSelected":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

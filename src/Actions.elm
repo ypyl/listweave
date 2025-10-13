@@ -1,10 +1,13 @@
 module Actions exposing (..)
 
 
-type Action
-    = SearchToolbarKeyArrowUp
-    | SearchToolbarKeyArrowDown
-    | SearchToolbarKeyEnter
-    | SearchToolbarCollapseAll
-    | SearchToolbarExpandAll
-    | SearchToolbarQueryChanged String Int
+type SearchToolbarAction
+    = KeyArrowUp
+    | KeyArrowDown
+    | KeyEnter
+    | CollapseAll
+    | ExpandAll
+    | QueryChanged String Int
+
+type TagPopupAction
+    = HighlightTag String

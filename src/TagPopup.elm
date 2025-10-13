@@ -1,17 +1,25 @@
 module TagPopup exposing
     ( Model
-    , Msg(..)
+    , Msg
     , Source(..)
+    , currentSource
     , getHighlightedTag
     , getTags
+    , hidePopup
+    , hidePopupMsg
     , init
     , isVisible
+    , navigateDown
+    , navigateDownMsg
+    , navigateUp
+    , navigateUpMsg
     , setTags
     , update
     , view
-    , currentSource
+    , showPopup
     )
 
+import Actions exposing (TagPopupAction)
 import Html exposing (Html, div, text)
 import Html.Attributes
 import Html.Events exposing (onClick, stopPropagationOn)
@@ -35,11 +43,56 @@ type alias Model =
     , source : Maybe Source
     }
 
-currentSource: Model -> Maybe Source
+
+currentSource : Model -> Maybe Source
 currentSource model =
     model.source
 
 
+navigateUp : Model -> Model
+navigateUp model =
+    case ( model.tags, model.highlightedTag ) of
+        ( Just tags, Just current ) ->
+            case TagsUtils.findPrev tags current of
+                Just prev ->
+                    { model | highlightedTag = Just prev }
+
+                Nothing ->
+                    model
+
+        ( Just tags, Nothing ) ->
+            case List.head tags of
+                Just firstTag ->
+                    { model | highlightedTag = Just firstTag }
+
+                Nothing ->
+                    model
+
+        _ ->
+            model
+
+
+navigateDown : Model -> Model
+navigateDown model =
+    case ( model.tags, model.highlightedTag ) of
+        ( Just tags, Just current ) ->
+            case TagsUtils.findNext tags current of
+                Just next ->
+                    { model | highlightedTag = Just next }
+
+                Nothing ->
+                    model
+
+        ( Just tags, Nothing ) ->
+            case List.head tags of
+                Just firstTag ->
+                    { model | highlightedTag = Just firstTag }
+
+                Nothing ->
+                    model
+
+        _ ->
+            model
 
 
 init : Model
@@ -56,88 +109,83 @@ init =
 
 
 type Msg
-    = Show ( Int, Int, Int ) (List String)
-    | Hide
+    = Hide
     | NavigateUp
     | NavigateDown
     | HighlightTag String
     | NoOp
 
 
-update : Msg -> Model -> Model
+hidePopupMsg : Msg
+hidePopupMsg =
+    Hide
+
+
+navigateDownMsg : Msg
+navigateDownMsg =
+    NavigateDown
+
+
+navigateUpMsg : Msg
+navigateUpMsg =
+    NavigateUp
+
+
+update : Msg -> Model -> ( Model, Maybe TagPopupAction )
 update msg model =
     case msg of
-        Show position tags ->
-            let
-                selectedTag =
-                    case tags of
-                        t :: _ ->
-                            Just t
-
-                        [] ->
-                            Nothing
-            in
-            { model
-                | position = Just position
-                , tags = Just tags
-                , highlightedTag = selectedTag
-            }
-
         Hide ->
-            { model
-                | position = Nothing
-                , tags = Nothing
-                , highlightedTag = Nothing
-                , source = Nothing
-            }
+            ( hidePopup model
+            , Nothing
+            )
 
         NavigateUp ->
-            case ( model.tags, model.highlightedTag ) of
-                ( Just tags, Just current ) ->
-                    case TagsUtils.findPrev tags current of
-                        Just prev ->
-                            { model | highlightedTag = Just prev }
-
-                        Nothing ->
-                            model
-
-                ( Just tags, Nothing ) ->
-                    case List.head tags of
-                        Just firstTag ->
-                            { model | highlightedTag = Just firstTag }
-
-                        Nothing ->
-                            model
-
-                _ ->
-                    model
+            ( navigateUp model, Nothing )
 
         NavigateDown ->
-            case ( model.tags, model.highlightedTag ) of
-                ( Just tags, Just current ) ->
-                    case TagsUtils.findNext tags current of
-                        Just next ->
-                            { model | highlightedTag = Just next }
-
-                        Nothing ->
-                            model
-
-                ( Just tags, Nothing ) ->
-                    case List.head tags of
-                        Just firstTag ->
-                            { model | highlightedTag = Just firstTag }
-
-                        Nothing ->
-                            model
-
-                _ ->
-                    model
+            ( navigateDown model, Nothing )
 
         HighlightTag tag ->
-            { model | highlightedTag = Just tag }
+            let
+                hidenPopup =
+                    hidePopup model
+            in
+            ( { hidenPopup
+                | highlightedTag = Just tag
+              }
+            , Just (Actions.HighlightTag tag)
+            )
 
         NoOp ->
-            model
+            ( model, Nothing )
+
+
+hidePopup : Model -> Model
+hidePopup model =
+    { model
+        | position = Nothing
+        , tags = Nothing
+        , highlightedTag = Nothing
+        , source = Nothing
+    }
+
+
+showPopup : ( Int, Int, Int ) -> List String -> Model -> Model
+showPopup position tags model =
+    let
+        selectedTag =
+            case tags of
+                t :: _ ->
+                    Just t
+
+                [] ->
+                    Nothing
+    in
+    { model
+        | position = Just position
+        , tags = Just tags
+        , highlightedTag = selectedTag
+    }
 
 
 
@@ -199,9 +247,9 @@ viewPopupTag currentHighlightedTag tag =
 -- PUBLIC HELPERS
 
 
-setTags : (List String, Source) -> Model -> Model
-setTags (tags, source) model =
-    { model | tags = Just tags, source = Just source}
+setTags : ( List String, Source ) -> Model -> Model
+setTags ( tags, source ) model =
+    { model | tags = Just tags, source = Just source }
 
 
 isVisible : Model -> Bool
