@@ -1,18 +1,15 @@
 module TagPopup exposing
     ( Model
-    , Msg
+    , Msg(..)
     , Source(..)
     , currentSource
     , getHighlightedTag
     , getTags
     , hidePopup
-    , hidePopupMsg
     , init
     , isVisible
     , navigateDown
-    , navigateDownMsg
     , navigateUp
-    , navigateUpMsg
     , setTags
     , update
     , view
@@ -114,21 +111,6 @@ type Msg
     | NavigateDown
     | HighlightTag String
     | NoOp
-
-
-hidePopupMsg : Msg
-hidePopupMsg =
-    Hide
-
-
-navigateDownMsg : Msg
-navigateDownMsg =
-    NavigateDown
-
-
-navigateUpMsg : Msg
-navigateUpMsg =
-    NavigateUp
 
 
 update : Msg -> Model -> ( Model, Maybe TagPopupAction )

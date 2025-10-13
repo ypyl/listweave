@@ -598,7 +598,7 @@ view model =
         [ Html.Attributes.style "max-width" "800px"
         , Html.Attributes.style "margin" "0 auto"
         , Html.Attributes.style "padding" "20px"
-        , onClick (TagPopupMsg TagPopup.hidePopupMsg)
+        , onClick (TagPopupMsg TagPopup.Hide)
         ]
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)

@@ -13378,6 +13378,7 @@ var $author$project$Main$update = F2(
 		}
 	});
 var $author$project$Main$CreateItemAtEnd = {$: 'CreateItemAtEnd'};
+var $author$project$TagPopup$Hide = {$: 'Hide'};
 var $author$project$Main$SearchToolbarMsg = function (a) {
 	return {$: 'SearchToolbarMsg', a: a};
 };
@@ -13476,8 +13477,6 @@ var $author$project$ListItem$filterItems = F3(
 var $author$project$SearchToolbar$getSearchQuery = function (model) {
 	return model.searchQuery;
 };
-var $author$project$TagPopup$Hide = {$: 'Hide'};
-var $author$project$TagPopup$hidePopupMsg = $author$project$TagPopup$Hide;
 var $author$project$TagPopup$isVisible = function (model) {
 	var _v0 = _Utils_Tuple2(model.position, model.tags);
 	if ((_v0.a.$ === 'Just') && (_v0.b.$ === 'Just')) {
@@ -13763,6 +13762,8 @@ var $elm$html$Html$Events$onBlur = function (msg) {
 		'blur',
 		$elm$json$Json$Decode$succeed(msg));
 };
+var $author$project$TagPopup$NavigateDown = {$: 'NavigateDown'};
+var $author$project$TagPopup$NavigateUp = {$: 'NavigateUp'};
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $author$project$Clipboard$hasItem = function (model) {
 	return !_Utils_eq(model.clipboard, $elm$core$Maybe$Nothing);
@@ -13797,10 +13798,6 @@ var $author$project$KeyboardHandler$keyFromCode = function (code) {
 			return $author$project$KeyboardHandler$Other(code);
 	}
 };
-var $author$project$TagPopup$NavigateDown = {$: 'NavigateDown'};
-var $author$project$TagPopup$navigateDownMsg = $author$project$TagPopup$NavigateDown;
-var $author$project$TagPopup$NavigateUp = {$: 'NavigateUp'};
-var $author$project$TagPopup$navigateUpMsg = $author$project$TagPopup$NavigateUp;
 var $author$project$KeyboardHandler$onKeyDown = F2(
 	function (config, item) {
 		var valueDecoder = A2(
@@ -13889,7 +13886,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										return _Utils_Tuple2(config.onNoOp, false);
 									} else {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$hidePopupMsg),
+											config.onTagPopupMsg($author$project$TagPopup$Hide),
 											false);
 									}
 								case 'Right':
@@ -13898,7 +13895,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										return _Utils_Tuple2(config.onNoOp, false);
 									} else {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$hidePopupMsg),
+											config.onTagPopupMsg($author$project$TagPopup$Hide),
 											false);
 									}
 								case 'Escape':
@@ -13910,7 +13907,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 									} else {
 										if (_v5.b) {
 											return _Utils_Tuple2(
-												config.onTagPopupMsg($author$project$TagPopup$hidePopupMsg),
+												config.onTagPopupMsg($author$project$TagPopup$Hide),
 												true);
 										} else {
 											return _Utils_Tuple2(config.onNoOp, false);
@@ -13919,7 +13916,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 								case 'Down':
 									if ($author$project$TagPopup$isVisible(config.tagPopup)) {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$navigateDownMsg),
+											config.onTagPopupMsg($author$project$TagPopup$NavigateDown),
 											true);
 									} else {
 										var lines = $elm$core$String$lines(value);
@@ -13949,7 +13946,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 								case 'Up':
 									if ($author$project$TagPopup$isVisible(config.tagPopup)) {
 										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$navigateUpMsg),
+											config.onTagPopupMsg($author$project$TagPopup$NavigateUp),
 											true);
 									} else {
 										var currentLineIndex = function (n) {
@@ -14530,7 +14527,7 @@ var $author$project$Main$view = function (model) {
 				A2($elm$html$Html$Attributes$style, 'margin', '0 auto'),
 				A2($elm$html$Html$Attributes$style, 'padding', '20px'),
 				$elm$html$Html$Events$onClick(
-				$author$project$Main$TagPopupMsg($author$project$TagPopup$hidePopupMsg))
+				$author$project$Main$TagPopupMsg($author$project$TagPopup$Hide))
 			]),
 		A2(
 			$elm$core$List$cons,

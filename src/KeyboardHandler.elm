@@ -7,9 +7,6 @@ import Json.Decode as D
 import ListItem exposing (ListItem, getContent)
 import TagPopup
 import TagsUtils
-import TagPopup exposing (hidePopup)
-import TagPopup exposing (navigateDownMsg, hidePopupMsg)
-import TagPopup exposing (navigateUpMsg)
 
 
 type Key
@@ -142,7 +139,7 @@ onKeyDown config item =
                                     ( config.onNoOp, False )
 
                                 Nothing ->
-                                    ( config.onTagPopupMsg hidePopupMsg, False )
+                                    ( config.onTagPopupMsg TagPopup.Hide, False )
 
                         Right ->
                             case TagsUtils.focusedTag cursorPos value of
@@ -150,7 +147,7 @@ onKeyDown config item =
                                     ( config.onNoOp, False )
 
                                 Nothing ->
-                                    ( config.onTagPopupMsg hidePopupMsg, False )
+                                    ( config.onTagPopupMsg TagPopup.Hide, False )
 
                         Escape ->
                             case ( Clipboard.hasItem config.clipboard, TagPopup.isVisible config.tagPopup ) of
@@ -158,14 +155,14 @@ onKeyDown config item =
                                     ( config.onRestoreCutItem, True )
 
                                 ( False, True ) ->
-                                    ( config.onTagPopupMsg hidePopupMsg, True )
+                                    ( config.onTagPopupMsg TagPopup.Hide, True )
 
                                 ( False, False ) ->
                                     ( config.onNoOp, False )
 
                         Down ->
                             if TagPopup.isVisible config.tagPopup then
-                                ( config.onTagPopupMsg navigateDownMsg, True )
+                                ( config.onTagPopupMsg TagPopup.NavigateDown, True )
 
                             else
                                 let
@@ -196,7 +193,7 @@ onKeyDown config item =
 
                         Up ->
                             if TagPopup.isVisible config.tagPopup then
-                                ( config.onTagPopupMsg navigateUpMsg, True )
+                                ( config.onTagPopupMsg TagPopup.NavigateUp, True )
 
                             else
                                 let
