@@ -159,18 +159,6 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        SortByDate ->
-            let
-                newSortOrder =
-                    case model.sortOrder of
-                        Manual ->
-                            ByDate
-
-                        ByDate ->
-                            Manual
-            in
-            ( { model | sortOrder = newSortOrder }, Cmd.none )
-
         TagPopupMsg tagPopupMsg ->
             let
                 ( updatedmodel, action ) =
