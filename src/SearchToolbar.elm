@@ -1,12 +1,14 @@
-module SearchToolbar exposing (Model, Msg, getSearchQuery, getUpdatedCursorPosition, init, resetUpdatedCursorPosition, update, view)
+module SearchToolbar exposing (Model, Msg(..), getSelectedTags, getUpdatedCursorPosition, init, resetUpdatedCursorPosition, update, view, selectTag, addTagToSelected, getFilteredItems)
 
-import Actions exposing (SearchToolbarAction(..))
-import Html exposing (Html, div, input, text)
+import Actions exposing (SearchToolbarAction(..), SortOrder(..))
+import Html exposing (Html, div, input, span, text)
 import Html.Attributes exposing (id, placeholder, type_, value)
 import Html.Events exposing (onClick, preventDefaultOn)
 import Json.Decode as D
 import Regex
 import Theme
+import ListItem exposing (ListItem)
+import ListItem exposing (filterItems)
 
 
 
@@ -32,6 +34,7 @@ whitespaceRegex =
 type alias Model =
     { searchQuery : String
     , updatedCursorPosition : Maybe Int
+    , selectedTags : List String
     }
 
 
@@ -44,9 +47,18 @@ init : Model
 init =
     { searchQuery = ""
     , updatedCursorPosition = Nothing
+    , selectedTags = []
     }
 
 
+getSelectedTags : Model -> List String
+getSelectedTags model =
+    model.selectedTags
+
+
+getFilteredItems : Model -> List ListItem -> List ListItem
+getFilteredItems model =
+    filterItems model.searchQuery model.selectedTags
 
 -- UPDATE
 
@@ -56,6 +68,14 @@ type Msg
     | CollapseAllClicked
     | ExpandAllClicked
     | SearchKeyDown Int
+    | SortOrderChanged String
+    | RemoveSelectedTag String
+    | ClearAllSelectedTags
+    | AddTagToSelected String
+
+addTagToSelected : String -> Msg
+addTagToSelected tag =
+    AddTagToSelected tag
 
 
 update : Msg -> Model -> ( Model, Maybe SearchToolbarAction )
@@ -71,6 +91,9 @@ update msg model =
 
         ExpandAllClicked ->
             ( model, Just Actions.ExpandAll )
+
+        SortOrderChanged sortOrder ->
+            ( model, Just (Actions.SetSortOrder (getSortOrder sortOrder)) )
 
         SearchKeyDown key ->
             case key of
@@ -93,30 +116,110 @@ update msg model =
                 _ ->
                     ( model, Nothing )
 
+        RemoveSelectedTag tag ->
+            ({ model | selectedTags = List.filter ((/=) tag) model.selectedTags }, Nothing)
+
+        ClearAllSelectedTags ->
+            ({ model | selectedTags = [] }, Nothing)
+
+        AddTagToSelected tag ->
+            if String.isEmpty tag || List.member tag model.selectedTags then
+                (model, Nothing)
+
+            else
+                ({ model | selectedTags = model.selectedTags ++ [ tag ] }, Nothing)
+
+
+selectTag : String -> Model -> Model
+selectTag tag model =
+    if String.isEmpty tag || List.member tag model.selectedTags then
+        model
+
+    else
+        { model
+            | selectedTags = model.selectedTags ++ [ tag ]
+            -- , tagPopup = hidePopup model.tagPopup
+          }
 
 
 -- VIEW
 
 
+getSortOrder : String -> SortOrder
+getSortOrder sortOrder =
+    case sortOrder of
+        "Updated Date" ->
+            ByUpdatedDate
+
+        "Created Date" ->
+            ByCreatedDate
+
+        _ ->
+            ByCreatedDate
+
+
 view : Model -> Bool -> Html Msg
 view model listenKeydownEvents =
-    div Theme.searchToolbar
-        [ div
-            (onClick CollapseAllClicked :: Theme.button)
-            [ text "Collapse All" ]
-        , div
-            (onClick ExpandAllClicked :: Theme.button)
-            [ text "Expand All" ]
-        , input
-            ([ type_ "text"
-            , id "search-input"
-            , placeholder "Search... (type @tag to filter by tags)"
-            , value model.searchQuery
-            , preventDefaultOn "input" inputDecoder
-            , preventDefaultOn "keydown" (keydownDecoder listenKeydownEvents)
-            ] ++ Theme.searchInput)
-            []
+    div []
+        [ div Theme.searchToolbar
+            [ div
+                (onClick CollapseAllClicked :: Theme.button)
+                [ text "Collapse All" ]
+            , div
+                (onClick ExpandAllClicked :: Theme.button)
+                [ text "Expand All" ]
+            , input
+                ([ type_ "text"
+                 , id "search-input"
+                 , placeholder "Search... (type @tag to filter by tags)"
+                 , value model.searchQuery
+                 , preventDefaultOn "input" inputDecoder
+                 , preventDefaultOn "keydown" (keydownDecoder listenKeydownEvents)
+                 ]
+                    ++ Theme.searchInput
+                )
+                []
+            ]
+        , div Theme.searchToolbar
+            [ viewSelectedTags model.selectedTags
+            , div
+                Theme.select
+                [ text "Sort by"
+                , div Theme.buttonGroup
+                    [ div (onClick (SortOrderChanged "Created Date") :: Theme.buttonGroupFirst) [ text "created" ]
+                    , div (onClick (SortOrderChanged "Updated Date") :: Theme.buttonGroupLast) [ text "updated" ]
+                    ]
+                , text "date"
+                ]
+            ]
         ]
+
+
+viewSelectedTags : List String -> Html Msg
+viewSelectedTags selectedTags =
+    if List.isEmpty selectedTags then
+        text ""
+
+    else
+        div Theme.selectedTagsContainer
+            (List.map viewTagChip selectedTags ++ [ viewClearAllButton ])
+
+
+viewTagChip : String -> Html Msg
+viewTagChip tag =
+    div Theme.tagChip
+        [ text ("@" ++ tag)
+        , span
+            (onClick (RemoveSelectedTag tag) :: Theme.tagChipClose)
+            [ text "×" ]
+        ]
+
+
+viewClearAllButton : Html Msg
+viewClearAllButton =
+    div
+        (onClick ClearAllSelectedTags :: Theme.button)
+        [ text "Clear all" ]
 
 
 
@@ -183,11 +286,6 @@ removeTagFromQueryWithPosition query =
         |> Regex.replace whitespaceRegex (\_ -> " ")
     , cursorPos
     )
-
-
-getSearchQuery : Model -> String
-getSearchQuery model =
-    model.searchQuery
 
 
 resetUpdatedCursorPosition : Model -> Model

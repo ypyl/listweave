@@ -1,6 +1,6 @@
 port module Main exposing (main)
 
-import Actions exposing (SearchToolbarAction)
+import Actions exposing (SearchToolbarAction, SortOrder(..))
 import Browser
 import Browser.Dom
 import Browser.Events
@@ -13,12 +13,15 @@ import KeyboardHandler
 import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, filterItems, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
 import NewItemButton
 import Regex
-import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition)
+import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition, getSelectedTags)
 import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
 import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Theme
 import Time exposing (Month(..), Posix, millisToPosix)
+import SearchToolbar exposing (selectTag)
+import SearchToolbar exposing (addTagToSelected)
+import SearchToolbar exposing (getFilteredItems)
 
 
 
@@ -68,7 +71,7 @@ type alias Model =
     , searchToolbar : SearchToolbar.Model
     , noBlur : Bool
     , clipboard : Clipboard.Model
-    , selectedTags : List String
+
     }
 
 
@@ -110,7 +113,6 @@ initialModel =
     , searchToolbar = SearchToolbar.init
     , noBlur = False
     , clipboard = Clipboard.init
-    , selectedTags = []
     }
 
 
@@ -147,10 +149,7 @@ type Msg
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
     | TagPopupMsg TagPopup.Msg
-    | SearchTagSelected String
-    | RemoveSelectedTag String
-    | ClearAllSelectedTags
-    | AddTagToSelected String
+
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -169,7 +168,7 @@ update msg model =
                     case currentSource model.tagPopup of
                         Just TagPopup.FromSearchToolbar ->
                             -- Tag selection from search input
-                            update (SearchTagSelected tag) { model | tagPopup = updatedmodel }
+                            ( { model | tagPopup = updatedmodel, searchToolbar = selectTag tag model.searchToolbar }, Cmd.none )
 
                         Just TagPopup.FromItem ->
                             -- Tag selection from textarea - get current cursor position
@@ -207,10 +206,13 @@ update msg model =
                                 Actions.ExpandAll ->
                                     ( { model | items = setAllCollapsed False model.items }, Cmd.none )
 
+                                Actions.SetSortOrder sortOrder ->
+                                    ( { model | items = ListItem.sortItemsByDate sortOrder model.items }, Cmd.none )
+
                                 Actions.KeyEnter ->
                                     case TagPopup.getHighlightedTag model.tagPopup of
                                         Just tag ->
-                                            update (SearchTagSelected tag) model
+                                            ( { model | searchToolbar = selectTag tag model.searchToolbar, tagPopup = hidePopup model.tagPopup }, Cmd.none )
 
                                         Nothing ->
                                             ( model, Cmd.none )
@@ -484,84 +486,22 @@ update msg model =
             , Cmd.none
             )
 
-        SearchTagSelected tag ->
-            if String.isEmpty tag || List.member tag model.selectedTags then
-                ( model, Cmd.none )
-
-            else
-                ( { model
-                    | selectedTags = model.selectedTags ++ [ tag ]
-                    , tagPopup = hidePopup model.tagPopup
-                  }
-                , Cmd.none
-                )
-
-        RemoveSelectedTag tag ->
-            ( { model | selectedTags = List.filter ((/=) tag) model.selectedTags }, Cmd.none )
-
-        ClearAllSelectedTags ->
-            ( { model | selectedTags = [] }, Cmd.none )
-
-        AddTagToSelected tag ->
-            if String.isEmpty tag || List.member tag model.selectedTags then
-                ( model, Cmd.none )
-
-            else
-                ( { model | selectedTags = model.selectedTags ++ [ tag ] }, Cmd.none )
-
-
-
--- HELPERS
-
-
-andThen : (model -> ( model, Cmd msg )) -> ( model, Cmd msg ) -> ( model, Cmd msg )
-andThen fn ( model, cmd ) =
-    let
-        ( nextModel, nextCmd ) =
-            fn model
-    in
-    ( nextModel, Cmd.batch [ cmd, nextCmd ] )
 
 
 
 -- VIEW
 
 
-viewSelectedTags : List String -> Html Msg
-viewSelectedTags selectedTags =
-    if List.isEmpty selectedTags then
-        text ""
 
-    else
-        div Theme.selectedTagsContainer
-            (List.map viewTagChip selectedTags ++ [ viewClearAllButton ])
-
-
-viewTagChip : String -> Html Msg
-viewTagChip tag =
-    div Theme.tagChip
-        [ text ("@" ++ tag)
-        , span
-            (onClick (RemoveSelectedTag tag) :: Theme.tagChipClose)
-            [ text "×" ]
-        ]
-
-
-viewClearAllButton : Html Msg
-viewClearAllButton =
-    div
-        (onClick ClearAllSelectedTags :: Theme.button)
-        [ text "Clear all" ]
 
 
 view : Model -> Html Msg
 view model =
     div
-        (onClick (TagPopupMsg TagPopup.Hide) :: Theme.container)
+        Theme.container
         ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)
-            :: viewSelectedTags model.selectedTags
-            :: (List.map (viewListItem model 0) (filterItems (SearchToolbar.getSearchQuery model.searchToolbar) model.selectedTags model.items) ++ [ NewItemButton.view (GetCurrentTime CreateItemAtEnd) ])
+            :: (List.map (viewListItem model 0) (model.items |> getFilteredItems model.searchToolbar) ++ [ NewItemButton.view (GetCurrentTime CreateItemAtEnd) ])
         )
 
 
@@ -605,7 +545,7 @@ viewListItem model level item =
                     viewEditableItem model item
 
                   else
-                    viewStaticItem model.items model.selectedTags item
+                    viewStaticItem model.items (getSelectedTags model.searchToolbar) item
                 ]
     in
     div Theme.listItem
@@ -748,7 +688,7 @@ renderContentWithSelectedTags items item pieces matches selectedTags =
             in
             [ text p
             , span
-                (stopPropagationOn "click" (D.succeed ( AddTagToSelected tag, True )) :: tagStyle)
+                (stopPropagationOn "click" (D.succeed ( SearchToolbarMsg (addTagToSelected tag), True )) :: tagStyle)
                 [ text m.match ]
             ]
                 ++ renderContentWithSelectedTags items item ps ms selectedTags

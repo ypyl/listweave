@@ -4,6 +4,9 @@ import Regex
 import Set
 import TagsUtils exposing (isTagRegex)
 import Time exposing (Posix)
+import Actions exposing (SortOrder)
+import Array exposing (get)
+import Actions exposing (SortOrder(..))
 
 
 type ListItem
@@ -17,6 +20,32 @@ type ListItem
         , created : Posix
         , updated : Posix
         }
+
+sortItemsByDate : SortOrder -> List ListItem -> List ListItem
+sortItemsByDate sortOrder items =
+    let
+        fn =
+            case sortOrder of
+                ByCreatedDate ->
+                    getCreated
+
+                ByUpdatedDate ->
+                    getUpdated
+        sortByDate item =
+            Time.posixToMillis (fn item)
+
+        sortedItems =
+            List.sortBy sortByDate items |> List.reverse
+    in
+    List.map
+        (\item ->
+            let
+                (ListItem record) =
+                    item
+            in
+            ListItem { record | children = sortItemsByDate sortOrder record.children }
+        )
+        sortedItems
 
 
 moveItem : (ListItem -> ListItem -> Bool) -> List ListItem -> List ListItem
@@ -110,6 +139,10 @@ getTags (ListItem record) =
 getUpdated : ListItem -> Posix
 getUpdated (ListItem record) =
     record.updated
+
+getCreated : ListItem -> Posix
+getCreated (ListItem record) =
+    record.created
 
 
 deleteItem : ListItem -> List ListItem -> List ListItem

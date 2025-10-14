@@ -1,4 +1,3 @@
-- sorting by created/updated data - [requirements specification](docs/sort-items-by-date-requirements.md)
 - export/import
 - storage (indexDB)
 - delete icon in the top-left corner
@@ -11,6 +10,7 @@
 - highligh words which were found
 
 - ✅ when addItem - two columns textarea - should be only
+- ✅ sorting by created/updated date - [requirements specification](docs/sort-items-by-date-requirements.md)
 
 ## Component Refactoring
 - ✅ Extract TagPopup component from Main.elm - [requirements specification](docs/tagpopup-component-requirements.md)

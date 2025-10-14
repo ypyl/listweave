@@ -1,6 +1,11 @@
 module Actions exposing (..)
 
 
+type SortOrder
+    = ByCreatedDate
+    | ByUpdatedDate
+
+
 type SearchToolbarAction
     = KeyArrowUp
     | KeyArrowDown
@@ -8,6 +13,8 @@ type SearchToolbarAction
     | CollapseAll
     | ExpandAll
     | QueryChanged String Int
+    | SetSortOrder SortOrder
+
 
 type TagPopupAction
     = HighlightTag String
