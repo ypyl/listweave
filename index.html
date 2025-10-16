@@ -177,11 +177,45 @@
       });
 
       function autoResize() {
-        const lineHeight = 1.8;
-        const fontSize = parseFloat(getComputedStyle(this).fontSize);
-        const lines = this.value.split("\n").length;
-        const calculatedHeight = lines * lineHeight * fontSize;
-        this.style.height = calculatedHeight + "px";
+        const ta = this;
+
+        // Ensure wrapping behaviour is consistent so scrollHeight reflects wrapped lines
+        ta.style.whiteSpace = "pre-wrap";
+        ta.style.wordWrap = "break-word";
+        ta.style.overflowWrap = "anywhere";
+        ta.style.overflow = "hidden";
+
+        // Reset height so scrollHeight can shrink when content is removed
+        ta.style.height = "auto";
+
+        // Primary approach: use scrollHeight which accounts for wrapped lines
+        let newHeight = ta.scrollHeight;
+
+        // Fallback: if for some reason scrollHeight is unavailable or 0, measure with a mirror div
+        if (!newHeight || newHeight === 0) {
+          const mirror = document.createElement("div");
+          const style = getComputedStyle(ta);
+          for (const prop of style) {
+            mirror.style[prop] = style[prop];
+          }
+          mirror.style.position = "absolute";
+          mirror.style.visibility = "hidden";
+          mirror.style.whiteSpace = "pre-wrap";
+          mirror.style.wordWrap = "break-word";
+          mirror.style.overflowWrap = "anywhere";
+          mirror.style.width = ta.offsetWidth + "px";
+          // Use textContent to match rendering and avoid injection
+          mirror.textContent = ta.value || ".";
+          document.body.appendChild(mirror);
+          newHeight = mirror.getBoundingClientRect().height;
+          document.body.removeChild(mirror);
+        }
+
+        // Add a tiny buffer to avoid scrollbars appearing
+        const style = getComputedStyle(ta);
+        const fontSize = parseFloat(style.fontSize) || 14;
+        const minHeight = fontSize * 1.2;
+        ta.style.height = Math.max(newHeight + 2, minHeight) + "px";
       }
 
       window.addEventListener(

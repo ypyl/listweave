@@ -208,8 +208,14 @@ summary {
   display: list-item;
 }
 
+/* Ensure textareas wrap very long lines and don't show scrollbars when auto-resizing */
 textarea {
   line-height: 1.8 !important;
+  overflow: hidden;        /* hide native scrollbars */
+  resize: none;            /* optional: prevent manual resize */
+  white-space: pre-wrap;   /* preserve newlines, allow wrapping */
+  word-wrap: break-word;
+  overflow-wrap: anywhere; /* allow breaking long words/URLs */
 }
 
 .view-item:focus {
