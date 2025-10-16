@@ -321,7 +321,7 @@ selectedTagsContainer =
 
 searchToolbar : List (Html.Attribute msg)
 searchToolbar =
-    [ style "margin-bottom" spacing.lg
+    [ style "margin-bottom" spacing.xs
     , style "display" "flex"
     , style "align-items" "center"
     , style "gap" spacing.sm

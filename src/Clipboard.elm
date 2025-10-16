@@ -1,7 +1,8 @@
-module Clipboard exposing (Model, Msg(..), init, update, hasItem)
+module Clipboard exposing (Model, Msg(..), init, update, hasItem, encode, decode)
 
 import ListItem exposing (ListItem, findItemPosition, insertClipboardItemAfter, removeItemCompletely, restoreItemAtPosition)
-
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
 
 -- MODEL
 
@@ -18,6 +19,44 @@ init =
     , clipboardOriginalPosition = Nothing
     }
 
+
+encode : Model -> Encode.Value
+encode model =
+    Encode.object
+        [ ( "clipboard"
+          , Maybe.map ListItem.encode model.clipboard
+                |> Maybe.withDefault Encode.null
+          )
+        , ( "clipboardOriginalPosition"
+          , Maybe.map (\( a, b ) -> Encode.list identity [ Maybe.map Encode.int a |> Maybe.withDefault Encode.null, Encode.int b ]) model.clipboardOriginalPosition
+                |> Maybe.withDefault Encode.null
+          )
+        ]
+
+
+decode : Decoder Model
+decode =
+    Decode.map2 Model
+        (Decode.field "clipboard" (Decode.nullable ListItem.decode))
+        (Decode.field "clipboardOriginalPosition" (Decode.nullable clipboardPositionDecoder))
+
+
+-- Helper decoder for the clipboard position tuple (Maybe Int, Int)
+clipboardPositionDecoder : Decoder ( Maybe Int, Int )
+clipboardPositionDecoder =
+    Decode.list (Decode.nullable Decode.int)
+        |> Decode.andThen
+            (\list ->
+                case list of
+                    [ maybeIntValue, Just intB ] ->
+                        let
+                            maybeIntA = Maybe.withDefault Nothing (Maybe.map Just maybeIntValue)
+                        in
+                        Decode.succeed ( maybeIntA, intB )
+
+                    _ ->
+                        Decode.fail "ClipboardOriginalPosition list must have exactly 2 elements: [Maybe Int, Int]"
+            )
 
 -- UPDATE
 

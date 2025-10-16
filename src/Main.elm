@@ -5,23 +5,21 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Clipboard
-import Html exposing (Html, code, div, span, text, textarea)
+import Html exposing (Html, button, code, div, span, text, textarea)
 import Html.Attributes exposing (id, rows, value)
 import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagationOn)
 import Json.Decode as D
+import Json.Encode as Encode
 import KeyboardHandler
-import ListItem exposing (ListItem(..), deleteItem, editItemFn, expandToItem, filterItems, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
+import ListItem exposing (ListItem(..), deleteItem, editItemFn, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
 import NewItemButton
 import Regex
-import SearchToolbar exposing (getUpdatedCursorPosition, resetUpdatedCursorPosition, getSelectedTags)
+import SearchToolbar exposing (addTagToSelected, getFilteredItems, getSelectedTags, getUpdatedCursorPosition, resetUpdatedCursorPosition, selectTag)
 import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
 import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Theme
 import Time exposing (Month(..), Posix, millisToPosix)
-import SearchToolbar exposing (selectTag)
-import SearchToolbar exposing (addTagToSelected)
-import SearchToolbar exposing (getFilteredItems)
 
 
 
@@ -58,6 +56,15 @@ port getCurrentCursorPosition : Int -> Cmd msg
 port receiveCurrentCursorPosition : (D.Value -> msg) -> Sub msg
 
 
+port downloadJson : { filename : String, content : String } -> Cmd msg
+
+
+port readFile : () -> Cmd msg
+
+
+port receiveFile : (D.Value -> msg) -> Sub msg
+
+
 
 -- MODEL
 
@@ -71,7 +78,6 @@ type alias Model =
     , searchToolbar : SearchToolbar.Model
     , noBlur : Bool
     , clipboard : Clipboard.Model
-
     }
 
 
@@ -116,6 +122,45 @@ initialModel =
     }
 
 
+decode =
+    D.map8
+        (\items cursorPos caretTask pendingTagInsertion tagPopup searchToolbar noBlur clipboard ->
+            { items = items
+            , cursorPos = cursorPos
+            , caretTask = caretTask
+            , pendingTagInsertion = pendingTagInsertion
+            , tagPopup = tagPopup
+            , searchToolbar = searchToolbar
+            , noBlur = noBlur
+            , clipboard = clipboard
+            }
+        )
+        (D.field "items" (D.list ListItem.decode))
+        (D.field "cursorPos" (D.nullable D.int))
+        (D.field "caretTask" (D.nullable (D.map2 Tuple.pair D.int D.int)))
+        (D.field "pendingTagInsertion" (D.nullable D.string))
+        (D.field "tagPopup" TagPopup.decode)
+        (D.field "searchToolbar" SearchToolbar.decode)
+        (D.field "noBlur" D.bool)
+        (D.field "clipboard" Clipboard.decode)
+
+
+encode : Model -> Encode.Value
+encode model =
+    Encode.object
+        [ ( "items", Encode.list ListItem.encode model.items )
+        , ( "cursorPos", Maybe.map Encode.int model.cursorPos |> Maybe.withDefault Encode.null )
+        , ( "caretTask"
+          , Maybe.map (\( a, b ) -> Encode.list Encode.int [ a, b ]) model.caretTask |> Maybe.withDefault Encode.null
+          )
+        , ( "pendingTagInsertion", Maybe.map Encode.string model.pendingTagInsertion |> Maybe.withDefault Encode.null )
+        , ( "tagPopup", TagPopup.encode model.tagPopup )
+        , ( "searchToolbar", SearchToolbar.encoder model.searchToolbar )
+        , ( "noBlur", Encode.bool model.noBlur )
+        , ( "clipboard", Clipboard.encode model.clipboard )
+        ]
+
+
 
 -- UPDATE
 
@@ -150,6 +195,7 @@ type Msg
     | ClipboardMsg Clipboard.Msg
     | TagPopupMsg TagPopup.Msg
 
+    | ReceiveImportedModel D.Value
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -157,6 +203,15 @@ update msg model =
     case msg of
         NoOp ->
             ( model, Cmd.none )
+
+        ReceiveImportedModel jsonValue ->
+            case D.decodeValue decode jsonValue of
+                Ok newModel ->
+                    ( newModel, Cmd.none )
+
+                Err _ ->
+                    -- Optionally show an error (e.g., via a flag or toast)
+                    ( model, Cmd.none )
 
         TagPopupMsg tagPopupMsg ->
             let
@@ -222,6 +277,17 @@ update msg model =
 
                                 Actions.KeyArrowDown ->
                                     ( { model | tagPopup = navigateDown model.tagPopup }, Cmd.none )
+
+                                Actions.ImportModel ->
+                                    ( model, readFile () )
+
+                                Actions.ExportModel ->
+                                    let
+                                        jsonString =
+                                            encode model |> Encode.encode 2
+                                    in
+                                    ( model, downloadJson { filename = "listweave-data.json", content = jsonString } )
+
 
                                 Actions.QueryChanged query cursorPos ->
                                     let
@@ -488,18 +554,15 @@ update msg model =
 
 
 
-
 -- VIEW
-
-
-
 
 
 view : Model -> Html Msg
 view model =
     div
         Theme.container
-        ((TagPopup.view model.tagPopup |> Html.map TagPopupMsg)
+        (div []
+            [(TagPopup.view model.tagPopup |> Html.map TagPopupMsg)]
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)
             :: (List.map (viewListItem model 0) (model.items |> getFilteredItems model.searchToolbar) ++ [ NewItemButton.view (GetCurrentTime CreateItemAtEnd) ])
         )
@@ -771,4 +834,5 @@ subscriptions model =
                     Err _ ->
                         NoOp
             )
+        , receiveFile ReceiveImportedModel
         ]

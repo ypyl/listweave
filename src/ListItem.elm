@@ -5,9 +5,9 @@ import Set
 import TagsUtils exposing (isTagRegex)
 import Time exposing (Posix)
 import Actions exposing (SortOrder)
-import Array exposing (get)
 import Actions exposing (SortOrder(..))
-
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
 
 type ListItem
     = ListItem
@@ -20,6 +20,51 @@ type ListItem
         , created : Posix
         , updated : Posix
         }
+
+
+encode : ListItem -> Encode.Value
+encode (ListItem item) = -- Destructure the custom type
+    Encode.object
+        [ ( "id", Encode.int item.id )
+        , ( "content", Encode.list Encode.string item.content )
+        , ( "tags", Encode.list Encode.string item.tags )
+        , ( "children", Encode.list encode item.children ) -- `encoder` handles the custom type
+        , ( "collapsed", Encode.bool item.collapsed )
+        , ( "editing", Encode.bool item.editing )
+        , ( "created", Encode.float (toFloat (Time.posixToMillis item.created)) )
+        , ( "updated", Encode.float (toFloat (Time.posixToMillis item.updated)) )
+        ]
+
+
+decode : Decoder ListItem
+decode =
+    Decode.map ListItem -- Map the *record* to the *custom type constructor*
+        (Decode.map8 (\id content tags children collapsed editing created updated ->
+            { id = id
+            , content = content
+            , tags = tags
+            , children = children
+            , collapsed = collapsed
+            , editing = editing
+            , created = created
+            , updated = updated
+            }
+         )
+            (Decode.field "id" Decode.int)
+            (Decode.field "content" (Decode.list Decode.string))
+            (Decode.field "tags" (Decode.list Decode.string))
+            (Decode.field "children" (Decode.list (Decode.lazy (\_ -> decode)))) -- Use lazy here
+            (Decode.field "collapsed" Decode.bool)
+            (Decode.field "editing" Decode.bool)
+            (Decode.field "created" posixDecoder)
+            (Decode.field "updated" posixDecoder)
+        )
+
+
+posixDecoder : Decoder Posix
+posixDecoder =
+    Decode.float
+        |> Decode.map (\millis -> Time.millisToPosix (round millis))
 
 sortItemsByDate : SortOrder -> List ListItem -> List ListItem
 sortItemsByDate sortOrder items =

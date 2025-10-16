@@ -137,7 +137,7 @@
           app.ports.receiveCurrentCursorPosition.send({
             itemId: itemId,
             tag: "", // Will be handled by Elm
-            cursorPos: cursorPos
+            cursorPos: cursorPos,
           });
         }
       });
@@ -179,7 +179,7 @@
       function autoResize() {
         const lineHeight = 1.8;
         const fontSize = parseFloat(getComputedStyle(this).fontSize);
-        const lines = this.value.split('\n').length;
+        const lines = this.value.split("\n").length;
         const calculatedHeight = lines * lineHeight * fontSize;
         this.style.height = calculatedHeight + "px";
       }
@@ -194,6 +194,42 @@
         },
         false
       );
+
+      app.ports.downloadJson.subscribe(function (data) {
+        const blob = new Blob([data.content], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 0);
+      });
+
+      app.ports.readFile.subscribe(function () {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+        input.onchange = function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            try {
+              const json = JSON.parse(event.target.result);
+              app.ports.receiveFile.send(json);
+            } catch (err) {
+              console.error("Failed to parse JSON file", err);
+              // Optionally send an error message back to Elm
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      });
     </script>
   </body>
 </html>

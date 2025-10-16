@@ -1,14 +1,14 @@
-module SearchToolbar exposing (Model, Msg(..), getSelectedTags, getUpdatedCursorPosition, init, resetUpdatedCursorPosition, update, view, selectTag, addTagToSelected, getFilteredItems)
+module SearchToolbar exposing (Model, Msg(..), addTagToSelected, decode, encoder, getFilteredItems, getSelectedTags, getUpdatedCursorPosition, init, resetUpdatedCursorPosition, selectTag, update, view)
 
 import Actions exposing (SearchToolbarAction(..), SortOrder(..))
 import Html exposing (Html, div, input, span, text)
-import Html.Attributes exposing (id, placeholder, type_, value)
+import Html.Attributes exposing (id, placeholder, style, type_, value)
 import Html.Events exposing (onClick, preventDefaultOn)
-import Json.Decode as D
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
+import ListItem exposing (ListItem, filterItems)
 import Regex
 import Theme
-import ListItem exposing (ListItem)
-import ListItem exposing (filterItems)
 
 
 
@@ -38,6 +38,26 @@ type alias Model =
     }
 
 
+encoder : Model -> Encode.Value
+encoder model =
+    Encode.object
+        [ ( "searchQuery", Encode.string model.searchQuery )
+        , ( "updatedCursorPosition"
+          , Maybe.map Encode.int model.updatedCursorPosition
+                |> Maybe.withDefault Encode.null
+          )
+        , ( "selectedTags", Encode.list Encode.string model.selectedTags )
+        ]
+
+
+decode : Decoder Model
+decode =
+    Decode.map3 Model
+        (Decode.field "searchQuery" Decode.string)
+        (Decode.field "updatedCursorPosition" (Decode.nullable Decode.int))
+        (Decode.field "selectedTags" (Decode.list Decode.string))
+
+
 getUpdatedCursorPosition : Model -> Maybe Int
 getUpdatedCursorPosition model =
     model.updatedCursorPosition
@@ -60,6 +80,8 @@ getFilteredItems : Model -> List ListItem -> List ListItem
 getFilteredItems model =
     filterItems model.searchQuery model.selectedTags
 
+
+
 -- UPDATE
 
 
@@ -72,6 +94,9 @@ type Msg
     | RemoveSelectedTag String
     | ClearAllSelectedTags
     | AddTagToSelected String
+    | ExportModel
+    | ImportModel
+
 
 addTagToSelected : String -> Msg
 addTagToSelected tag =
@@ -117,17 +142,23 @@ update msg model =
                     ( model, Nothing )
 
         RemoveSelectedTag tag ->
-            ({ model | selectedTags = List.filter ((/=) tag) model.selectedTags }, Nothing)
+            ( { model | selectedTags = List.filter ((/=) tag) model.selectedTags }, Nothing )
 
         ClearAllSelectedTags ->
-            ({ model | selectedTags = [] }, Nothing)
+            ( { model | selectedTags = [] }, Nothing )
 
         AddTagToSelected tag ->
             if String.isEmpty tag || List.member tag model.selectedTags then
-                (model, Nothing)
+                ( model, Nothing )
 
             else
-                ({ model | selectedTags = model.selectedTags ++ [ tag ] }, Nothing)
+                ( { model | selectedTags = model.selectedTags ++ [ tag ] }, Nothing )
+
+        ExportModel ->
+            ( model, Just Actions.ExportModel )
+
+        ImportModel ->
+            ( model, Just Actions.ImportModel )
 
 
 selectTag : String -> Model -> Model
@@ -138,8 +169,8 @@ selectTag tag model =
     else
         { model
             | selectedTags = model.selectedTags ++ [ tag ]
-            -- , tagPopup = hidePopup model.tagPopup
-          }
+        }
+
 
 
 -- VIEW
@@ -162,13 +193,7 @@ view : Model -> Bool -> Html Msg
 view model listenKeydownEvents =
     div []
         [ div Theme.searchToolbar
-            [ div
-                (onClick CollapseAllClicked :: Theme.button)
-                [ text "Collapse All" ]
-            , div
-                (onClick ExpandAllClicked :: Theme.button)
-                [ text "Expand All" ]
-            , input
+            [ input
                 ([ type_ "text"
                  , id "search-input"
                  , placeholder "Search... (type @tag to filter by tags)"
@@ -190,6 +215,20 @@ view model listenKeydownEvents =
                     , div (onClick (SortOrderChanged "Updated Date") :: Theme.buttonGroupLast) [ text "updated" ]
                     ]
                 , text "date"
+                ]
+            ]
+        , div Theme.searchToolbar
+            [ div Theme.buttonGroup
+                [ div
+                    (onClick CollapseAllClicked :: Theme.buttonGroupFirst)
+                    [ text "▲" ]
+                , div
+                    (onClick ExpandAllClicked :: Theme.buttonGroupLast)
+                    [ text "▼" ]
+                ]
+            , div (style "margin-left" "auto" :: Theme.buttonGroup)
+                [ div (onClick ExportModel :: Theme.buttonGroupFirst) [ text "📥" ]
+                , div (onClick ImportModel :: Theme.buttonGroupLast) [ text "📤" ]
                 ]
             ]
         ]
@@ -226,19 +265,19 @@ viewClearAllButton =
 -- DECODERS
 
 
-inputDecoder : D.Decoder ( Msg, Bool )
+inputDecoder : Decode.Decoder ( Msg, Bool )
 inputDecoder =
-    D.map2
+    Decode.map2
         (\value selectionStart ->
             ( SearchQueryChanged value selectionStart, False )
         )
-        (D.field "target" (D.field "value" D.string))
-        (D.field "target" (D.field "selectionStart" D.int))
+        (Decode.field "target" (Decode.field "value" Decode.string))
+        (Decode.field "target" (Decode.field "selectionStart" Decode.int))
 
 
-keydownDecoder : Bool -> D.Decoder ( Msg, Bool )
+keydownDecoder : Bool -> Decode.Decoder ( Msg, Bool )
 keydownDecoder listenKeydownEvents =
-    D.map
+    Decode.map
         (\key ->
             let
                 shouldPrevent =
@@ -246,7 +285,7 @@ keydownDecoder listenKeydownEvents =
             in
             ( SearchKeyDown key, shouldPrevent )
         )
-        (D.field "keyCode" D.int)
+        (Decode.field "keyCode" Decode.int)
 
 
 

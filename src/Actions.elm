@@ -14,6 +14,8 @@ type SearchToolbarAction
     | ExpandAll
     | QueryChanged String Int
     | SetSortOrder SortOrder
+    | ExportModel
+    | ImportModel
 
 
 type TagPopupAction
