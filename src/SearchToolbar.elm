@@ -226,15 +226,15 @@ view model listenKeydownEvents =
             [ div Theme.buttonGroup
                 [ div
                     (onClick CollapseAllClicked :: Theme.buttonGroupFirst)
-                    [ text "▲" ]
+                    [ text "-" ]
                 , div
                     (onClick ExpandAllClicked :: Theme.buttonGroupLast)
-                    [ text "▼" ]
+                    [ text "+" ]
                 ]
             , NewItemButton.view NewItemClicked -- (GetCurrentTime CreateItemAtEnd)
             , div (style "margin-left" "auto" :: Theme.buttonGroup)
-                [ div (onClick ExportModel :: Theme.buttonGroupFirst) [ text "📥" ]
-                , div (onClick ImportModel :: Theme.buttonGroupLast) [ text "📤" ]
+                [ div (onClick ImportModel :: Theme.buttonGroupFirst) [ text "⟳" ]
+                , div (onClick ExportModel :: Theme.buttonGroupLast) [ text "🗎" ]
                 ]
             ]
         ]

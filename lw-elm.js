@@ -12479,6 +12479,28 @@ var $author$project$Main$readFile = _Platform_outgoingPort(
 	function ($) {
 		return $elm$json$Json$Encode$null;
 	});
+var $author$project$ListItem$removeItemCompletely = F2(
+	function (_v0, list) {
+		var item = _v0.a;
+		var removeRecursive = F2(
+			function (innerId, innerList) {
+				return A2(
+					$elm$core$List$filterMap,
+					function (current) {
+						var _v1 = current;
+						var record = _v1.a;
+						return _Utils_eq(record.id, innerId) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
+							$author$project$ListItem$ListItem(
+								_Utils_update(
+									record,
+									{
+										children: A2(removeRecursive, innerId, record.children)
+									})));
+					},
+					innerList);
+			});
+		return A2(removeRecursive, item.id, list);
+	});
 var $author$project$Main$requestCursorPosition = _Platform_outgoingPort('requestCursorPosition', $elm$json$Json$Encode$int);
 var $author$project$SearchToolbar$resetUpdatedCursorPosition = function (model) {
 	return _Utils_update(
@@ -12690,28 +12712,6 @@ var $author$project$ListItem$insertClipboardItemAfter = F3(
 			}
 		};
 		return insertInList(items);
-	});
-var $author$project$ListItem$removeItemCompletely = F2(
-	function (_v0, list) {
-		var item = _v0.a;
-		var removeRecursive = F2(
-			function (innerId, innerList) {
-				return A2(
-					$elm$core$List$filterMap,
-					function (current) {
-						var _v1 = current;
-						var record = _v1.a;
-						return _Utils_eq(record.id, innerId) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(
-							$author$project$ListItem$ListItem(
-								_Utils_update(
-									record,
-									{
-										children: A2(removeRecursive, innerId, record.children)
-									})));
-					},
-					innerList);
-			});
-		return A2(removeRecursive, item.id, list);
 	});
 var $elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
@@ -13757,6 +13757,15 @@ var $author$project$Main$update = F2(
 								items: A2($author$project$ListItem$deleteItem, item, model.items)
 							}),
 						$elm$core$Platform$Cmd$none);
+				case 'DeleteItemWithChildren':
+					var item = msg.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								items: A2($author$project$ListItem$removeItemCompletely, item, model.items)
+							}),
+						$elm$core$Platform$Cmd$none);
 				case 'InsertSelectedTag':
 					var item = msg.a;
 					var tag = msg.b;
@@ -14114,7 +14123,7 @@ var $author$project$NewItemButton$view = function (onClickMsg) {
 			$elm$html$Html$Events$onClick(onClickMsg),
 			A2(
 				$elm$core$List$cons,
-				A2($elm$html$Html$Attributes$style, 'margin-left', '20px'),
+				A2($elm$html$Html$Attributes$style, 'margin-left', '10px'),
 				A2(
 					$elm$core$List$cons,
 					A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
@@ -14292,7 +14301,7 @@ var $author$project$SearchToolbar$view = F2(
 										$author$project$Theme$buttonGroupFirst),
 									_List_fromArray(
 										[
-											$elm$html$Html$text('▲')
+											$elm$html$Html$text('-')
 										])),
 									A2(
 									$elm$html$Html$div,
@@ -14302,7 +14311,7 @@ var $author$project$SearchToolbar$view = F2(
 										$author$project$Theme$buttonGroupLast),
 									_List_fromArray(
 										[
-											$elm$html$Html$text('▼')
+											$elm$html$Html$text('+')
 										]))
 								])),
 							$author$project$NewItemButton$view($author$project$SearchToolbar$NewItemClicked),
@@ -14318,21 +14327,21 @@ var $author$project$SearchToolbar$view = F2(
 									$elm$html$Html$div,
 									A2(
 										$elm$core$List$cons,
-										$elm$html$Html$Events$onClick($author$project$SearchToolbar$ExportModel),
+										$elm$html$Html$Events$onClick($author$project$SearchToolbar$ImportModel),
 										$author$project$Theme$buttonGroupFirst),
 									_List_fromArray(
 										[
-											$elm$html$Html$text('📥')
+											$elm$html$Html$text('⟳')
 										])),
 									A2(
 									$elm$html$Html$div,
 									A2(
 										$elm$core$List$cons,
-										$elm$html$Html$Events$onClick($author$project$SearchToolbar$ImportModel),
+										$elm$html$Html$Events$onClick($author$project$SearchToolbar$ExportModel),
 										$author$project$Theme$buttonGroupLast),
 									_List_fromArray(
 										[
-											$elm$html$Html$text('📤')
+											$elm$html$Html$text('🗎')
 										]))
 								]))
 						]))
@@ -14439,6 +14448,9 @@ var $author$project$TagPopup$view = function (model) {
 		return $elm$html$Html$text('');
 	}
 };
+var $author$project$Main$DeleteItem = function (a) {
+	return {$: 'DeleteItem', a: a};
+};
 var $author$project$Main$ToggleCollapse = function (a) {
 	return {$: 'ToggleCollapse', a: a};
 };
@@ -14497,8 +14509,7 @@ var $author$project$Theme$listItem = _List_fromArray(
 var $author$project$Theme$listItemRow = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
-		A2($elm$html$Html$Attributes$style, 'align-items', 'flex-start'),
-		A2($elm$html$Html$Attributes$style, 'max-width', '80%')
+		A2($elm$html$Html$Attributes$style, 'align-items', 'flex-start')
 	]);
 var $author$project$Theme$listItemRowWithChildren = _Utils_ap(
 	$author$project$Theme$listItemRow,
@@ -14513,9 +14524,6 @@ var $author$project$Clipboard$CutItem = F2(
 	function (a, b) {
 		return {$: 'CutItem', a: a, b: b};
 	});
-var $author$project$Main$DeleteItem = function (a) {
-	return {$: 'DeleteItem', a: a};
-};
 var $author$project$Main$IndentItem = F2(
 	function (a, b) {
 		return {$: 'IndentItem', a: a, b: b};
@@ -15151,7 +15159,21 @@ var $author$project$Main$viewListItem = F3(
 						$author$project$Main$viewStaticItem,
 						model.items,
 						$author$project$SearchToolbar$getSelectedTags(model.searchToolbar),
-						item)
+						item),
+						A2(
+						$elm$html$Html$span,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick(
+								$author$project$Main$DeleteItem(item)),
+								A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+								A2($elm$html$Html$Attributes$style, 'margin-left', '10px'),
+								A2($elm$html$Html$Attributes$style, 'margin-left', 'auto')
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('×')
+							]))
 					]));
 		}();
 		return A2(
@@ -15199,4 +15221,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

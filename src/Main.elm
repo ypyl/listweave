@@ -6,12 +6,12 @@ import Browser.Dom
 import Browser.Events
 import Clipboard
 import Html exposing (Html, code, div, span, text, textarea)
-import Html.Attributes exposing (id, rows, value)
+import Html.Attributes exposing (id, rows, style, value)
 import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
-import ListItem exposing (ListItem(..), deleteItem, editItemFn, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
+import ListItem exposing (ListItem(..), deleteItem, editItemFn, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, removeItemCompletely, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
 import Regex
 import SearchToolbar exposing (addTagToSelected, getFilteredItems, getSelectedTags, getUpdatedCursorPosition, resetUpdatedCursorPosition, selectTag)
 import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
@@ -175,6 +175,7 @@ type Msg
     | IndentItem Int ListItem
     | OutdentItem Int ListItem
     | DeleteItem ListItem
+    | DeleteItemWithChildren ListItem
     | SaveAndCreateAfter ListItem
     | FocusResult (Result Browser.Dom.Error ())
     | ClickedAt { id : Int, pos : Int }
@@ -463,6 +464,9 @@ update msg model =
         DeleteItem item ->
             ( { model | items = deleteItem item model.items }, Cmd.none )
 
+        DeleteItemWithChildren item ->
+            ( { model | items = removeItemCompletely item model.items }, Cmd.none )
+
         InsertSelectedTag item tag cursorPos currentTime ->
             let
                 content =
@@ -609,6 +613,7 @@ viewListItem model level item =
 
                   else
                     viewStaticItem model.items (getSelectedTags model.searchToolbar) item
+                , span [ onClick (DeleteItem item), style "cursor" "pointer", style "margin-left" "10px", style "margin-left" "auto"] [ text "×" ]
                 ]
     in
     div Theme.listItem

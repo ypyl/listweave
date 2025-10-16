@@ -1,16 +1,22 @@
-- export/import
-- storage (indexDB)
+
 - delete icon in the top-left corner
-- assert support (attach any file)
+- auto tags (created, updated, attachment, code)
 - ZoomIn/ZoomOut
     ALt ->
     Alt <-
 - keyboard help
 - search using OR instead of AND for words
+- search should automatic expand items which are there. E.g. collapsed item should be expanded if it is under criteria
 - highligh words which were found
+- export to markdown (view)
+- state action (keep previous state)
+
+- storage (indexDB)
+- assert support (attach any file)
 
 - ✅ when addItem - two columns textarea - should be only
 - ✅ sorting by created/updated date - [requirements specification](docs/sort-items-by-date-requirements.md)
+- ✅ export/import
 
 ## Component Refactoring
 - ✅ Extract TagPopup component from Main.elm - [requirements specification](docs/tagpopup-component-requirements.md)

@@ -9,5 +9,5 @@ import Theme
 view : msg -> Html msg
 view onClickMsg =
     div
-        (onClick onClickMsg :: Html.Attributes.style "margin-left" "20px" :: Html.Attributes.style "display" "inline-flex" :: Html.Attributes.style "align-items" "center" :: Html.Attributes.style "justify-content" "center" :: Theme.button)
+        (onClick onClickMsg :: Html.Attributes.style "margin-left" "10px" :: Html.Attributes.style "display" "inline-flex" :: Html.Attributes.style "align-items" "center" :: Html.Attributes.style "justify-content" "center" :: Theme.button)
         [ text "+ Add Item" ]

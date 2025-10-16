@@ -183,7 +183,6 @@ listItemRow : List (Html.Attribute msg)
 listItemRow =
     [ style "display" "flex"
     , style "align-items" "flex-start"
-    , style "max-width" "80%"
     ]
 
 
