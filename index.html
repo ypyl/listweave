@@ -214,8 +214,8 @@
         // Add a tiny buffer to avoid scrollbars appearing
         const style = getComputedStyle(ta);
         const fontSize = parseFloat(style.fontSize) || 14;
-        const minHeight = fontSize * 1.2;
-        ta.style.height = Math.max(newHeight + 2, minHeight) + "px";
+        const minHeight = fontSize * 1.8;
+        ta.style.height = Math.max(newHeight, minHeight) + "px";
       }
 
       window.addEventListener(
