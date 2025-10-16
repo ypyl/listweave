@@ -16,7 +16,10 @@ type Key
     | Right
     | Up
     | Down
+    | X
+    | V
     | Escape
+    | Tab
     | Other Int
 
 
@@ -43,6 +46,15 @@ keyFromCode code =
 
         40 ->
             Down
+
+        88 ->
+            X
+
+        86 ->
+            V
+
+        9 ->
+            Tab
 
         _ ->
             Other code
@@ -97,10 +109,10 @@ onKeyDown config item =
                         Down ->
                             ( config.onMoveItemDown cursorPos item, True )
 
-                        Other 88 ->
+                        X ->
                             ( config.onCutItem item, True )
 
-                        Other 86 ->
+                        V ->
                             ( config.onPasteItem item, True )
 
                         _ ->
@@ -126,7 +138,7 @@ onKeyDown config item =
                                 _ ->
                                     ( config.onSaveAndCreateAfter item, True )
 
-                        Other 9 ->
+                        Tab ->
                             if shift then
                                 ( config.onOutdentItem cursorPos item, True )
 
@@ -216,7 +228,7 @@ onKeyDown config item =
                                 else
                                     ( config.onNoOp, False )
 
-                        Other _ ->
+                        _ ->
                             ( config.onNoOp, False )
             )
             keyDecoder

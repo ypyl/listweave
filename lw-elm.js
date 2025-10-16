@@ -14576,6 +14576,7 @@ var $author$project$Clipboard$hasItem = function (model) {
 	return !_Utils_eq(model.clipboard, $elm$core$Maybe$Nothing);
 };
 var $author$project$KeyboardHandler$Backspace = {$: 'Backspace'};
+var $author$project$KeyboardHandler$C = {$: 'C'};
 var $author$project$KeyboardHandler$Down = {$: 'Down'};
 var $author$project$KeyboardHandler$Enter = {$: 'Enter'};
 var $author$project$KeyboardHandler$Escape = {$: 'Escape'};
@@ -14584,7 +14585,9 @@ var $author$project$KeyboardHandler$Other = function (a) {
 	return {$: 'Other', a: a};
 };
 var $author$project$KeyboardHandler$Right = {$: 'Right'};
+var $author$project$KeyboardHandler$Tab = {$: 'Tab'};
 var $author$project$KeyboardHandler$Up = {$: 'Up'};
+var $author$project$KeyboardHandler$X = {$: 'X'};
 var $author$project$KeyboardHandler$keyFromCode = function (code) {
 	switch (code) {
 		case 8:
@@ -14601,6 +14604,12 @@ var $author$project$KeyboardHandler$keyFromCode = function (code) {
 			return $author$project$KeyboardHandler$Right;
 		case 40:
 			return $author$project$KeyboardHandler$Down;
+		case 88:
+			return $author$project$KeyboardHandler$X;
+		case 86:
+			return $author$project$KeyboardHandler$C;
+		case 9:
+			return $author$project$KeyboardHandler$Tab;
 		default:
 			return $author$project$KeyboardHandler$Other(code);
 	}
@@ -14629,35 +14638,26 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 				F5(
 					function (key, alt, shift, cursorPos, value) {
 						if (alt) {
-							_v0$4:
-							while (true) {
-								switch (key.$) {
-									case 'Up':
-										return _Utils_Tuple2(
-											A2(config.onMoveItemUp, cursorPos, item),
-											true);
-									case 'Down':
-										return _Utils_Tuple2(
-											A2(config.onMoveItemDown, cursorPos, item),
-											true);
-									case 'Other':
-										switch (key.a) {
-											case 88:
-												return _Utils_Tuple2(
-													config.onCutItem(item),
-													true);
-											case 86:
-												return _Utils_Tuple2(
-													config.onPasteItem(item),
-													true);
-											default:
-												break _v0$4;
-										}
-									default:
-										break _v0$4;
-								}
+							switch (key.$) {
+								case 'Up':
+									return _Utils_Tuple2(
+										A2(config.onMoveItemUp, cursorPos, item),
+										true);
+								case 'Down':
+									return _Utils_Tuple2(
+										A2(config.onMoveItemDown, cursorPos, item),
+										true);
+								case 'X':
+									return _Utils_Tuple2(
+										config.onCutItem(item),
+										true);
+								case 'C':
+									return _Utils_Tuple2(
+										config.onPasteItem(item),
+										true);
+								default:
+									return _Utils_Tuple2(config.onNoOp, false);
 							}
-							return _Utils_Tuple2(config.onNoOp, false);
 						} else {
 							switch (key.$) {
 								case 'Backspace':
@@ -14687,6 +14687,12 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 									} else {
 										return _Utils_Tuple2(config.onNoOp, false);
 									}
+								case 'Tab':
+									return shift ? _Utils_Tuple2(
+										A2(config.onOutdentItem, cursorPos, item),
+										true) : _Utils_Tuple2(
+										A2(config.onIndentItem, cursorPos, item),
+										true);
 								case 'Left':
 									var _v3 = A2($author$project$TagsUtils$focusedTag, cursorPos, value);
 									if (_v3.$ === 'Just') {
@@ -14779,15 +14785,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										}
 									}
 								default:
-									if (key.a === 9) {
-										return shift ? _Utils_Tuple2(
-											A2(config.onOutdentItem, cursorPos, item),
-											true) : _Utils_Tuple2(
-											A2(config.onIndentItem, cursorPos, item),
-											true);
-									} else {
-										return _Utils_Tuple2(config.onNoOp, false);
-									}
+									return _Utils_Tuple2(config.onNoOp, false);
 							}
 						}
 					}),

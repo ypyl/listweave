@@ -1,6 +1,7 @@
 
-- delete icon in the top-left corner
+
 - auto tags (created, updated, attachment, code)
+- copy item
 - ZoomIn/ZoomOut
     ALt ->
     Alt <-
@@ -14,11 +15,13 @@
 - storage (indexDB)
 - assert support (attach any file)
 
+- ✅ delete icon in the top-left corner
 - ✅ when addItem - two columns textarea - should be only
 - ✅ sorting by created/updated date - [requirements specification](docs/sort-items-by-date-requirements.md)
 - ✅ export/import
 
 ## Component Refactoring
+
 - ✅ Extract TagPopup component from Main.elm - [requirements specification](docs/tagpopup-component-requirements.md)
 - ✅ Extract SearchToolbar component from Main.elm
 - Extract ContentRenderer component from Main.elm
