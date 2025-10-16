@@ -1,13 +1,13 @@
 module ListItem exposing (..)
 
+import Actions exposing (SortOrder(..))
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
 import Regex
 import Set
 import TagsUtils exposing (isTagRegex)
 import Time exposing (Posix)
-import Actions exposing (SortOrder)
-import Actions exposing (SortOrder(..))
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode
+
 
 type ListItem
     = ListItem
@@ -23,7 +23,8 @@ type ListItem
 
 
 encode : ListItem -> Encode.Value
-encode (ListItem item) = -- Destructure the custom type
+encode (ListItem item) =
+    -- Destructure the custom type
     Encode.object
         [ ( "id", Encode.int item.id )
         , ( "content", Encode.list Encode.string item.content )
@@ -38,22 +39,25 @@ encode (ListItem item) = -- Destructure the custom type
 
 decode : Decoder ListItem
 decode =
-    Decode.map ListItem -- Map the *record* to the *custom type constructor*
-        (Decode.map8 (\id content tags children collapsed editing created updated ->
-            { id = id
-            , content = content
-            , tags = tags
-            , children = children
-            , collapsed = collapsed
-            , editing = editing
-            , created = created
-            , updated = updated
-            }
-         )
+    Decode.map ListItem
+        -- Map the *record* to the *custom type constructor*
+        (Decode.map8
+            (\id content tags children collapsed editing created updated ->
+                { id = id
+                , content = content
+                , tags = tags
+                , children = children
+                , collapsed = collapsed
+                , editing = editing
+                , created = created
+                , updated = updated
+                }
+            )
             (Decode.field "id" Decode.int)
             (Decode.field "content" (Decode.list Decode.string))
             (Decode.field "tags" (Decode.list Decode.string))
-            (Decode.field "children" (Decode.list (Decode.lazy (\_ -> decode)))) -- Use lazy here
+            (Decode.field "children" (Decode.list (Decode.lazy (\_ -> decode))))
+            -- Use lazy here
             (Decode.field "collapsed" Decode.bool)
             (Decode.field "editing" Decode.bool)
             (Decode.field "created" posixDecoder)
@@ -66,6 +70,7 @@ posixDecoder =
     Decode.float
         |> Decode.map (\millis -> Time.millisToPosix (round millis))
 
+
 sortItemsByDate : SortOrder -> List ListItem -> List ListItem
 sortItemsByDate sortOrder items =
     let
@@ -76,6 +81,7 @@ sortItemsByDate sortOrder items =
 
                 ByUpdatedDate ->
                     getUpdated
+
         sortByDate item =
             Time.posixToMillis (fn item)
 
@@ -184,6 +190,7 @@ getTags (ListItem record) =
 getUpdated : ListItem -> Posix
 getUpdated (ListItem record) =
     record.updated
+
 
 getCreated : ListItem -> Posix
 getCreated (ListItem record) =
@@ -476,14 +483,17 @@ updateItemContentFn (ListItem current) content currentTime (ListItem item) =
 extractTags : String -> List String
 extractTags content =
     let
-        lines = String.lines content
-        blocks = TagsUtils.processContent lines
+        lines =
+            String.lines content
+
+        blocks =
+            TagsUtils.processContent lines
 
         -- Only extract tags from non-code blocks
         textBlocks =
             blocks
-                |> List.filter (\(isCode, _) -> not isCode)
-                |> List.concatMap (\(_, blockLines) -> blockLines)
+                |> List.filter (\( isCode, _ ) -> not isCode)
+                |> List.concatMap (\( _, blockLines ) -> blockLines)
                 |> String.join "\n"
     in
     Regex.find isTagRegex textBlocks
@@ -788,7 +798,8 @@ filterItems query selectedTags items =
 
     else
         let
-            isEmpty item = List.isEmpty (getContent item) || List.all String.isEmpty (getContent item)
+            isEmpty item =
+                List.isEmpty (getContent item) || List.all String.isEmpty (getContent item)
 
             containsQuery item =
                 let
@@ -798,18 +809,21 @@ filterItems query selectedTags items =
                     contentMatches =
                         if String.isEmpty query then
                             True
+
                         else
                             List.any (String.contains loweredQuery) (List.map String.toLower (getContent item))
 
                     tagMatches =
                         if String.isEmpty query then
                             True
+
                         else
                             List.any (String.contains loweredQuery) (List.map String.toLower (getTags item))
 
                     selectedTagsMatch =
                         if List.isEmpty selectedTags then
                             True
+
                         else
                             List.all (\selectedTag -> List.member selectedTag (getTags item)) selectedTags
                 in
@@ -818,7 +832,7 @@ filterItems query selectedTags items =
             filterItemAndChildren item =
                 case item of
                     ListItem data ->
-                        if containsQuery item then
+                        if containsQuery item || data.editing then
                             Just (ListItem { data | children = List.filterMap filterItemAndChildren data.children })
 
                         else
@@ -829,25 +843,10 @@ filterItems query selectedTags items =
                                 filteredChildren ->
                                     Just (ListItem { data | children = filteredChildren })
 
-            filtered = List.filterMap filterItemAndChildren items
-
-            -- Find trailing empty items from original list
-            trailingEmpty =
-                let
-                    takeWhileEmpty list =
-                        case list of
-                            [] -> []
-                            item :: rest ->
-                                if isEmpty item then
-                                    item :: takeWhileEmpty rest
-                                else
-                                    []
-                in
-                List.reverse items
-                    |> takeWhileEmpty
-                    |> List.reverse
+            filtered =
+                List.filterMap filterItemAndChildren items
         in
-        filtered ++ trailingEmpty
+        filtered
 
 
 findEditingItem : List ListItem -> Maybe ( ListItem, Int )

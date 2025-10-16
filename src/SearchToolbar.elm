@@ -7,6 +7,7 @@ import Html.Events exposing (onClick, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import ListItem exposing (ListItem, filterItems)
+import NewItemButton
 import Regex
 import Theme
 
@@ -96,6 +97,7 @@ type Msg
     | AddTagToSelected String
     | ExportModel
     | ImportModel
+    | NewItemClicked
 
 
 addTagToSelected : String -> Msg
@@ -110,6 +112,9 @@ update msg model =
             ( { model | searchQuery = query }
             , Just (Actions.QueryChanged query cursorPos)
             )
+
+        NewItemClicked ->
+            ( model, Just Actions.AddNewItem )
 
         CollapseAllClicked ->
             ( model, Just Actions.CollapseAll )
@@ -191,7 +196,7 @@ getSortOrder sortOrder =
 
 view : Model -> Bool -> Html Msg
 view model listenKeydownEvents =
-    div []
+    div [ style "margin-bottom" Theme.spacing.lg ]
         [ div Theme.searchToolbar
             [ input
                 ([ type_ "text"
@@ -226,6 +231,7 @@ view model listenKeydownEvents =
                     (onClick ExpandAllClicked :: Theme.buttonGroupLast)
                     [ text "▼" ]
                 ]
+            , NewItemButton.view NewItemClicked -- (GetCurrentTime CreateItemAtEnd)
             , div (style "margin-left" "auto" :: Theme.buttonGroup)
                 [ div (onClick ExportModel :: Theme.buttonGroupFirst) [ text "📥" ]
                 , div (onClick ImportModel :: Theme.buttonGroupLast) [ text "📤" ]

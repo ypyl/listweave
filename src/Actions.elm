@@ -16,6 +16,7 @@ type SearchToolbarAction
     | SetSortOrder SortOrder
     | ExportModel
     | ImportModel
+    | AddNewItem
 
 
 type TagPopupAction

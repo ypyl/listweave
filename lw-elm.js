@@ -11119,6 +11119,9 @@ var $author$project$Main$CreateItemAfter = F2(
 	function (a, b) {
 		return {$: 'CreateItemAfter', a: a, b: b};
 	});
+var $author$project$Main$CreateItemAtStart = function (a) {
+	return {$: 'CreateItemAtStart', a: a};
+};
 var $author$project$Main$EditItem = function (a) {
 	return {$: 'EditItem', a: a};
 };
@@ -12953,6 +12956,7 @@ var $author$project$Clipboard$update = F2(
 				}
 		}
 	});
+var $author$project$Actions$AddNewItem = {$: 'AddNewItem'};
 var $author$project$Actions$CollapseAll = {$: 'CollapseAll'};
 var $author$project$Actions$ExpandAll = {$: 'ExpandAll'};
 var $author$project$Actions$ExportModel = {$: 'ExportModel'};
@@ -13032,6 +13036,10 @@ var $author$project$SearchToolbar$update = F2(
 						{searchQuery: query}),
 					$elm$core$Maybe$Just(
 						A2($author$project$Actions$QueryChanged, query, cursorPos)));
+			case 'NewItemClicked':
+				return _Utils_Tuple2(
+					model,
+					$elm$core$Maybe$Just($author$project$Actions$AddNewItem));
 			case 'CollapseAllClicked':
 				return _Utils_Tuple2(
 					model,
@@ -13300,6 +13308,11 @@ var $author$project$Main$update = F2(
 						if (action.$ === 'Just') {
 							var act = action.a;
 							switch (act.$) {
+								case 'AddNewItem':
+									return A2(
+										$author$project$Main$update,
+										$author$project$Main$GetCurrentTime($author$project$Main$CreateItemAtStart),
+										model);
 								case 'CollapseAll':
 									return _Utils_Tuple2(
 										_Utils_update(
@@ -13694,21 +13707,19 @@ var $author$project$Main$update = F2(
 							$author$project$Main$FocusResult,
 							$elm$browser$Browser$Dom$focus(
 								'input-id-' + $elm$core$String$fromInt(newId))));
-				case 'CreateItemAtEnd':
+				case 'CreateItemAtStart':
 					var currentTime = msg.a;
 					var newId = $author$project$ListItem$getNextId(model.items);
 					var newModel = _Utils_update(
 						model,
 						{
-							items: _Utils_ap(
-								model.items,
-								_List_fromArray(
-									[
-										A2(
-										$author$project$ListItem$editItemFn,
-										newId,
-										A2($author$project$ListItem$newEmptyListItem, currentTime, newId))
-									]))
+							items: A2(
+								$elm$core$List$cons,
+								A2(
+									$author$project$ListItem$editItemFn,
+									newId,
+									A2($author$project$ListItem$newEmptyListItem, currentTime, newId)),
+								model.items)
 						});
 					return _Utils_Tuple2(
 						newModel,
@@ -13869,9 +13880,6 @@ var $author$project$Main$update = F2(
 			}
 		}
 	});
-var $author$project$Main$CreateItemAtEnd = function (a) {
-	return {$: 'CreateItemAtEnd', a: a};
-};
 var $author$project$Main$SearchToolbarMsg = function (a) {
 	return {$: 'SearchToolbarMsg', a: a};
 };
@@ -13903,23 +13911,6 @@ var $author$project$ListItem$filterItems = F3(
 					$elm$core$String$isEmpty,
 					$author$project$ListItem$getContent(item));
 			};
-			var trailingEmpty = function () {
-				var takeWhileEmpty = function (list) {
-					if (!list.b) {
-						return _List_Nil;
-					} else {
-						var item = list.a;
-						var rest = list.b;
-						return isEmpty(item) ? A2(
-							$elm$core$List$cons,
-							item,
-							takeWhileEmpty(rest)) : _List_Nil;
-					}
-				};
-				return $elm$core$List$reverse(
-					takeWhileEmpty(
-						$elm$core$List$reverse(items)));
-			}();
 			var containsQuery = function (item) {
 				var selectedTagsMatch = $elm$core$List$isEmpty(selectedTags) ? true : A2(
 					$elm$core$List$all,
@@ -13949,7 +13940,7 @@ var $author$project$ListItem$filterItems = F3(
 			};
 			var filterItemAndChildren = function (item) {
 				var data = item.a;
-				if (containsQuery(item)) {
+				if (containsQuery(item) || data.editing) {
 					return $elm$core$Maybe$Just(
 						$author$project$ListItem$ListItem(
 							_Utils_update(
@@ -13972,7 +13963,7 @@ var $author$project$ListItem$filterItems = F3(
 				}
 			};
 			var filtered = A2($elm$core$List$filterMap, filterItemAndChildren, items);
-			return _Utils_ap(filtered, trailingEmpty);
+			return filtered;
 		}
 	});
 var $author$project$SearchToolbar$getFilteredItems = function (model) {
@@ -13987,49 +13978,15 @@ var $author$project$TagPopup$isVisible = function (model) {
 		return false;
 	}
 };
-var $author$project$Theme$colors = {background: '#f5f5f5', border: '#ccc', borderSelected: '#90caf9', codeBackground: '#f5f5f5', highlight: '#ffeb3b', link: '#007acc', tagBackground: '#e3f2fd', text: '#000', textMuted: '#666', textPlaceholder: '#aaa'};
-var $author$project$Theme$typography = {fontFamily: 'inherit', fontFamilyMono: 'monospace', fontSize: '12px', lineHeight: '1.8'};
-var $author$project$Theme$button = _List_fromArray(
-	[
-		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
-		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.border),
-		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
-		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
-		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
-		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize),
-		A2($elm$html$Html$Attributes$style, 'user-select', 'none')
-	]);
-var $author$project$NewItemButton$view = function (onClickMsg) {
-	return A2(
-		$elm$html$Html$div,
-		A2(
-			$elm$core$List$cons,
-			$elm$html$Html$Events$onClick(onClickMsg),
-			A2(
-				$elm$core$List$cons,
-				A2($elm$html$Html$Attributes$style, 'margin-left', '20px'),
-				A2(
-					$elm$core$List$cons,
-					A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
-					A2(
-						$elm$core$List$cons,
-						A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
-						A2(
-							$elm$core$List$cons,
-							A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
-							$author$project$Theme$button))))),
-		_List_fromArray(
-			[
-				$elm$html$Html$text('+ Add Item')
-			]));
-};
 var $author$project$SearchToolbar$CollapseAllClicked = {$: 'CollapseAllClicked'};
 var $author$project$SearchToolbar$ExpandAllClicked = {$: 'ExpandAllClicked'};
 var $author$project$SearchToolbar$ExportModel = {$: 'ExportModel'};
 var $author$project$SearchToolbar$ImportModel = {$: 'ImportModel'};
+var $author$project$SearchToolbar$NewItemClicked = {$: 'NewItemClicked'};
 var $author$project$SearchToolbar$SortOrderChanged = function (a) {
 	return {$: 'SortOrderChanged', a: a};
 };
+var $author$project$Theme$typography = {fontFamily: 'inherit', fontFamilyMono: 'monospace', fontSize: '12px', lineHeight: '1.8'};
 var $author$project$Theme$buttonGroup = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'padding', '0'),
@@ -14039,6 +13996,7 @@ var $author$project$Theme$buttonGroup = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
 		A2($elm$html$Html$Attributes$style, 'align-items', 'center')
 	]);
+var $author$project$Theme$colors = {background: '#f5f5f5', border: '#ccc', borderSelected: '#90caf9', codeBackground: '#f5f5f5', highlight: '#ffeb3b', link: '#007acc', tagBackground: '#e3f2fd', text: '#000', textMuted: '#666', textPlaceholder: '#aaa'};
 var $author$project$Theme$buttonGroupBase = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
@@ -14138,6 +14096,40 @@ var $author$project$Theme$select = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'align-self', 'flex-end'),
 		A2($elm$html$Html$Attributes$style, 'margin-left', 'auto')
 	]);
+var $author$project$Theme$button = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.background),
+		A2($elm$html$Html$Attributes$style, 'border', '1px solid ' + $author$project$Theme$colors.border),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xs + (' ' + $author$project$Theme$spacing.sm)),
+		A2($elm$html$Html$Attributes$style, 'cursor', 'pointer'),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize),
+		A2($elm$html$Html$Attributes$style, 'user-select', 'none')
+	]);
+var $author$project$NewItemButton$view = function (onClickMsg) {
+	return A2(
+		$elm$html$Html$div,
+		A2(
+			$elm$core$List$cons,
+			$elm$html$Html$Events$onClick(onClickMsg),
+			A2(
+				$elm$core$List$cons,
+				A2($elm$html$Html$Attributes$style, 'margin-left', '20px'),
+				A2(
+					$elm$core$List$cons,
+					A2($elm$html$Html$Attributes$style, 'display', 'inline-flex'),
+					A2(
+						$elm$core$List$cons,
+						A2($elm$html$Html$Attributes$style, 'align-items', 'center'),
+						A2(
+							$elm$core$List$cons,
+							A2($elm$html$Html$Attributes$style, 'justify-content', 'center'),
+							$author$project$Theme$button))))),
+		_List_fromArray(
+			[
+				$elm$html$Html$text('+ Add Item')
+			]));
+};
 var $author$project$Theme$selectedTagsContainer = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'display', 'flex'),
@@ -14210,7 +14202,10 @@ var $author$project$SearchToolbar$view = F2(
 	function (model, listenKeydownEvents) {
 		return A2(
 			$elm$html$Html$div,
-			_List_Nil,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$style, 'margin-bottom', $author$project$Theme$spacing.lg)
+				]),
 			_List_fromArray(
 				[
 					A2(
@@ -14310,6 +14305,7 @@ var $author$project$SearchToolbar$view = F2(
 											$elm$html$Html$text('▼')
 										]))
 								])),
+							$author$project$NewItemButton$view($author$project$SearchToolbar$NewItemClicked),
 							A2(
 							$elm$html$Html$div,
 							A2(
@@ -15188,16 +15184,10 @@ var $author$project$Main$view = function (model) {
 						$author$project$SearchToolbar$view,
 						model.searchToolbar,
 						$author$project$TagPopup$isVisible(model.tagPopup))),
-				_Utils_ap(
-					A2(
-						$elm$core$List$map,
-						A2($author$project$Main$viewListItem, model, 0),
-						A2($author$project$SearchToolbar$getFilteredItems, model.searchToolbar, model.items)),
-					_List_fromArray(
-						[
-							$author$project$NewItemButton$view(
-							$author$project$Main$GetCurrentTime($author$project$Main$CreateItemAtEnd))
-						])))));
+				A2(
+					$elm$core$List$map,
+					A2($author$project$Main$viewListItem, model, 0),
+					A2($author$project$SearchToolbar$getFilteredItems, model.searchToolbar, model.items)))));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{
@@ -15209,4 +15199,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtEnd":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

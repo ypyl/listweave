@@ -1,18 +1,17 @@
 port module Main exposing (main)
 
-import Actions exposing (SearchToolbarAction, SortOrder(..))
+import Actions exposing (SortOrder(..))
 import Browser
 import Browser.Dom
 import Browser.Events
 import Clipboard
-import Html exposing (Html, button, code, div, span, text, textarea)
+import Html exposing (Html, code, div, span, text, textarea)
 import Html.Attributes exposing (id, rows, value)
 import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
 import ListItem exposing (ListItem(..), deleteItem, editItemFn, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
-import NewItemButton
 import Regex
 import SearchToolbar exposing (addTagToSelected, getFilteredItems, getSelectedTags, getUpdatedCursorPosition, resetUpdatedCursorPosition, selectTag)
 import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
@@ -171,7 +170,7 @@ type Msg
     | UpdateItemContent ListItem String Int Posix
     | SaveItem ListItem
     | CreateItemAfter ListItem Posix
-    | CreateItemAtEnd Posix
+    | CreateItemAtStart Posix
     | GetCurrentTime (Posix -> Msg)
     | IndentItem Int ListItem
     | OutdentItem Int ListItem
@@ -194,7 +193,6 @@ type Msg
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
     | TagPopupMsg TagPopup.Msg
-
     | ReceiveImportedModel D.Value
 
 
@@ -255,6 +253,9 @@ update msg model =
                     case action of
                         Just act ->
                             case act of
+                                Actions.AddNewItem ->
+                                    update (GetCurrentTime CreateItemAtStart) model
+
                                 Actions.CollapseAll ->
                                     ( { model | items = setAllCollapsed True model.items }, Cmd.none )
 
@@ -287,7 +288,6 @@ update msg model =
                                             encode model |> Encode.encode 2
                                     in
                                     ( model, downloadJson { filename = "listweave-data.json", content = jsonString } )
-
 
                                 Actions.QueryChanged query cursorPos ->
                                     let
@@ -437,13 +437,13 @@ update msg model =
             , Task.attempt FocusResult (Browser.Dom.focus ("input-id-" ++ String.fromInt newId))
             )
 
-        CreateItemAtEnd currentTime ->
+        CreateItemAtStart currentTime ->
             let
                 newId =
                     getNextId model.items
 
                 newModel =
-                    { model | items = model.items ++ [ newEmptyListItem currentTime newId |> editItemFn newId ] }
+                    { model | items = (newEmptyListItem currentTime newId |> editItemFn newId) :: model.items }
             in
             ( newModel, Task.attempt FocusResult (Browser.Dom.focus ("input-id-" ++ String.fromInt newId)) )
 
@@ -562,9 +562,9 @@ view model =
     div
         Theme.container
         (div []
-            [(TagPopup.view model.tagPopup |> Html.map TagPopupMsg)]
+            [ TagPopup.view model.tagPopup |> Html.map TagPopupMsg ]
             :: (SearchToolbar.view model.searchToolbar (isVisible model.tagPopup) |> Html.map SearchToolbarMsg)
-            :: (List.map (viewListItem model 0) (model.items |> getFilteredItems model.searchToolbar) ++ [ NewItemButton.view (GetCurrentTime CreateItemAtEnd) ])
+            :: List.map (viewListItem model 0) (model.items |> getFilteredItems model.searchToolbar)
         )
 
 
