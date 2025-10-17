@@ -221,8 +221,12 @@ update msg model =
                 Just (Actions.HighlightTag tag) ->
                     case currentSource model.tagPopup of
                         Just TagPopup.FromSearchToolbar ->
+                            let
+                                (searchToolbarUpdatedModel, _ ) = SearchToolbar.update (SearchToolbar.SearchKeyDown 13) model.searchToolbar
+                            in
+
                             -- Tag selection from search input
-                            ( { model | tagPopup = updatedmodel, searchToolbar = selectTag tag model.searchToolbar }, Cmd.none )
+                            ( { model | tagPopup = updatedmodel, searchToolbar = selectTag tag searchToolbarUpdatedModel }, Cmd.none )
 
                         Just TagPopup.FromItem ->
                             -- Tag selection from textarea - get current cursor position
@@ -250,45 +254,47 @@ update msg model =
                 ( updatedSearchToolbarModel, action ) =
                     SearchToolbar.update searchToolbarMsg model.searchToolbar
 
+                withSearchToolbar = { model | searchToolbar = updatedSearchToolbarModel }
+
                 ( updatedModel, cmd ) =
                     case action of
                         Just act ->
                             case act of
                                 Actions.AddNewItem ->
-                                    update (GetCurrentTime CreateItemAtStart) model
+                                    update (GetCurrentTime CreateItemAtStart) withSearchToolbar
 
                                 Actions.CollapseAll ->
-                                    ( { model | items = setAllCollapsed True model.items }, Cmd.none )
+                                    ( { withSearchToolbar | items = setAllCollapsed True withSearchToolbar.items }, Cmd.none )
 
                                 Actions.ExpandAll ->
-                                    ( { model | items = setAllCollapsed False model.items }, Cmd.none )
+                                    ( { withSearchToolbar | items = setAllCollapsed False withSearchToolbar.items }, Cmd.none )
 
                                 Actions.SetSortOrder sortOrder ->
-                                    ( { model | items = ListItem.sortItemsByDate sortOrder model.items }, Cmd.none )
+                                    ( { withSearchToolbar | items = ListItem.sortItemsByDate sortOrder withSearchToolbar.items }, Cmd.none )
 
                                 Actions.KeyEnter ->
-                                    case TagPopup.getHighlightedTag model.tagPopup of
+                                    case TagPopup.getHighlightedTag model.tagPopup |> Debug.log "selected" of
                                         Just tag ->
-                                            ( { model | searchToolbar = selectTag tag model.searchToolbar, tagPopup = hidePopup model.tagPopup }, Cmd.none )
+                                            ( { withSearchToolbar | searchToolbar = selectTag tag updatedSearchToolbarModel, tagPopup = hidePopup withSearchToolbar.tagPopup }, Cmd.none )
 
                                         Nothing ->
-                                            ( model, Cmd.none )
+                                            ( withSearchToolbar, Cmd.none )
 
                                 Actions.KeyArrowUp ->
-                                    ( { model | tagPopup = navigateUp model.tagPopup }, Cmd.none )
+                                    ( { withSearchToolbar | tagPopup = navigateUp withSearchToolbar.tagPopup }, Cmd.none )
 
                                 Actions.KeyArrowDown ->
-                                    ( { model | tagPopup = navigateDown model.tagPopup }, Cmd.none )
+                                    ( { withSearchToolbar | tagPopup = navigateDown withSearchToolbar.tagPopup }, Cmd.none )
 
                                 Actions.ImportModel ->
-                                    ( model, readFile () )
+                                    ( withSearchToolbar, readFile () )
 
                                 Actions.ExportModel ->
                                     let
                                         jsonString =
-                                            encode model |> Encode.encode 2
+                                            encode withSearchToolbar |> Encode.encode 2
                                     in
-                                    ( model, downloadJson { filename = "listweave-data.json", content = jsonString } )
+                                    ( withSearchToolbar, downloadJson { filename = "listweave-data.json", content = jsonString } )
 
                                 Actions.QueryChanged query cursorPos ->
                                     let
@@ -296,7 +302,7 @@ update msg model =
                                             isInsideTagBrackets cursorPos query
                                                 |> Maybe.map
                                                     (\( tagSearchPrefix, _ ) ->
-                                                        getAllTags model.items
+                                                        getAllTags withSearchToolbar.items
                                                             |> List.filter (String.startsWith tagSearchPrefix)
                                                     )
 
@@ -304,22 +310,22 @@ update msg model =
                                             case tagPopupTags of
                                                 Just tags ->
                                                     if List.isEmpty tags then
-                                                        ( hidePopup model.tagPopup, Cmd.none )
+                                                        ( hidePopup withSearchToolbar.tagPopup, Cmd.none )
 
                                                     else
-                                                        ( TagPopup.setTags ( tags, TagPopup.FromSearchToolbar ) model.tagPopup, getSearchInputPosition () )
+                                                        ( TagPopup.setTags ( tags, TagPopup.FromSearchToolbar ) withSearchToolbar.tagPopup, getSearchInputPosition () )
 
                                                 Nothing ->
-                                                    ( hidePopup model.tagPopup, Cmd.none )
+                                                    ( hidePopup withSearchToolbar.tagPopup, Cmd.none )
                                     in
-                                    ( { model | tagPopup = updatedTagPopup }
+                                    ( { withSearchToolbar | tagPopup = updatedTagPopup }
                                     , updatedCmd
                                     )
 
                         Nothing ->
-                            ( model, Cmd.none )
+                            ( withSearchToolbar, Cmd.none )
             in
-            ( { updatedModel | searchToolbar = updatedSearchToolbarModel }, cmd )
+            ( updatedModel, cmd )
 
         ToggleCollapse item ->
             ( { model | items = mapItem (toggleCollapseFn item) model.items }

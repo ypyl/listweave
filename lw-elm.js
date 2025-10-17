@@ -11140,6 +11140,9 @@ var $author$project$Main$InsertSelectedTag = F4(
 var $author$project$Main$SaveItem = function (a) {
 	return {$: 'SaveItem', a: a};
 };
+var $author$project$SearchToolbar$SearchKeyDown = function (a) {
+	return {$: 'SearchKeyDown', a: a};
+};
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
@@ -12287,6 +12290,7 @@ var $author$project$TagsUtils$isInsideTagBrackets = F2(
 			},
 			A2($author$project$TagsUtils$focusedTag, cursorPos, content));
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$ListItem$mapItem = F2(
 	function (fn, list) {
 		return A2(
@@ -13438,20 +13442,25 @@ var $author$project$Main$update = F2(
 						if (_v4.$ === 'Just') {
 							if (_v4.a.$ === 'FromSearchToolbar') {
 								var _v5 = _v4.a;
+								var _v6 = A2(
+									$author$project$SearchToolbar$update,
+									$author$project$SearchToolbar$SearchKeyDown(13),
+									model.searchToolbar);
+								var searchToolbarUpdatedModel = _v6.a;
 								return _Utils_Tuple2(
 									_Utils_update(
 										model,
 										{
-											searchToolbar: A2($author$project$SearchToolbar$selectTag, tag, model.searchToolbar),
+											searchToolbar: A2($author$project$SearchToolbar$selectTag, tag, searchToolbarUpdatedModel),
 											tagPopup: updatedmodel
 										}),
 									$elm$core$Platform$Cmd$none);
 							} else {
-								var _v6 = _v4.a;
-								var _v7 = $author$project$ListItem$findEditingItem(model.items);
-								if (_v7.$ === 'Just') {
-									var _v8 = _v7.a;
-									var editingItem = _v8.a;
+								var _v7 = _v4.a;
+								var _v8 = $author$project$ListItem$findEditingItem(model.items);
+								if (_v8.$ === 'Just') {
+									var _v9 = _v8.a;
+									var editingItem = _v9.a;
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
@@ -13503,10 +13512,13 @@ var $author$project$Main$update = F2(
 						$elm$core$Platform$Cmd$none);
 				case 'SearchToolbarMsg':
 					var searchToolbarMsg = msg.a;
-					var _v9 = A2($author$project$SearchToolbar$update, searchToolbarMsg, model.searchToolbar);
-					var updatedSearchToolbarModel = _v9.a;
-					var action = _v9.b;
-					var _v10 = function () {
+					var _v10 = A2($author$project$SearchToolbar$update, searchToolbarMsg, model.searchToolbar);
+					var updatedSearchToolbarModel = _v10.a;
+					var action = _v10.b;
+					var withSearchToolbar = _Utils_update(
+						model,
+						{searchToolbar: updatedSearchToolbarModel});
+					var _v11 = function () {
 						if (action.$ === 'Just') {
 							var act = action.a;
 							switch (act.$) {
@@ -13514,74 +13526,77 @@ var $author$project$Main$update = F2(
 									return A2(
 										$author$project$Main$update,
 										$author$project$Main$GetCurrentTime($author$project$Main$CreateItemAtStart),
-										model);
+										withSearchToolbar);
 								case 'CollapseAll':
 									return _Utils_Tuple2(
 										_Utils_update(
-											model,
+											withSearchToolbar,
 											{
-												items: A2($author$project$ListItem$setAllCollapsed, true, model.items)
+												items: A2($author$project$ListItem$setAllCollapsed, true, withSearchToolbar.items)
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'ExpandAll':
 									return _Utils_Tuple2(
 										_Utils_update(
-											model,
+											withSearchToolbar,
 											{
-												items: A2($author$project$ListItem$setAllCollapsed, false, model.items)
+												items: A2($author$project$ListItem$setAllCollapsed, false, withSearchToolbar.items)
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'SetSortOrder':
 									var sortOrder = act.a;
 									return _Utils_Tuple2(
 										_Utils_update(
-											model,
+											withSearchToolbar,
 											{
-												items: A2($author$project$ListItem$sortItemsByDate, sortOrder, model.items)
+												items: A2($author$project$ListItem$sortItemsByDate, sortOrder, withSearchToolbar.items)
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'KeyEnter':
-									var _v13 = $author$project$TagPopup$getHighlightedTag(model.tagPopup);
-									if (_v13.$ === 'Just') {
-										var tag = _v13.a;
+									var _v14 = A2(
+										$elm$core$Debug$log,
+										'selected',
+										$author$project$TagPopup$getHighlightedTag(model.tagPopup));
+									if (_v14.$ === 'Just') {
+										var tag = _v14.a;
 										return _Utils_Tuple2(
 											_Utils_update(
-												model,
+												withSearchToolbar,
 												{
-													searchToolbar: A2($author$project$SearchToolbar$selectTag, tag, model.searchToolbar),
-													tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
+													searchToolbar: A2($author$project$SearchToolbar$selectTag, tag, updatedSearchToolbarModel),
+													tagPopup: $author$project$TagPopup$hidePopup(withSearchToolbar.tagPopup)
 												}),
 											$elm$core$Platform$Cmd$none);
 									} else {
-										return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+										return _Utils_Tuple2(withSearchToolbar, $elm$core$Platform$Cmd$none);
 									}
 								case 'KeyArrowUp':
 									return _Utils_Tuple2(
 										_Utils_update(
-											model,
+											withSearchToolbar,
 											{
-												tagPopup: $author$project$TagPopup$navigateUp(model.tagPopup)
+												tagPopup: $author$project$TagPopup$navigateUp(withSearchToolbar.tagPopup)
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'KeyArrowDown':
 									return _Utils_Tuple2(
 										_Utils_update(
-											model,
+											withSearchToolbar,
 											{
-												tagPopup: $author$project$TagPopup$navigateDown(model.tagPopup)
+												tagPopup: $author$project$TagPopup$navigateDown(withSearchToolbar.tagPopup)
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'ImportModel':
 									return _Utils_Tuple2(
-										model,
+										withSearchToolbar,
 										$author$project$Main$readFile(_Utils_Tuple0));
 								case 'ExportModel':
 									var jsonString = A2(
 										$elm$json$Json$Encode$encode,
 										2,
-										$author$project$Main$encode(model));
+										$author$project$Main$encode(withSearchToolbar));
 									return _Utils_Tuple2(
-										model,
+										withSearchToolbar,
 										$author$project$Main$downloadJson(
 											{content: jsonString, filename: 'listweave-data.json'}));
 								default:
@@ -13589,50 +13604,46 @@ var $author$project$Main$update = F2(
 									var cursorPos = act.b;
 									var tagPopupTags = A2(
 										$elm$core$Maybe$map,
-										function (_v16) {
-											var tagSearchPrefix = _v16.a;
+										function (_v17) {
+											var tagSearchPrefix = _v17.a;
 											return A2(
 												$elm$core$List$filter,
 												$elm$core$String$startsWith(tagSearchPrefix),
-												$author$project$ListItem$getAllTags(model.items));
+												$author$project$ListItem$getAllTags(withSearchToolbar.items));
 										},
 										A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, query));
-									var _v14 = function () {
+									var _v15 = function () {
 										if (tagPopupTags.$ === 'Just') {
 											var tags = tagPopupTags.a;
 											return $elm$core$List$isEmpty(tags) ? _Utils_Tuple2(
-												$author$project$TagPopup$hidePopup(model.tagPopup),
+												$author$project$TagPopup$hidePopup(withSearchToolbar.tagPopup),
 												$elm$core$Platform$Cmd$none) : _Utils_Tuple2(
 												A2(
 													$author$project$TagPopup$setTags,
 													_Utils_Tuple2(tags, $author$project$TagPopup$FromSearchToolbar),
-													model.tagPopup),
+													withSearchToolbar.tagPopup),
 												$author$project$Main$getSearchInputPosition(_Utils_Tuple0));
 										} else {
 											return _Utils_Tuple2(
-												$author$project$TagPopup$hidePopup(model.tagPopup),
+												$author$project$TagPopup$hidePopup(withSearchToolbar.tagPopup),
 												$elm$core$Platform$Cmd$none);
 										}
 									}();
-									var updatedTagPopup = _v14.a;
-									var updatedCmd = _v14.b;
+									var updatedTagPopup = _v15.a;
+									var updatedCmd = _v15.b;
 									return _Utils_Tuple2(
 										_Utils_update(
-											model,
+											withSearchToolbar,
 											{tagPopup: updatedTagPopup}),
 										updatedCmd);
 							}
 						} else {
-							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							return _Utils_Tuple2(withSearchToolbar, $elm$core$Platform$Cmd$none);
 						}
 					}();
-					var updatedModel = _v10.a;
-					var cmd = _v10.b;
-					return _Utils_Tuple2(
-						_Utils_update(
-							updatedModel,
-							{searchToolbar: updatedSearchToolbarModel}),
-						cmd);
+					var updatedModel = _v11.a;
+					var cmd = _v11.b;
+					return _Utils_Tuple2(updatedModel, cmd);
 				case 'ToggleCollapse':
 					var item = msg.a;
 					return _Utils_Tuple2(
@@ -13667,10 +13678,10 @@ var $author$project$Main$update = F2(
 								$author$project$ListItem$editItemFn(id),
 								model.items)
 						});
-					var _v17 = function () {
-						var _v18 = model.cursorPos;
-						if (_v18.$ === 'Just') {
-							var pos = _v18.a;
+					var _v18 = function () {
+						var _v19 = model.cursorPos;
+						if (_v19.$ === 'Just') {
+							var pos = _v19.a;
 							return _Utils_Tuple2(
 								_Utils_update(
 									newModel,
@@ -13689,8 +13700,8 @@ var $author$project$Main$update = F2(
 									$elm$browser$Browser$Dom$focus(inputId)));
 						}
 					}();
-					var updatedModel = _v17.a;
-					var command = _v17.b;
+					var updatedModel = _v18.a;
+					var command = _v18.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							updatedModel,
@@ -13718,9 +13729,9 @@ var $author$project$Main$update = F2(
 					var item = msg.a;
 					var tag = msg.b;
 					var cursorPos = msg.c;
-					return function (_v19) {
-						var m = _v19.a;
-						var c = _v19.b;
+					return function (_v20) {
+						var m = _v20.a;
+						var c = _v20.b;
 						return A2(
 							$elm$core$Tuple$mapSecond,
 							function (cmd) {
@@ -13745,11 +13756,11 @@ var $author$project$Main$update = F2(
 					var cursorPos = msg.c;
 					var currentTime = msg.d;
 					var itemId = $author$project$ListItem$getId(item);
-					var _v20 = A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, content);
-					if (_v20.$ === 'Just') {
-						var _v21 = _v20.a;
-						var tagSearchPrefix = _v21.a;
-						var tag = _v21.b;
+					var _v21 = A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, content);
+					if (_v21.$ === 'Just') {
+						var _v22 = _v21.a;
+						var tagSearchPrefix = _v22.a;
+						var tag = _v22.b;
 						var matchingTags = A2(
 							$elm$core$List$filter,
 							$elm$core$Basics$neq(tag),
@@ -13855,9 +13866,9 @@ var $author$project$Main$update = F2(
 					var top = msg.a;
 					var left = msg.b;
 					var width = msg.c;
-					var _v22 = $author$project$TagPopup$getTags(model.tagPopup);
-					if (_v22.$ === 'Just') {
-						var tags = _v22.a;
+					var _v23 = $author$project$TagPopup$getTags(model.tagPopup);
+					if (_v23.$ === 'Just') {
+						var tags = _v23.a;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -13878,7 +13889,7 @@ var $author$project$Main$update = F2(
 						model,
 						A2(
 							$elm$core$Task$perform,
-							function (_v23) {
+							function (_v24) {
 								return $author$project$Main$ToggleNoBlur;
 							},
 							$elm$core$Task$succeed(_Utils_Tuple0))) : _Utils_Tuple2(
@@ -13937,11 +13948,11 @@ var $author$project$Main$update = F2(
 						A2($elm$core$Task$perform, msgFn, $elm$time$Time$now));
 				case 'SaveAndCreateAfter':
 					var item = msg.a;
-					var _v24 = A2(
+					var _v25 = A2(
 						$author$project$Main$update,
 						$author$project$Main$SaveItem(item),
 						model);
-					var afterSave = _v24.a;
+					var afterSave = _v25.a;
 					var $temp$msg = $author$project$Main$GetCurrentTime(
 						$author$project$Main$CreateItemAfter(item)),
 						$temp$model = afterSave;
@@ -13977,9 +13988,9 @@ var $author$project$Main$update = F2(
 						$elm$core$String$join,
 						'\n',
 						$author$project$ListItem$getContent(item));
-					var _v25 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
-					var newContent = _v25.a;
-					var newCaretPos = _v25.b;
+					var _v26 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
+					var newContent = _v26.a;
+					var newCaretPos = _v26.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -13999,9 +14010,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToPreviousWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v26 = A2($author$project$ListItem$findPreviousItem, item, model.items);
-					if (_v26.$ === 'Just') {
-						var prevItem = _v26.a;
+					var _v27 = A2($author$project$ListItem$findPreviousItem, item, model.items);
+					if (_v27.$ === 'Just') {
+						var prevItem = _v27.a;
 						var prevId = $author$project$ListItem$getId(prevItem);
 						var prevContent = A2(
 							$elm$core$String$join,
@@ -14037,9 +14048,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToNextWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v27 = A2($author$project$ListItem$findNextItem, item, model.items);
-					if (_v27.$ === 'Just') {
-						var nextItem = _v27.a;
+					var _v28 = A2($author$project$ListItem$findNextItem, item, model.items);
+					if (_v28.$ === 'Just') {
+						var nextItem = _v28.a;
 						var nextId = $author$project$ListItem$getId(nextItem);
 						var nextContent = A2(
 							$elm$core$String$join,
@@ -14071,10 +14082,10 @@ var $author$project$Main$update = F2(
 					}
 				default:
 					var clipboardMsg = msg.a;
-					var _v28 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
-					var updatedClipboard = _v28.a;
-					var updatedItems = _v28.b;
-					var maybeCaretTask = _v28.c;
+					var _v29 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
+					var updatedClipboard = _v29.a;
+					var updatedItems = _v29.b;
+					var maybeCaretTask = _v29.c;
 					var newCaretTask = function () {
 						if (maybeCaretTask.$ === 'Just') {
 							var caretTask = maybeCaretTask.a;
@@ -14251,9 +14262,6 @@ var $author$project$SearchToolbar$inputDecoder = A3(
 		$elm$json$Json$Decode$field,
 		'target',
 		A2($elm$json$Json$Decode$field, 'selectionStart', $elm$json$Json$Decode$int)));
-var $author$project$SearchToolbar$SearchKeyDown = function (a) {
-	return {$: 'SearchKeyDown', a: a};
-};
 var $author$project$SearchToolbar$keydownDecoder = function (listenKeydownEvents) {
 	return A2(
 		$elm$json$Json$Decode$map,
