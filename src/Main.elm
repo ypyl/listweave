@@ -86,28 +86,28 @@ initialModel =
         [ newListItem
             { id = 1
             , content = [ "Meeting notes 2025-09-01", "Discussed project timeline with team. Action items: @todo @exercise" ]
-            , tags = [ "todo", "exercise" ]
+            , tags = [ "todo", "exercise", "created:09/08/2025", "updated:09/08/2025" ]
             , collapsed = True
             , editing = False
             , created = millisToPosix 1757532035027
             , updated = millisToPosix 1757532035027
             , children =
-                [ newListItem { id = 2, content = [ "Review requirements @todo" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
-                , newListItem { id = 7, content = [ "Schedule next meeting 2 @calendar" ], tags = [ "calendar" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
-                , newListItem { id = 3, content = [ "Code example:", "```", "function test() {", "  // This @todo should not be clickable", "  return @value;", "}", "```", "But this @todo should work" ], tags = [ "todo" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                [ newListItem { id = 2, content = [ "Review requirements @todo" ], tags = [ "todo", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 7, content = [ "Schedule next meeting 2 @calendar" ], tags = [ "calendar", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 3, content = [ "Code example:", "```", "function test() {", "  // This @todo should not be clickable", "  return @value;", "}", "```", "But this @todo should work" ], tags = [ "todo", "code", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
             }
         , newListItem
             { id = 4
             , content = [ "Search Tutorial - How to use the search box", "Type text to search content across all items", "Use @tag to filter by specific tags (e.g., @todo)", "Selected tags appear as chips below search box" ]
-            , tags = [ "tag", "todo" ]
+            , tags = [ "tag", "todo", "created:09/08/2025", "updated:09/08/2025" ]
             , created = millisToPosix 1757532035027
             , updated = millisToPosix 1757532035027
             , collapsed = True
             , editing = False
             , children =
-                [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
-                , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
             }
         ]

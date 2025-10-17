@@ -1,6 +1,5 @@
 
 
-- auto tags (created, updated, attachment, code)
 - copy item
 - ZoomIn/ZoomOut
     ALt ->
@@ -15,6 +14,7 @@
 - storage (indexDB)
 - assert support (attach any file)
 
+- ✅ auto tags (created, updated, attachment, code)
 - ✅ delete icon in the top-left corner
 - ✅ when addItem - two columns textarea - should be only
 - ✅ sorting by created/updated date - [requirements specification](docs/sort-items-by-date-requirements.md)

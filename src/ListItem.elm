@@ -5,8 +5,8 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Regex
 import Set
-import TagsUtils exposing (isTagRegex)
-import Time exposing (Posix)
+import TagsUtils exposing (isTagRegex, processContent)
+import Time exposing (Month(..), Posix, millisToPosix, posixToMillis, toDay, toMonth, toYear)
 
 
 type ListItem
@@ -63,6 +63,64 @@ decode =
             (Decode.field "created" posixDecoder)
             (Decode.field "updated" posixDecoder)
         )
+
+
+monthToInt : Time.Month -> Int
+monthToInt month =
+    case month of
+        Time.Jan ->
+            1
+
+        Time.Feb ->
+            2
+
+        Time.Mar ->
+            3
+
+        Time.Apr ->
+            4
+
+        Time.May ->
+            5
+
+        Time.Jun ->
+            6
+
+        Time.Jul ->
+            7
+
+        Time.Aug ->
+            8
+
+        Time.Sep ->
+            9
+
+        Time.Oct ->
+            10
+
+        Time.Nov ->
+            11
+
+        Time.Dec ->
+            12
+
+
+formatDateToMDY : Posix -> String
+formatDateToMDY posix =
+    let
+        zone =
+            Time.utc
+
+        month =
+            Time.toMonth zone posix |> monthToInt
+
+        day =
+            Time.toDay zone posix
+
+        year =
+            Time.toYear zone posix
+    in
+    String.padLeft 2 '0' (String.fromInt month) ++ "/" ++ String.padLeft 2 '0' (String.fromInt day) ++ "/" ++ String.fromInt year
 
 
 posixDecoder : Decoder Posix
@@ -169,7 +227,13 @@ getId (ListItem item) =
 
 newEmptyListItem : Posix -> Int -> ListItem
 newEmptyListItem posix id =
-    ListItem { id = id, content = [], tags = [], children = [], collapsed = True, editing = False, created = posix, updated = posix }
+    let
+        autoTags =
+            [ "created:" ++ formatDateToMDY posix
+            , "updated:" ++ formatDateToMDY posix
+            ]
+    in
+    ListItem { id = id, content = [], tags = autoTags, children = [], collapsed = True, editing = False, created = posix, updated = posix }
 
 
 newListItem : { a | id : Int, content : List String, tags : List String, children : List ListItem, collapsed : Bool, editing : Bool, created : Posix, updated : Posix } -> ListItem
@@ -471,10 +535,28 @@ updateItemContentFn (ListItem current) content currentTime (ListItem item) =
                 else
                     lines
 
-            tags =
+            userTags =
                 extractTags content
+
+            hasCodeBlock =
+                TagsUtils.processContent lines
+                    |> List.any (\( isCode, _ ) -> isCode)
+
+            autoTags =
+                [ "created:" ++ formatDateToMDY item.created
+                , "updated:" ++ formatDateToMDY currentTime
+                ]
+                    ++ (if hasCodeBlock then
+                            [ "code" ]
+
+                        else
+                            []
+                       )
+
+            allTags =
+                Set.fromList (userTags ++ autoTags) |> Set.toList
         in
-        ListItem { item | content = finalLines, tags = tags, updated = currentTime }
+        ListItem { item | content = finalLines, tags = allTags, updated = currentTime }
 
     else
         ListItem item

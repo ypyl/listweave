@@ -10735,7 +10735,7 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 2,
 							tags: _List_fromArray(
-								['todo']),
+								['todo', 'created:09/08/2025', 'updated:09/08/2025']),
 							updated: $elm$time$Time$millisToPosix(1757532035027)
 						}),
 						$author$project$ListItem$newListItem(
@@ -10748,7 +10748,7 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 7,
 							tags: _List_fromArray(
-								['calendar']),
+								['calendar', 'created:09/08/2025', 'updated:09/08/2025']),
 							updated: $elm$time$Time$millisToPosix(1757532035027)
 						}),
 						$author$project$ListItem$newListItem(
@@ -10761,7 +10761,7 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 3,
 							tags: _List_fromArray(
-								['todo']),
+								['todo', 'code', 'created:09/08/2025', 'updated:09/08/2025']),
 							updated: $elm$time$Time$millisToPosix(1757532035027)
 						})
 					]),
@@ -10772,7 +10772,7 @@ var $author$project$Main$initialModel = {
 				editing: false,
 				id: 1,
 				tags: _List_fromArray(
-					['todo', 'exercise']),
+					['todo', 'exercise', 'created:09/08/2025', 'updated:09/08/2025']),
 				updated: $elm$time$Time$millisToPosix(1757532035027)
 			}),
 			$author$project$ListItem$newListItem(
@@ -10789,7 +10789,7 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 5,
 							tags: _List_fromArray(
-								['search']),
+								['search', 'created:09/08/2025', 'updated:09/08/2025']),
 							updated: $elm$time$Time$millisToPosix(1757532035027)
 						}),
 						$author$project$ListItem$newListItem(
@@ -10802,7 +10802,7 @@ var $author$project$Main$initialModel = {
 							editing: false,
 							id: 6,
 							tags: _List_fromArray(
-								['tutorial']),
+								['tutorial', 'created:09/08/2025', 'updated:09/08/2025']),
 							updated: $elm$time$Time$millisToPosix(1757532035027)
 						})
 					]),
@@ -10813,7 +10813,7 @@ var $author$project$Main$initialModel = {
 				editing: false,
 				id: 4,
 				tags: _List_fromArray(
-					['tag', 'todo']),
+					['tag', 'todo', 'created:09/08/2025', 'updated:09/08/2025']),
 				updated: $elm$time$Time$millisToPosix(1757532035027)
 			})
 		]),
@@ -11896,10 +11896,198 @@ var $author$project$ListItem$indentItem = F2(
 			},
 			list) : result;
 	});
+var $author$project$ListItem$monthToInt = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 1;
+		case 'Feb':
+			return 2;
+		case 'Mar':
+			return 3;
+		case 'Apr':
+			return 4;
+		case 'May':
+			return 5;
+		case 'Jun':
+			return 6;
+		case 'Jul':
+			return 7;
+		case 'Aug':
+			return 8;
+		case 'Sep':
+			return 9;
+		case 'Oct':
+			return 10;
+		case 'Nov':
+			return 11;
+		default:
+			return 12;
+	}
+};
+var $elm$core$String$cons = _String_cons;
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			$elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
+	});
+var $elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3($elm$core$String$repeatHelp, n, chunk, '');
+	});
+var $elm$core$String$padLeft = F3(
+	function (n, _char, string) {
+		return _Utils_ap(
+			A2(
+				$elm$core$String$repeat,
+				n - $elm$core$String$length(string),
+				$elm$core$String$fromChar(_char)),
+			string);
+	});
+var $elm$time$Time$flooredDiv = F2(
+	function (numerator, denominator) {
+		return $elm$core$Basics$floor(numerator / denominator);
+	});
+var $elm$time$Time$toAdjustedMinutesHelp = F3(
+	function (defaultOffset, posixMinutes, eras) {
+		toAdjustedMinutesHelp:
+		while (true) {
+			if (!eras.b) {
+				return posixMinutes + defaultOffset;
+			} else {
+				var era = eras.a;
+				var olderEras = eras.b;
+				if (_Utils_cmp(era.start, posixMinutes) < 0) {
+					return posixMinutes + era.offset;
+				} else {
+					var $temp$defaultOffset = defaultOffset,
+						$temp$posixMinutes = posixMinutes,
+						$temp$eras = olderEras;
+					defaultOffset = $temp$defaultOffset;
+					posixMinutes = $temp$posixMinutes;
+					eras = $temp$eras;
+					continue toAdjustedMinutesHelp;
+				}
+			}
+		}
+	});
+var $elm$time$Time$toAdjustedMinutes = F2(
+	function (_v0, time) {
+		var defaultOffset = _v0.a;
+		var eras = _v0.b;
+		return A3(
+			$elm$time$Time$toAdjustedMinutesHelp,
+			defaultOffset,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				60000),
+			eras);
+	});
+var $elm$time$Time$toCivil = function (minutes) {
+	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
+	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
+	var dayOfEra = rawDay - (era * 146097);
+	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
+	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
+	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
+	var month = mp + ((mp < 10) ? 3 : (-9));
+	var year = yearOfEra + (era * 400);
+	return {
+		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		month: month,
+		year: year + ((month <= 2) ? 1 : 0)
+	};
+};
+var $elm$time$Time$toDay = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
+	});
+var $elm$time$Time$Apr = {$: 'Apr'};
+var $elm$time$Time$Aug = {$: 'Aug'};
+var $elm$time$Time$Dec = {$: 'Dec'};
+var $elm$time$Time$Feb = {$: 'Feb'};
+var $elm$time$Time$Jan = {$: 'Jan'};
+var $elm$time$Time$Jul = {$: 'Jul'};
+var $elm$time$Time$Jun = {$: 'Jun'};
+var $elm$time$Time$Mar = {$: 'Mar'};
+var $elm$time$Time$May = {$: 'May'};
+var $elm$time$Time$Nov = {$: 'Nov'};
+var $elm$time$Time$Oct = {$: 'Oct'};
+var $elm$time$Time$Sep = {$: 'Sep'};
+var $elm$time$Time$toMonth = F2(
+	function (zone, time) {
+		var _v0 = $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
+		switch (_v0) {
+			case 1:
+				return $elm$time$Time$Jan;
+			case 2:
+				return $elm$time$Time$Feb;
+			case 3:
+				return $elm$time$Time$Mar;
+			case 4:
+				return $elm$time$Time$Apr;
+			case 5:
+				return $elm$time$Time$May;
+			case 6:
+				return $elm$time$Time$Jun;
+			case 7:
+				return $elm$time$Time$Jul;
+			case 8:
+				return $elm$time$Time$Aug;
+			case 9:
+				return $elm$time$Time$Sep;
+			case 10:
+				return $elm$time$Time$Oct;
+			case 11:
+				return $elm$time$Time$Nov;
+			default:
+				return $elm$time$Time$Dec;
+		}
+	});
+var $elm$time$Time$toYear = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).year;
+	});
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
+var $author$project$ListItem$formatDateToMDY = function (posix) {
+	var zone = $elm$time$Time$utc;
+	var year = A2($elm$time$Time$toYear, zone, posix);
+	var month = $author$project$ListItem$monthToInt(
+		A2($elm$time$Time$toMonth, zone, posix));
+	var day = A2($elm$time$Time$toDay, zone, posix);
+	return A3(
+		$elm$core$String$padLeft,
+		2,
+		_Utils_chr('0'),
+		$elm$core$String$fromInt(month)) + ('/' + (A3(
+		$elm$core$String$padLeft,
+		2,
+		_Utils_chr('0'),
+		$elm$core$String$fromInt(day)) + ('/' + $elm$core$String$fromInt(year))));
+};
 var $author$project$ListItem$newEmptyListItem = F2(
 	function (posix, id) {
+		var autoTags = _List_fromArray(
+			[
+				'created:' + $author$project$ListItem$formatDateToMDY(posix),
+				'updated:' + $author$project$ListItem$formatDateToMDY(posix)
+			]);
 		return $author$project$ListItem$ListItem(
-			{children: _List_Nil, collapsed: true, content: _List_Nil, created: posix, editing: false, id: id, tags: _List_Nil, updated: posix});
+			{children: _List_Nil, collapsed: true, content: _List_Nil, created: posix, editing: false, id: id, tags: autoTags, updated: posix});
 	});
 var $author$project$ListItem$insertItemAfter = F4(
 	function (after, newId, list, currentTime) {
@@ -12368,10 +12556,6 @@ var $elm$time$Time$Name = function (a) {
 var $elm$time$Time$Offset = function (a) {
 	return {$: 'Offset', a: a};
 };
-var $elm$time$Time$Zone = F2(
-	function (a, b) {
-		return {$: 'Zone', a: a, b: b};
-	});
 var $elm$time$Time$customZone = $elm$time$Time$Zone;
 var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $elm$core$List$partition = F2(
@@ -13198,13 +13382,31 @@ var $author$project$ListItem$updateItemContentFn = F4(
 		var current = _v0.a;
 		var item = _v1.a;
 		if (_Utils_eq(item.id, current.id)) {
-			var tags = $author$project$ListItem$extractTags(content);
+			var userTags = $author$project$ListItem$extractTags(content);
 			var lines = $elm$core$String$lines(content);
+			var hasCodeBlock = A2(
+				$elm$core$List$any,
+				function (_v2) {
+					var isCode = _v2.a;
+					return isCode;
+				},
+				$author$project$TagsUtils$processContent(lines));
 			var finalLines = A2($elm$core$List$all, $elm$core$String$isEmpty, lines) ? _List_Nil : lines;
+			var autoTags = _Utils_ap(
+				_List_fromArray(
+					[
+						'created:' + $author$project$ListItem$formatDateToMDY(item.created),
+						'updated:' + $author$project$ListItem$formatDateToMDY(currentTime)
+					]),
+				hasCodeBlock ? _List_fromArray(
+					['code']) : _List_Nil);
+			var allTags = $elm$core$Set$toList(
+				$elm$core$Set$fromList(
+					_Utils_ap(userTags, autoTags)));
 			return $author$project$ListItem$ListItem(
 				_Utils_update(
 					item,
-					{content: finalLines, tags: tags, updated: currentTime}));
+					{content: finalLines, tags: allTags, updated: currentTime}));
 		} else {
 			return $author$project$ListItem$ListItem(item);
 		}
@@ -14576,7 +14778,6 @@ var $author$project$Clipboard$hasItem = function (model) {
 	return !_Utils_eq(model.clipboard, $elm$core$Maybe$Nothing);
 };
 var $author$project$KeyboardHandler$Backspace = {$: 'Backspace'};
-var $author$project$KeyboardHandler$C = {$: 'C'};
 var $author$project$KeyboardHandler$Down = {$: 'Down'};
 var $author$project$KeyboardHandler$Enter = {$: 'Enter'};
 var $author$project$KeyboardHandler$Escape = {$: 'Escape'};
@@ -14587,6 +14788,7 @@ var $author$project$KeyboardHandler$Other = function (a) {
 var $author$project$KeyboardHandler$Right = {$: 'Right'};
 var $author$project$KeyboardHandler$Tab = {$: 'Tab'};
 var $author$project$KeyboardHandler$Up = {$: 'Up'};
+var $author$project$KeyboardHandler$V = {$: 'V'};
 var $author$project$KeyboardHandler$X = {$: 'X'};
 var $author$project$KeyboardHandler$keyFromCode = function (code) {
 	switch (code) {
@@ -14607,7 +14809,7 @@ var $author$project$KeyboardHandler$keyFromCode = function (code) {
 		case 88:
 			return $author$project$KeyboardHandler$X;
 		case 86:
-			return $author$project$KeyboardHandler$C;
+			return $author$project$KeyboardHandler$V;
 		case 9:
 			return $author$project$KeyboardHandler$Tab;
 		default:
@@ -14651,7 +14853,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 									return _Utils_Tuple2(
 										config.onCutItem(item),
 										true);
-								case 'C':
+								case 'V':
 									return _Utils_Tuple2(
 										config.onPasteItem(item),
 										true);
