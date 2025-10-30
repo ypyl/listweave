@@ -819,6 +819,47 @@ restoreItemAtPosition item parentId childIndex items =
                 items
 
 
+deepCopyItem : Posix -> Int -> ListItem -> ListItem
+deepCopyItem currentTime nextIdBase (ListItem item) =
+    let
+        copyChildren : Int -> List ListItem -> ( List ListItem, Int )
+        copyChildren idOffset children =
+            List.foldl
+                (\child ( acc, offset ) ->
+                    let
+                        newChild = deepCopyItem currentTime (nextIdBase + offset) child
+                        childrenCount = countTotalItems child
+                    in
+                    ( acc ++ [ newChild ], offset + childrenCount )
+                )
+                ( [], idOffset + 1 )
+                children
+
+        ( newChildren, _ ) = copyChildren 0 item.children
+
+        autoTags =
+            [ "created:" ++ formatDateToMDY currentTime
+            , "updated:" ++ formatDateToMDY currentTime
+            ]
+
+        userTags =
+            List.filter (\tag -> not (String.startsWith "created:" tag) && not (String.startsWith "updated:" tag)) item.tags
+    in
+    ListItem
+        { id = nextIdBase
+        , content = item.content
+        , tags = userTags ++ autoTags
+        , children = newChildren
+        , collapsed = item.collapsed
+        , editing = False
+        , created = currentTime
+        , updated = currentTime
+        }
+
+countTotalItems : ListItem -> Int
+countTotalItems (ListItem item) =
+    1 + List.sum (List.map countTotalItems item.children)
+
 insertClipboardItemAfter : ListItem -> ListItem -> List ListItem -> List ListItem
 insertClipboardItemAfter targetItem clipboardItem items =
     let
@@ -830,7 +871,6 @@ insertClipboardItemAfter targetItem clipboardItem items =
                 item :: rest ->
                     if item == targetItem then
                         item :: clipboardItem :: rest
-
                     else
                         case item of
                             ListItem data ->

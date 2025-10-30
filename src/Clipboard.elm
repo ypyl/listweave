@@ -3,6 +3,7 @@ module Clipboard exposing (Model, Msg(..), init, update, hasItem, encode, decode
 import ListItem exposing (ListItem, findItemPosition, insertClipboardItemAfter, removeItemCompletely, restoreItemAtPosition)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+import Time exposing (Posix)
 
 -- MODEL
 
@@ -63,6 +64,7 @@ clipboardPositionDecoder =
 
 type Msg
     = CutItem ListItem (List ListItem)
+    | CopyItem ListItem (List ListItem) Posix
     | PasteItem ListItem (List ListItem)
     | RestoreCutItem (List ListItem)
 
@@ -70,6 +72,14 @@ type Msg
 update : Msg -> Model -> ( Model, List ListItem, Maybe ( Int, Int ) )
 update msg model =
     case msg of
+        CopyItem item items currentTime ->
+            -- For copy, create a deep copy immediately and store it
+            let
+                nextId = ListItem.getNextId items
+                copiedItem = ListItem.deepCopyItem currentTime nextId item
+            in
+            ( { model | clipboard = Just copiedItem, clipboardOriginalPosition = Nothing }, items, Nothing )
+
         CutItem item items ->
             let
                 -- If clipboard not empty, restore previous cut item first

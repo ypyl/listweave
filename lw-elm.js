@@ -12835,6 +12835,62 @@ var $author$project$ListItem$toggleCollapseFn = F2(
 var $author$project$Clipboard$RestoreCutItem = function (a) {
 	return {$: 'RestoreCutItem', a: a};
 };
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $author$project$ListItem$countTotalItems = function (_v0) {
+	var item = _v0.a;
+	return 1 + $elm$core$List$sum(
+		A2($elm$core$List$map, $author$project$ListItem$countTotalItems, item.children));
+};
+var $author$project$ListItem$deepCopyItem = F3(
+	function (currentTime, nextIdBase, _v0) {
+		var item = _v0.a;
+		var userTags = A2(
+			$elm$core$List$filter,
+			function (tag) {
+				return (!A2($elm$core$String$startsWith, 'created:', tag)) && (!A2($elm$core$String$startsWith, 'updated:', tag));
+			},
+			item.tags);
+		var copyChildren = F2(
+			function (idOffset, children) {
+				return A3(
+					$elm$core$List$foldl,
+					F2(
+						function (child, _v2) {
+							var acc = _v2.a;
+							var offset = _v2.b;
+							var newChild = A3($author$project$ListItem$deepCopyItem, currentTime, nextIdBase + offset, child);
+							var childrenCount = $author$project$ListItem$countTotalItems(child);
+							return _Utils_Tuple2(
+								_Utils_ap(
+									acc,
+									_List_fromArray(
+										[newChild])),
+								offset + childrenCount);
+						}),
+					_Utils_Tuple2(_List_Nil, idOffset + 1),
+					children);
+			});
+		var autoTags = _List_fromArray(
+			[
+				'created:' + $author$project$ListItem$formatDateToMDY(currentTime),
+				'updated:' + $author$project$ListItem$formatDateToMDY(currentTime)
+			]);
+		var _v1 = A2(copyChildren, 0, item.children);
+		var newChildren = _v1.a;
+		return $author$project$ListItem$ListItem(
+			{
+				children: newChildren,
+				collapsed: item.collapsed,
+				content: item.content,
+				created: currentTime,
+				editing: false,
+				id: nextIdBase,
+				tags: _Utils_ap(userTags, autoTags),
+				updated: currentTime
+			});
+	});
 var $author$project$ListItem$findItemPosition = F2(
 	function (target, items) {
 		var findInList = F2(
@@ -13075,6 +13131,21 @@ var $author$project$ListItem$restoreItemAtPosition = F4(
 var $author$project$Clipboard$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
+			case 'CopyItem':
+				var item = msg.a;
+				var items = msg.b;
+				var currentTime = msg.c;
+				var nextId = $author$project$ListItem$getNextId(items);
+				var copiedItem = A3($author$project$ListItem$deepCopyItem, currentTime, nextId, item);
+				return _Utils_Tuple3(
+					_Utils_update(
+						model,
+						{
+							clipboard: $elm$core$Maybe$Just(copiedItem),
+							clipboardOriginalPosition: $elm$core$Maybe$Nothing
+						}),
+					items,
+					$elm$core$Maybe$Nothing);
 			case 'CutItem':
 				var item = msg.a;
 				var items = msg.b;
@@ -14730,6 +14801,10 @@ var $author$project$Theme$listItemRowWithChildren = _Utils_ap(
 var $author$project$Main$ClipboardMsg = function (a) {
 	return {$: 'ClipboardMsg', a: a};
 };
+var $author$project$Clipboard$CopyItem = F3(
+	function (a, b, c) {
+		return {$: 'CopyItem', a: a, b: b, c: c};
+	});
 var $author$project$Clipboard$CutItem = F2(
 	function (a, b) {
 		return {$: 'CutItem', a: a, b: b};
@@ -14786,6 +14861,7 @@ var $author$project$Clipboard$hasItem = function (model) {
 	return !_Utils_eq(model.clipboard, $elm$core$Maybe$Nothing);
 };
 var $author$project$KeyboardHandler$Backspace = {$: 'Backspace'};
+var $author$project$KeyboardHandler$C = {$: 'C'};
 var $author$project$KeyboardHandler$Down = {$: 'Down'};
 var $author$project$KeyboardHandler$Enter = {$: 'Enter'};
 var $author$project$KeyboardHandler$Escape = {$: 'Escape'};
@@ -14818,6 +14894,8 @@ var $author$project$KeyboardHandler$keyFromCode = function (code) {
 			return $author$project$KeyboardHandler$X;
 		case 86:
 			return $author$project$KeyboardHandler$V;
+		case 67:
+			return $author$project$KeyboardHandler$C;
 		case 9:
 			return $author$project$KeyboardHandler$Tab;
 		default:
@@ -14860,6 +14938,10 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 								case 'X':
 									return _Utils_Tuple2(
 										config.onCutItem(item),
+										true);
+								case 'C':
+									return _Utils_Tuple2(
+										config.onCopyItem(item),
 										true);
 								case 'V':
 									return _Utils_Tuple2(
@@ -15036,6 +15118,13 @@ var $author$project$Main$viewEditableItem = F2(
 		var items = _v0.items;
 		var keyboardConfig = {
 			clipboard: clipboard,
+			onCopyItem: function (targetItem) {
+				return $author$project$Main$GetCurrentTime(
+					function (currentTime) {
+						return $author$project$Main$ClipboardMsg(
+							A3($author$project$Clipboard$CopyItem, targetItem, items, currentTime));
+					});
+			},
 			onCutItem: function (targetItem) {
 				return $author$project$Main$ClipboardMsg(
 					A2($author$project$Clipboard$CutItem, targetItem, items));
@@ -15429,4 +15518,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

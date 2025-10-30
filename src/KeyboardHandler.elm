@@ -18,6 +18,7 @@ type Key
     | Down
     | X
     | V
+    | C
     | Escape
     | Tab
     | Other Int
@@ -53,6 +54,9 @@ keyFromCode code =
         86 ->
             V
 
+        67 ->
+            C
+
         9 ->
             Tab
 
@@ -66,6 +70,7 @@ onKeyDown :
     , onMoveItemUp : Int -> ListItem -> msg
     , onMoveItemDown : Int -> ListItem -> msg
     , onCutItem : ListItem -> msg
+    , onCopyItem : ListItem -> msg
     , onPasteItem : ListItem -> msg
     , onDeleteItem : ListItem -> msg
     , onInsertSelectedTag : ListItem -> String -> Int -> msg
@@ -111,6 +116,9 @@ onKeyDown config item =
 
                         X ->
                             ( config.onCutItem item, True )
+
+                        C ->
+                            ( config.onCopyItem item, True )
 
                         V ->
                             ( config.onPasteItem item, True )

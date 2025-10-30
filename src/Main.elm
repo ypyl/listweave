@@ -679,6 +679,7 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
             , onMoveItemUp = MoveItemUp
             , onMoveItemDown = MoveItemDown
             , onCutItem = \targetItem -> ClipboardMsg (Clipboard.CutItem targetItem items)
+            , onCopyItem = \targetItem -> GetCurrentTime (\currentTime -> ClipboardMsg (Clipboard.CopyItem targetItem items currentTime))
             , onPasteItem = \targetItem -> ClipboardMsg (Clipboard.PasteItem targetItem items)
             , onDeleteItem = DeleteItem
             , onInsertSelectedTag = \targetItem tag cursorPos -> GetCurrentTime (InsertSelectedTag targetItem tag cursorPos)

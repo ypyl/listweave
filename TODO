@@ -1,6 +1,5 @@
 
 
-- copy item
 - ZoomIn/ZoomOut
     ALt ->
     Alt <-
@@ -14,6 +13,7 @@
 - storage (indexDB)
 - assert support (attach any file)
 
+- ✅ copy item
 - ✅ auto tags (created, updated, attachment, code)
 - ✅ delete icon in the top-left corner
 - ✅ when addItem - two columns textarea - should be only
