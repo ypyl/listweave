@@ -920,27 +920,30 @@ filterItems query selectedTags items =
 
     else
         let
-            isEmpty item =
-                List.isEmpty (getContent item) || List.all String.isEmpty (getContent item)
+            searchWords =
+                String.words (String.toLower query)
 
             containsQuery item =
                 let
-                    loweredQuery =
-                        String.toLower query
+                    itemContent =
+                        String.toLower (String.join " " (getContent item))
+
+                    itemTags =
+                        String.toLower (String.join " " (getTags item))
 
                     contentMatches =
-                        if String.isEmpty query then
+                        if List.isEmpty searchWords then
                             True
 
                         else
-                            List.any (String.contains loweredQuery) (List.map String.toLower (getContent item))
+                            List.any (\word -> String.contains word itemContent) searchWords
 
                     tagMatches =
-                        if String.isEmpty query then
+                        if List.isEmpty searchWords then
                             True
 
                         else
-                            List.any (String.contains loweredQuery) (List.map String.toLower (getTags item))
+                            List.any (\word -> String.contains word itemTags) searchWords
 
                     selectedTagsMatch =
                         if List.isEmpty selectedTags then
