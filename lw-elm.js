@@ -14192,18 +14192,14 @@ var $author$project$ListItem$getTags = function (_v0) {
 	return record.tags;
 };
 var $elm$core$String$toLower = _String_toLower;
+var $elm$core$String$words = _String_words;
 var $author$project$ListItem$filterItems = F3(
 	function (query, selectedTags, items) {
 		if ($elm$core$String$isEmpty(query) && $elm$core$List$isEmpty(selectedTags)) {
 			return items;
 		} else {
-			var isEmpty = function (item) {
-				return $elm$core$List$isEmpty(
-					$author$project$ListItem$getContent(item)) || A2(
-					$elm$core$List$all,
-					$elm$core$String$isEmpty,
-					$author$project$ListItem$getContent(item));
-			};
+			var searchWords = $elm$core$String$words(
+				$elm$core$String$toLower(query));
 			var containsQuery = function (item) {
 				var selectedTagsMatch = $elm$core$List$isEmpty(selectedTags) ? true : A2(
 					$elm$core$List$all,
@@ -14214,21 +14210,27 @@ var $author$project$ListItem$filterItems = F3(
 							$author$project$ListItem$getTags(item));
 					},
 					selectedTags);
-				var loweredQuery = $elm$core$String$toLower(query);
-				var tagMatches = $elm$core$String$isEmpty(query) ? true : A2(
-					$elm$core$List$any,
-					$elm$core$String$contains(loweredQuery),
+				var matches = F2(
+					function (words, text) {
+						return $elm$core$List$isEmpty(words) ? true : A2(
+							$elm$core$List$any,
+							function (word) {
+								return A2($elm$core$String$contains, word, text);
+							},
+							words);
+					});
+				var itemTags = $elm$core$String$toLower(
 					A2(
-						$elm$core$List$map,
-						$elm$core$String$toLower,
+						$elm$core$String$join,
+						' ',
 						$author$project$ListItem$getTags(item)));
-				var contentMatches = $elm$core$String$isEmpty(query) ? true : A2(
-					$elm$core$List$any,
-					$elm$core$String$contains(loweredQuery),
+				var tagMatches = A2(matches, searchWords, itemTags);
+				var itemContent = $elm$core$String$toLower(
 					A2(
-						$elm$core$List$map,
-						$elm$core$String$toLower,
+						$elm$core$String$join,
+						' ',
 						$author$project$ListItem$getContent(item)));
+				var contentMatches = A2(matches, searchWords, itemContent);
 				return (contentMatches || tagMatches) && selectedTagsMatch;
 			};
 			var filterItemAndChildren = function (item) {
