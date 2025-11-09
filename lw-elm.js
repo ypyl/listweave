@@ -10719,6 +10719,7 @@ var $author$project$Main$initialModel = {
 	caretTask: $elm$core$Maybe$Nothing,
 	clipboard: $author$project$Clipboard$init,
 	cursorPos: $elm$core$Maybe$Nothing,
+	initEditableTask: $elm$core$Maybe$Nothing,
 	items: _List_fromArray(
 		[
 			$author$project$ListItem$newListItem(
@@ -10846,6 +10847,9 @@ var $author$project$Main$GotCursorPosition = F3(
 	function (a, b, c) {
 		return {$: 'GotCursorPosition', a: a, b: b, c: c};
 	});
+var $author$project$Main$InitEditableTaskDone = function (a) {
+	return {$: 'InitEditableTaskDone', a: a};
+};
 var $author$project$Main$NoOp = {$: 'NoOp'};
 var $author$project$Main$ReceiveImportedModel = function (a) {
 	return {$: 'ReceiveImportedModel', a: a};
@@ -10873,6 +10877,20 @@ var $author$project$Main$clickedAt = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int));
 		},
 		A2($elm$json$Json$Decode$field, 'pos', $elm$json$Json$Decode$int)));
+var $author$project$Main$editableInput = _Platform_incomingPort('editableInput', $elm$json$Json$Decode$value);
+var $author$project$Main$EditableInput = function (a) {
+	return {$: 'EditableInput', a: a};
+};
+var $author$project$Main$editableInputDecoder = A4(
+	$elm$json$Json$Decode$map3,
+	F3(
+		function (id, content, cursorPos) {
+			return $author$project$Main$EditableInput(
+				{content: content, cursorPos: cursorPos, id: id});
+		}),
+	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'content', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'cursorPos', $elm$json$Json$Decode$int));
 var $author$project$ListItem$getChildren = function (_v0) {
 	var item = _v0.a;
 	return item.children;
@@ -11062,20 +11080,42 @@ var $author$project$Main$subscriptions = function (model) {
 				}
 			}(),
 				function () {
-				var _v3 = $author$project$SearchToolbar$getUpdatedCursorPosition(model.searchToolbar);
+				var _v3 = model.initEditableTask;
 				if (_v3.$ === 'Just') {
-					var pos = _v3.a;
+					var id = _v3.a;
 					return $elm$browser$Browser$Events$onAnimationFrame(
 						function (_v4) {
+							return $author$project$Main$InitEditableTaskDone(id);
+						});
+				} else {
+					return $elm$core$Platform$Sub$none;
+				}
+			}(),
+				function () {
+				var _v5 = $author$project$SearchToolbar$getUpdatedCursorPosition(model.searchToolbar);
+				if (_v5.$ === 'Just') {
+					var pos = _v5.a;
+					return $elm$browser$Browser$Events$onAnimationFrame(
+						function (_v6) {
 							return $author$project$Main$SetSearchCursor(pos);
 						});
 				} else {
 					return $elm$core$Platform$Sub$none;
 				}
 			}(),
+				$author$project$Main$editableInput(
+				function (value) {
+					var _v7 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$editableInputDecoder, value);
+					if (_v7.$ === 'Ok') {
+						var msg = _v7.a;
+						return msg;
+					} else {
+						return $author$project$Main$NoOp;
+					}
+				}),
 				$author$project$Main$receiveCursorPosition(
 				function (value) {
-					var _v5 = A2(
+					var _v8 = A2(
 						$elm$json$Json$Decode$decodeValue,
 						A4(
 							$elm$json$Json$Decode$map3,
@@ -11084,8 +11124,8 @@ var $author$project$Main$subscriptions = function (model) {
 							A2($elm$json$Json$Decode$field, 'left', $elm$json$Json$Decode$int),
 							A2($elm$json$Json$Decode$field, 'width', $elm$json$Json$Decode$int)),
 						value);
-					if (_v5.$ === 'Ok') {
-						var msg = _v5.a;
+					if (_v8.$ === 'Ok') {
+						var msg = _v8.a;
 						return msg;
 					} else {
 						return A3($author$project$Main$GotCursorPosition, 0, 0, 0);
@@ -11093,19 +11133,19 @@ var $author$project$Main$subscriptions = function (model) {
 				}),
 				$author$project$Main$receiveCurrentCursorPosition(
 				function (value) {
-					var _v6 = A2(
+					var _v9 = A2(
 						$elm$json$Json$Decode$decodeValue,
 						A4(
 							$elm$json$Json$Decode$map3,
 							F3(
 								function (itemId, tag, cursorPos) {
-									var _v7 = $author$project$ListItem$findEditingItem(model.items);
-									if (_v7.$ === 'Just') {
-										var _v8 = _v7.a;
-										var editingItem = _v8.a;
-										var _v9 = model.pendingTagInsertion;
-										if (_v9.$ === 'Just') {
-											var pendingTag = _v9.a;
+									var _v10 = $author$project$ListItem$findEditingItem(model.items);
+									if (_v10.$ === 'Just') {
+										var _v11 = _v10.a;
+										var editingItem = _v11.a;
+										var _v12 = model.pendingTagInsertion;
+										if (_v12.$ === 'Just') {
+											var pendingTag = _v12.a;
 											return A3($author$project$Main$GotCurrentCursorPosition, editingItem, pendingTag, cursorPos);
 										} else {
 											return $author$project$Main$NoOp;
@@ -11118,8 +11158,8 @@ var $author$project$Main$subscriptions = function (model) {
 							A2($elm$json$Json$Decode$field, 'tag', $elm$json$Json$Decode$string),
 							A2($elm$json$Json$Decode$field, 'cursorPos', $elm$json$Json$Decode$int)),
 						value);
-					if (_v6.$ === 'Ok') {
-						var msg = _v6.a;
+					if (_v9.$ === 'Ok') {
+						var msg = _v9.a;
 						return msg;
 					} else {
 						return $author$project$Main$NoOp;
@@ -11157,6 +11197,10 @@ var $author$project$SearchToolbar$SearchKeyDown = function (a) {
 	return {$: 'SearchKeyDown', a: a};
 };
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
+var $author$project$Main$UpdateItemContent = F4(
+	function (a, b, c, d) {
+		return {$: 'UpdateItemContent', a: a, b: b, c: c, d: d};
+	});
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
 	function (resultToMessage, task) {
@@ -11367,7 +11411,7 @@ var $author$project$Main$decode = A9(
 	$elm$json$Json$Decode$map8,
 	F8(
 		function (items, cursorPos, caretTask, pendingTagInsertion, tagPopup, searchToolbar, noBlur, clipboard) {
-			return {caretTask: caretTask, clipboard: clipboard, cursorPos: cursorPos, items: items, noBlur: noBlur, pendingTagInsertion: pendingTagInsertion, searchToolbar: searchToolbar, tagPopup: tagPopup};
+			return {caretTask: caretTask, clipboard: clipboard, cursorPos: cursorPos, initEditableTask: $elm$core$Maybe$Nothing, items: items, noBlur: noBlur, pendingTagInsertion: pendingTagInsertion, searchToolbar: searchToolbar, tagPopup: tagPopup};
 		}),
 	A2(
 		$elm$json$Json$Decode$field,
@@ -11651,6 +11695,12 @@ var $author$project$Main$encode = function (model) {
 						},
 						model.caretTask))),
 				_Utils_Tuple2(
+				'initEditableTask',
+				A2(
+					$elm$core$Maybe$withDefault,
+					$elm$json$Json$Encode$null,
+					A2($elm$core$Maybe$map, $elm$json$Json$Encode$int, model.initEditableTask))),
+				_Utils_Tuple2(
 				'pendingTagInsertion',
 				A2(
 					$elm$core$Maybe$withDefault,
@@ -11680,6 +11730,38 @@ var $elm$core$List$filter = F2(
 				}),
 			_List_Nil,
 			list);
+	});
+var $author$project$ListItem$findById = F2(
+	function (targetId, _v0) {
+		var record = _v0.a;
+		return _Utils_eq(record.id, targetId) ? $elm$core$Maybe$Just(
+			$author$project$ListItem$ListItem(record)) : A3(
+			$elm$core$List$foldl,
+			F2(
+				function (child, acc) {
+					if (acc.$ === 'Just') {
+						return acc;
+					} else {
+						return A2($author$project$ListItem$findById, targetId, child);
+					}
+				}),
+			$elm$core$Maybe$Nothing,
+			record.children);
+	});
+var $author$project$ListItem$findInForest = F2(
+	function (targetId, items) {
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (item, acc) {
+					if (acc.$ === 'Just') {
+						return acc;
+					} else {
+						return A2($author$project$ListItem$findById, targetId, item);
+					}
+				}),
+			$elm$core$Maybe$Nothing,
+			items);
 	});
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
@@ -11912,6 +11994,7 @@ var $author$project$ListItem$indentItem = F2(
 			},
 			list) : result;
 	});
+var $author$project$Main$initEditable = _Platform_outgoingPort('initEditable', $elm$json$Json$Encode$int);
 var $author$project$ListItem$monthToInt = function (month) {
 	switch (month.$) {
 		case 'Jan':
@@ -12708,7 +12791,6 @@ var $author$project$SearchToolbar$resetUpdatedCursorPosition = function (model) 
 		model,
 		{updatedCursorPosition: $elm$core$Maybe$Nothing});
 };
-var $author$project$Main$resizeTextarea = _Platform_outgoingPort('resizeTextarea', $elm$json$Json$Encode$int);
 var $author$project$ListItem$saveItemFn = F2(
 	function (_v0, _v1) {
 		var current = _v0.a;
@@ -13789,7 +13871,10 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							updatedModel,
-							{cursorPos: $elm$core$Maybe$Nothing}),
+							{
+								cursorPos: $elm$core$Maybe$Nothing,
+								initEditableTask: $elm$core$Maybe$Just(id)
+							}),
 						command);
 				case 'SetCaret':
 					var itemId = msg.a;
@@ -13800,6 +13885,29 @@ var $author$project$Main$update = F2(
 							{caretTask: $elm$core$Maybe$Nothing}),
 						$author$project$Main$setCaret(
 							{id: itemId, pos: pos}));
+				case 'InitEditableTaskDone':
+					var id = msg.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{initEditableTask: $elm$core$Maybe$Nothing}),
+						$author$project$Main$initEditable(id));
+				case 'EditableInput':
+					var id = msg.a.id;
+					var content = msg.a.content;
+					var cursorPos = msg.a.cursorPos;
+					var _v20 = A2($author$project$ListItem$findInForest, id, model.items);
+					if (_v20.$ === 'Just') {
+						var item = _v20.a;
+						var $temp$msg = $author$project$Main$GetCurrentTime(
+							A3($author$project$Main$UpdateItemContent, item, content, cursorPos)),
+							$temp$model = model;
+						msg = $temp$msg;
+						model = $temp$model;
+						continue update;
+					} else {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					}
 				case 'SetSearchCursor':
 					var pos = msg.a;
 					return _Utils_Tuple2(
@@ -13813,9 +13921,9 @@ var $author$project$Main$update = F2(
 					var item = msg.a;
 					var tag = msg.b;
 					var cursorPos = msg.c;
-					return function (_v20) {
-						var m = _v20.a;
-						var c = _v20.b;
+					return function (_v21) {
+						var m = _v21.a;
+						var c = _v21.b;
 						return A2(
 							$elm$core$Tuple$mapSecond,
 							function (cmd) {
@@ -13840,11 +13948,11 @@ var $author$project$Main$update = F2(
 					var cursorPos = msg.c;
 					var currentTime = msg.d;
 					var itemId = $author$project$ListItem$getId(item);
-					var _v21 = A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, content);
-					if (_v21.$ === 'Just') {
-						var _v22 = _v21.a;
-						var tagSearchPrefix = _v22.a;
-						var tag = _v22.b;
+					var _v22 = A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, content);
+					if (_v22.$ === 'Just') {
+						var _v23 = _v22.a;
+						var tagSearchPrefix = _v23.a;
+						var tag = _v23.b;
 						var matchingTags = A2(
 							$elm$core$List$filter,
 							$elm$core$Basics$neq(tag),
@@ -13867,12 +13975,7 @@ var $author$project$Main$update = F2(
 									noBlur: !$elm$core$List$isEmpty(matchingTags),
 									tagPopup: updatedTagPopup
 								}),
-							$elm$core$Platform$Cmd$batch(
-								_List_fromArray(
-									[
-										$author$project$Main$requestCursorPosition(itemId),
-										$author$project$Main$resizeTextarea(itemId)
-									])));
+							$author$project$Main$requestCursorPosition(itemId));
 					} else {
 						return _Utils_Tuple2(
 							_Utils_update(
@@ -13884,7 +13987,7 @@ var $author$project$Main$update = F2(
 										model.items),
 									tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 								}),
-							$author$project$Main$resizeTextarea(itemId));
+							$elm$core$Platform$Cmd$none);
 					}
 				case 'MoveItemUp':
 					var cursorPosition = msg.a;
@@ -13950,9 +14053,9 @@ var $author$project$Main$update = F2(
 					var top = msg.a;
 					var left = msg.b;
 					var width = msg.c;
-					var _v23 = $author$project$TagPopup$getTags(model.tagPopup);
-					if (_v23.$ === 'Just') {
-						var tags = _v23.a;
+					var _v24 = $author$project$TagPopup$getTags(model.tagPopup);
+					if (_v24.$ === 'Just') {
+						var tags = _v24.a;
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
@@ -13973,7 +14076,7 @@ var $author$project$Main$update = F2(
 						model,
 						A2(
 							$elm$core$Task$perform,
-							function (_v24) {
+							function (_v25) {
 								return $author$project$Main$ToggleNoBlur;
 							},
 							$elm$core$Task$succeed(_Utils_Tuple0))) : _Utils_Tuple2(
@@ -14032,11 +14135,11 @@ var $author$project$Main$update = F2(
 						A2($elm$core$Task$perform, msgFn, $elm$time$Time$now));
 				case 'SaveAndCreateAfter':
 					var item = msg.a;
-					var _v25 = A2(
+					var _v26 = A2(
 						$author$project$Main$update,
 						$author$project$Main$SaveItem(item),
 						model);
-					var afterSave = _v25.a;
+					var afterSave = _v26.a;
 					var $temp$msg = $author$project$Main$GetCurrentTime(
 						$author$project$Main$CreateItemAfter(item)),
 						$temp$model = afterSave;
@@ -14072,9 +14175,9 @@ var $author$project$Main$update = F2(
 						$elm$core$String$join,
 						'\n',
 						$author$project$ListItem$getContent(item));
-					var _v26 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
-					var newContent = _v26.a;
-					var newCaretPos = _v26.b;
+					var _v27 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
+					var newContent = _v27.a;
+					var newCaretPos = _v27.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -14094,9 +14197,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToPreviousWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v27 = A2($author$project$ListItem$findPreviousItem, item, model.items);
-					if (_v27.$ === 'Just') {
-						var prevItem = _v27.a;
+					var _v28 = A2($author$project$ListItem$findPreviousItem, item, model.items);
+					if (_v28.$ === 'Just') {
+						var prevItem = _v28.a;
 						var prevId = $author$project$ListItem$getId(prevItem);
 						var prevContent = A2(
 							$elm$core$String$join,
@@ -14132,9 +14235,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToNextWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v28 = A2($author$project$ListItem$findNextItem, item, model.items);
-					if (_v28.$ === 'Just') {
-						var nextItem = _v28.a;
+					var _v29 = A2($author$project$ListItem$findNextItem, item, model.items);
+					if (_v29.$ === 'Just') {
+						var nextItem = _v29.a;
 						var nextId = $author$project$ListItem$getId(nextItem);
 						var nextContent = A2(
 							$elm$core$String$join,
@@ -14166,10 +14269,10 @@ var $author$project$Main$update = F2(
 					}
 				default:
 					var clipboardMsg = msg.a;
-					var _v29 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
-					var updatedClipboard = _v29.a;
-					var updatedItems = _v29.b;
-					var maybeCaretTask = _v29.c;
+					var _v30 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
+					var updatedClipboard = _v30.a;
+					var updatedItems = _v30.b;
+					var maybeCaretTask = _v30.c;
 					var newCaretTask = function () {
 						if (maybeCaretTask.$ === 'Just') {
 							var caretTask = maybeCaretTask.a;
@@ -14855,10 +14958,36 @@ var $author$project$Clipboard$PasteItem = F2(
 var $author$project$Main$SaveAndCreateAfter = function (a) {
 	return {$: 'SaveAndCreateAfter', a: a};
 };
-var $author$project$Main$UpdateItemContent = F4(
-	function (a, b, c, d) {
-		return {$: 'UpdateItemContent', a: a, b: b, c: c, d: d};
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
 	});
+var $elm$html$Html$Attributes$contenteditable = $elm$html$Html$Attributes$boolProperty('contentEditable');
+var $author$project$Theme$textarea = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
+		A2($elm$html$Html$Attributes$style, 'overflow-y', 'hidden'),
+		A2($elm$html$Html$Attributes$style, 'resize', 'none'),
+		A2($elm$html$Html$Attributes$style, 'border', 'none'),
+		A2($elm$html$Html$Attributes$style, 'outline', 'none'),
+		A2($elm$html$Html$Attributes$style, 'background', 'transparent'),
+		A2($elm$html$Html$Attributes$style, 'width', '100%'),
+		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamily),
+		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize),
+		A2($elm$html$Html$Attributes$style, 'padding', '0'),
+		A2($elm$html$Html$Attributes$style, 'margin', '0'),
+		A2($elm$html$Html$Attributes$style, 'display', 'block'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
+var $author$project$Theme$editableDiv = _Utils_ap(
+	$author$project$Theme$textarea,
+	_List_fromArray(
+		[
+			A2($elm$html$Html$Attributes$style, 'min-height', '1.8em')
+		]));
 var $author$project$Theme$flexGrow = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
@@ -15102,29 +15231,6 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 				cursorPosDecoder,
 				valueDecoder));
 	});
-var $elm$html$Html$Attributes$rows = function (n) {
-	return A2(
-		_VirtualDom_attribute,
-		'rows',
-		$elm$core$String$fromInt(n));
-};
-var $elm$html$Html$textarea = _VirtualDom_node('textarea');
-var $author$project$Theme$textarea = _List_fromArray(
-	[
-		A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
-		A2($elm$html$Html$Attributes$style, 'overflow-y', 'hidden'),
-		A2($elm$html$Html$Attributes$style, 'resize', 'none'),
-		A2($elm$html$Html$Attributes$style, 'border', 'none'),
-		A2($elm$html$Html$Attributes$style, 'outline', 'none'),
-		A2($elm$html$Html$Attributes$style, 'background', 'transparent'),
-		A2($elm$html$Html$Attributes$style, 'width', '100%'),
-		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamily),
-		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize),
-		A2($elm$html$Html$Attributes$style, 'padding', '0'),
-		A2($elm$html$Html$Attributes$style, 'margin', '0'),
-		A2($elm$html$Html$Attributes$style, 'display', 'block'),
-		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
-	]);
 var $author$project$Main$viewEditableItem = F2(
 	function (_v0, item) {
 		var noBlur = _v0.noBlur;
@@ -15173,50 +15279,27 @@ var $author$project$Main$viewEditableItem = F2(
 			_List_fromArray(
 				[
 					A2(
-					$elm$html$Html$textarea,
+					$elm$html$Html$div,
 					_Utils_ap(
 						_List_fromArray(
 							[
 								$elm$html$Html$Attributes$id(
 								'input-id-' + $elm$core$String$fromInt(
 									$author$project$ListItem$getId(item))),
-								$elm$html$Html$Attributes$value(
-								A2(
-									$elm$core$String$join,
-									'\n',
-									$author$project$ListItem$getContent(item))),
-								A2(
-								$elm$html$Html$Events$preventDefaultOn,
-								'input',
-								A3(
-									$elm$json$Json$Decode$map2,
-									F2(
-										function (value, selectionStart) {
-											return _Utils_Tuple2(
-												$author$project$Main$GetCurrentTime(
-													A3($author$project$Main$UpdateItemContent, item, value, selectionStart)),
-												false);
-										}),
-									A2(
-										$elm$json$Json$Decode$field,
-										'target',
-										A2($elm$json$Json$Decode$field, 'value', $elm$json$Json$Decode$string)),
-									A2(
-										$elm$json$Json$Decode$field,
-										'target',
-										A2($elm$json$Json$Decode$field, 'selectionStart', $elm$json$Json$Decode$int)))),
+								$elm$html$Html$Attributes$contenteditable(true),
 								$elm$html$Html$Events$onBlur(
 								noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
-								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item),
-								$elm$html$Html$Attributes$rows(
-								A2(
-									$elm$core$Basics$max,
-									1,
-									$elm$core$List$length(
-										$author$project$ListItem$getContent(item))))
+								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
 							]),
-						$author$project$Theme$textarea),
-					_List_Nil)
+						$author$project$Theme$editableDiv),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							A2(
+								$elm$core$String$join,
+								'\n',
+								$author$project$ListItem$getContent(item)))
+						]))
 				]));
 	});
 var $author$project$Main$EditItemClick = F3(
@@ -15517,4 +15600,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"InitEditableTaskDone":["Basics.Int"],"EditableInput":["{ id : Basics.Int, content : String.String, cursorPos : Basics.Int }"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

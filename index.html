@@ -11,60 +11,18 @@
     <script>
       var app = Elm.Main.init({ node: document.getElementById("root") });
 
-      function getCaretCoordinates(textarea, position) {
-        // Create a mirror div
-        const div = document.createElement("div");
-        const style = getComputedStyle(textarea);
-        for (const prop of style) {
-          div.style[prop] = style[prop];
+      function getCaretCoordinates() {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          return {
+            top: rect.bottom,
+            left: rect.left,
+            width: rect.width,
+          };
         }
-
-        div.style.position = "absolute";
-        // div.style.visibility = "hidden";
-        div.style.whiteSpace = "pre-wrap";
-        div.style.wordWrap = "break-word";
-        div.style.overflow = "hidden";
-        div.style.width = textarea.offsetWidth + "px";
-
-        // Mirror scroll
-        div.scrollTop = textarea.scrollTop;
-        div.scrollLeft = textarea.scrollLeft;
-
-        // Insert text up to caret, ensuring we don't cut words in half
-        const fullText = textarea.value;
-        let text = fullText.substring(0, position);
-
-        // If we cut in the middle of a word, include the rest of the word
-        if (position < fullText.length && /\w/.test(fullText[position])) {
-          // Find the next non-word character (word boundary)
-          const rest = fullText.slice(position);
-          const nextBoundary = rest.search(/[^\w]/);
-          if (nextBoundary !== -1) {
-            text = fullText.substring(0, position + nextBoundary);
-          } else {
-            text = fullText;
-          }
-        }
-        div.textContent = text;
-
-        // Insert marker span
-        const span = document.createElement("div");
-        span.textContent = textarea.value.substring(position) || "."; // avoid empty
-        div.appendChild(span);
-
-        document.body.appendChild(div);
-
-        const rect = span.getBoundingClientRect();
-        const divRect = div.getBoundingClientRect();
-        const taRect = textarea.getBoundingClientRect();
-
-        document.body.removeChild(div);
-
-        return {
-          top: rect.top - divRect.top + taRect.top + textarea.scrollTop,
-          left: taRect.left,
-          width: textarea.offsetWidth,
-        };
+        return { top: 0, left: 0, width: 0 };
       }
 
       app.ports.setCaret.subscribe(function (data) {
@@ -73,27 +31,40 @@
         const input = document.getElementById("input-id-" + id);
         if (input) {
           input.focus();
-          input.setSelectionRange(pos, pos);
-          autoResize.call(input);
+          const range = document.createRange();
+          const sel = window.getSelection();
+          if (input.childNodes.length > 0) {
+            const textNode = input.childNodes[0];
+            const clampedPos = Math.min(pos, textNode.length);
+            range.setStart(textNode, clampedPos);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
         }
       });
 
-      app.ports.resizeTextarea.subscribe(function (id) {
+      app.ports.initEditable.subscribe(function (id) {
         const input = document.getElementById("input-id-" + id);
         if (input) {
-          autoResize.call(input);
+          input.addEventListener("input", function (event) {
+            const sel = window.getSelection();
+            let cursorPos = 0;
+            if (sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              cursorPos = range.startOffset;
+            }
+            app.ports.editableInput.send({
+              id: id,
+              content: event.target.innerText,
+              cursorPos: cursorPos,
+            });
+          });
         }
       });
 
       app.ports.requestCursorPosition.subscribe(function (id) {
-        // Find the textarea element by its value
-        const textarea = document.getElementById("input-id-" + id);
-        if (!textarea) {
-          return;
-        }
-        const cursorPos = textarea.selectionStart;
-        const coords = getCaretCoordinates(textarea, cursorPos);
-
+        const coords = getCaretCoordinates();
         if (app.ports && app.ports.receiveCursorPosition) {
           app.ports.receiveCursorPosition.send({
             top: Math.ceil(coords.top),
@@ -131,9 +102,10 @@
       });
 
       app.ports.getCurrentCursorPosition.subscribe(function (itemId) {
-        const textarea = document.getElementById("input-id-" + itemId);
-        if (textarea && app.ports.receiveCurrentCursorPosition) {
-          const cursorPos = textarea.selectionStart;
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const cursorPos = range.startOffset;
           app.ports.receiveCurrentCursorPosition.send({
             itemId: itemId,
             tag: "", // Will be handled by Elm
@@ -176,58 +148,6 @@
         }
       });
 
-      function autoResize() {
-        const ta = this;
-
-        // Ensure wrapping behaviour is consistent so scrollHeight reflects wrapped lines
-        ta.style.whiteSpace = "pre-wrap";
-        ta.style.wordWrap = "break-word";
-        ta.style.overflowWrap = "anywhere";
-        ta.style.overflow = "hidden";
-
-        // Reset height so scrollHeight can shrink when content is removed
-        ta.style.height = "auto";
-
-        // Primary approach: use scrollHeight which accounts for wrapped lines
-        let newHeight = ta.scrollHeight;
-
-        // Fallback: if for some reason scrollHeight is unavailable or 0, measure with a mirror div
-        if (!newHeight || newHeight === 0) {
-          const mirror = document.createElement("div");
-          const style = getComputedStyle(ta);
-          for (const prop of style) {
-            mirror.style[prop] = style[prop];
-          }
-          mirror.style.position = "absolute";
-          mirror.style.visibility = "hidden";
-          mirror.style.whiteSpace = "pre-wrap";
-          mirror.style.wordWrap = "break-word";
-          mirror.style.overflowWrap = "anywhere";
-          mirror.style.width = ta.offsetWidth + "px";
-          // Use textContent to match rendering and avoid injection
-          mirror.textContent = ta.value || ".";
-          document.body.appendChild(mirror);
-          newHeight = mirror.getBoundingClientRect().height;
-          document.body.removeChild(mirror);
-        }
-
-        // Add a tiny buffer to avoid scrollbars appearing
-        const style = getComputedStyle(ta);
-        const fontSize = parseFloat(style.fontSize) || 14;
-        const minHeight = fontSize * 1.8;
-        ta.style.height = Math.max(newHeight, minHeight) + "px";
-      }
-
-      window.addEventListener(
-        "resize",
-        () => {
-          const textareas = document.querySelectorAll("textarea");
-          textareas.forEach((textarea) => {
-            autoResize.call(textarea);
-          });
-        },
-        false
-      );
 
       app.ports.downloadJson.subscribe(function (data) {
         const blob = new Blob([data.content], { type: "application/json" });

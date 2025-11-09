@@ -5,9 +5,9 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Clipboard
-import Html exposing (Html, code, div, span, text, textarea)
-import Html.Attributes exposing (id, rows, style, value)
-import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagationOn)
+import Html exposing (Html, code, div, span, text)
+import Html.Attributes exposing (contenteditable, id, style)
+import Html.Events exposing (on, onBlur, onClick, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
@@ -31,6 +31,12 @@ port clickedAt : ({ id : Int, pos : Int } -> msg) -> Sub msg
 port setCaret : { id : Int, pos : Int } -> Cmd msg
 
 
+port initEditable : Int -> Cmd msg
+
+
+port editableInput : (D.Value -> msg) -> Sub msg
+
+
 port getPosition : { id : Int, clientX : Int, clientY : Int } -> Cmd msg
 
 
@@ -40,7 +46,6 @@ port requestCursorPosition : Int -> Cmd msg
 port receiveCursorPosition : (D.Value -> msg) -> Sub msg
 
 
-port resizeTextarea : Int -> Cmd msg
 
 
 port getSearchInputPosition : () -> Cmd msg
@@ -72,6 +77,7 @@ type alias Model =
     { items : List ListItem
     , cursorPos : Maybe Int
     , caretTask : Maybe ( Int, Int )
+    , initEditableTask : Maybe Int
     , pendingTagInsertion : Maybe String
     , tagPopup : TagPopup.Model
     , searchToolbar : SearchToolbar.Model
@@ -123,6 +129,7 @@ initialModel =
         ]
     , cursorPos = Nothing
     , caretTask = Nothing
+    , initEditableTask = Nothing
     , pendingTagInsertion = Nothing
     , tagPopup = TagPopup.init
     , searchToolbar = SearchToolbar.init
@@ -137,6 +144,7 @@ decode =
             { items = items
             , cursorPos = cursorPos
             , caretTask = caretTask
+            , initEditableTask = Nothing
             , pendingTagInsertion = pendingTagInsertion
             , tagPopup = tagPopup
             , searchToolbar = searchToolbar
@@ -162,6 +170,7 @@ encode model =
         , ( "caretTask"
           , Maybe.map (\( a, b ) -> Encode.list Encode.int [ a, b ]) model.caretTask |> Maybe.withDefault Encode.null
           )
+        , ( "initEditableTask", Maybe.map Encode.int model.initEditableTask |> Maybe.withDefault Encode.null )
         , ( "pendingTagInsertion", Maybe.map Encode.string model.pendingTagInsertion |> Maybe.withDefault Encode.null )
         , ( "tagPopup", TagPopup.encode model.tagPopup )
         , ( "searchToolbar", SearchToolbar.encoder model.searchToolbar )
@@ -190,6 +199,8 @@ type Msg
     | FocusResult (Result Browser.Dom.Error ())
     | ClickedAt { id : Int, pos : Int }
     | SetCaret Int Int
+    | InitEditableTaskDone Int
+    | EditableInput { id : Int, content : String, cursorPos : Int }
     | SetSearchCursor Int
     | GotCursorPosition Int Int Int
     | GotCurrentCursorPosition ListItem String Int
@@ -363,10 +374,21 @@ update msg model =
                             in
                             ( newModel, Task.attempt FocusResult (Browser.Dom.focus inputId) )
             in
-            ( { updatedModel | cursorPos = Nothing }, command )
+            ( { updatedModel | cursorPos = Nothing, initEditableTask = Just id }, command )
 
         SetCaret itemId pos ->
             ( { model | caretTask = Nothing }, setCaret { id = itemId, pos = pos } )
+
+        InitEditableTaskDone id ->
+            ( { model | initEditableTask = Nothing }, initEditable id )
+
+        EditableInput { id, content, cursorPos } ->
+            case ListItem.findInForest id model.items of
+                Just item ->
+                    update (GetCurrentTime (UpdateItemContent item content cursorPos)) model
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         SetSearchCursor pos ->
             ( { model | searchToolbar = resetUpdatedCursorPosition model.searchToolbar }, setSearchInputCursor pos )
@@ -400,7 +422,7 @@ update msg model =
                         , tagPopup = updatedTagPopup
                         , noBlur = List.isEmpty matchingTags |> not
                       }
-                    , Cmd.batch [ requestCursorPosition itemId, resizeTextarea itemId ]
+                    , requestCursorPosition itemId
                     )
 
                 Nothing ->
@@ -408,7 +430,7 @@ update msg model =
                         | items = mapItem (updateItemContentFn item content currentTime) model.items
                         , tagPopup = hidePopup model.tagPopup
                       }
-                    , resizeTextarea itemId
+                    , Cmd.none
                     )
 
         MoveItemUp cursorPosition item ->
@@ -697,17 +719,9 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
             }
     in
     div Theme.flexGrow
-        [ textarea
+        [ div
             ([ Html.Attributes.id ("input-id-" ++ String.fromInt (getId item))
-             , value (String.join "\n" (getContent item))
-             , preventDefaultOn "input"
-                (D.map2
-                    (\value selectionStart ->
-                        ( GetCurrentTime (UpdateItemContent item value selectionStart), False )
-                    )
-                    (D.field "target" (D.field "value" D.string))
-                    (D.field "target" (D.field "selectionStart" D.int))
-                )
+             , contenteditable True
              , onBlur
                 (if noBlur then
                     NoOp
@@ -716,11 +730,10 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
                     SaveItem item
                 )
              , KeyboardHandler.onKeyDown keyboardConfig item
-             , rows (max 1 (List.length (getContent item)))
              ]
-                ++ Theme.textarea
+                ++ Theme.editableDiv
             )
-            []
+            [ text (String.join "\n" (getContent item)) ]
         ]
 
 
@@ -803,6 +816,12 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
+        , case model.initEditableTask of
+            Just id ->
+                Browser.Events.onAnimationFrame (\_ -> InitEditableTaskDone id)
+
+            Nothing ->
+                Sub.none
         , case getUpdatedCursorPosition model.searchToolbar of
             Just pos ->
                 Browser.Events.onAnimationFrame
@@ -810,6 +829,15 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
+        , editableInput
+            (\value ->
+                case D.decodeValue editableInputDecoder value of
+                    Ok msg ->
+                        msg
+
+                    Err _ ->
+                        NoOp
+            )
         , receiveCursorPosition
             (\value ->
                 case D.decodeValue (D.map3 GotCursorPosition (D.field "top" D.int) (D.field "left" D.int) (D.field "width" D.int)) value of
@@ -851,3 +879,11 @@ subscriptions model =
             )
         , receiveFile ReceiveImportedModel
         ]
+
+
+editableInputDecoder : D.Decoder Msg
+editableInputDecoder =
+    D.map3 (\id content cursorPos -> EditableInput { id = id, content = content, cursorPos = cursorPos })
+        (D.field "id" D.int)
+        (D.field "content" D.string)
+        (D.field "cursorPos" D.int)
