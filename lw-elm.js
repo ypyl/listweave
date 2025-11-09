@@ -12290,88 +12290,35 @@ var $author$project$TagsUtils$focusedTag = F2(
 					A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, content))));
 	});
 var $elm$core$String$lines = _String_lines;
-var $author$project$TagsUtils$processContent = function (content) {
-	var isCodeBlock = function (line) {
-		return A2($elm$core$String$startsWith, '```', line);
-	};
-	var processLines = A3(
-		$elm$core$List$foldl,
-		F2(
-			function (line, _v1) {
-				var currentLines = _v1.a;
-				var inCode = _v1.b;
-				var acc = _v1.c;
-				return isCodeBlock(line) ? (inCode ? _Utils_Tuple3(
-					_List_Nil,
-					false,
-					_Utils_ap(
-						acc,
-						_List_fromArray(
-							[
-								_Utils_Tuple2(true, currentLines)
-							]))) : _Utils_Tuple3(
-					_List_Nil,
-					true,
-					$elm$core$List$isEmpty(currentLines) ? acc : _Utils_ap(
-						acc,
-						_List_fromArray(
-							[
-								_Utils_Tuple2(false, currentLines)
-							])))) : (inCode ? _Utils_Tuple3(
-					_Utils_ap(
-						currentLines,
-						_List_fromArray(
-							[line])),
-					inCode,
-					acc) : _Utils_Tuple3(
-					_Utils_ap(
-						currentLines,
-						_List_fromArray(
-							[line])),
-					inCode,
-					acc));
-			}),
-		_Utils_Tuple3(_List_Nil, false, _List_Nil),
-		content);
-	var remainingLines = processLines.a;
-	var blocks = processLines.c;
-	return $elm$core$List$isEmpty(remainingLines) ? blocks : _Utils_ap(
-		blocks,
-		_List_fromArray(
-			[
-				_Utils_Tuple2(false, remainingLines)
-			]));
-};
 var $author$project$TagsUtils$isInsideCodeBlock = F2(
 	function (cursorPos, content) {
 		var lines = $elm$core$String$lines(content);
-		var checkPosition = F2(
-			function (pos, remaining) {
-				checkPosition:
-				while (true) {
-					if (!remaining.b) {
-						return false;
-					} else {
-						var _v1 = remaining.a;
-						var isCode = _v1.a;
-						var blockLines = _v1.b;
-						var rest = remaining.b;
-						var blockContent = A2($elm$core$String$join, '\n', blockLines);
-						var blockEnd = pos + $elm$core$String$length(blockContent);
-						if (isCode && ((_Utils_cmp(cursorPos, pos) > -1) && (_Utils_cmp(cursorPos, blockEnd) < 1))) {
-							return true;
-						} else {
-							var $temp$pos = blockEnd + 1,
-								$temp$remaining = rest;
-							pos = $temp$pos;
-							remaining = $temp$remaining;
-							continue checkPosition;
-						}
-					}
-				}
+		var findBlock = F2(
+			function (_v2, line) {
+				var inCode = _v2.a;
+				var pos = _v2.b;
+				var lineEnd = pos + $elm$core$String$length(line);
+				var isCursorInLine = (_Utils_cmp(cursorPos, pos) > -1) && (_Utils_cmp(cursorPos, lineEnd) < 1);
+				return isCursorInLine ? _Utils_Tuple2(inCode, -1) : (A2($elm$core$String$startsWith, '```', line) ? _Utils_Tuple2(
+					!inCode,
+					(pos + $elm$core$String$length(line)) + 1) : _Utils_Tuple2(
+					inCode,
+					(pos + $elm$core$String$length(line)) + 1));
 			});
-		var blocks = $author$project$TagsUtils$processContent(lines);
-		return A2(checkPosition, 0, blocks);
+		var _v0 = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (line, acc) {
+					var _v1 = acc;
+					var currentInCode = _v1.a;
+					var currentPos = _v1.b;
+					return _Utils_eq(currentPos, -1) ? acc : A2(findBlock, acc, line);
+				}),
+			_Utils_Tuple2(false, 0),
+			lines);
+		var wasInCode = _v0.a;
+		var finalPos = _v0.b;
+		return _Utils_eq(finalPos, -1) ? wasInCode : false;
 	});
 var $author$project$TagsUtils$isInsideTagBrackets = F2(
 	function (cursorPos, content) {
@@ -13515,6 +13462,58 @@ var $elm$core$List$all = F2(
 			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
 			list);
 	});
+var $author$project$TagsUtils$processContent = function (content) {
+	var isCodeBlock = function (line) {
+		return A2($elm$core$String$startsWith, '```', line);
+	};
+	var processLines = A3(
+		$elm$core$List$foldl,
+		F2(
+			function (line, _v1) {
+				var currentLines = _v1.a;
+				var inCode = _v1.b;
+				var acc = _v1.c;
+				return isCodeBlock(line) ? (inCode ? _Utils_Tuple3(
+					_List_Nil,
+					false,
+					_Utils_ap(
+						acc,
+						_List_fromArray(
+							[
+								_Utils_Tuple2(true, currentLines)
+							]))) : _Utils_Tuple3(
+					_List_Nil,
+					true,
+					$elm$core$List$isEmpty(currentLines) ? acc : _Utils_ap(
+						acc,
+						_List_fromArray(
+							[
+								_Utils_Tuple2(false, currentLines)
+							])))) : (inCode ? _Utils_Tuple3(
+					_Utils_ap(
+						currentLines,
+						_List_fromArray(
+							[line])),
+					inCode,
+					acc) : _Utils_Tuple3(
+					_Utils_ap(
+						currentLines,
+						_List_fromArray(
+							[line])),
+					inCode,
+					acc));
+			}),
+		_Utils_Tuple3(_List_Nil, false, _List_Nil),
+		content);
+	var remainingLines = processLines.a;
+	var blocks = processLines.c;
+	return $elm$core$List$isEmpty(remainingLines) ? blocks : _Utils_ap(
+		blocks,
+		_List_fromArray(
+			[
+				_Utils_Tuple2(false, remainingLines)
+			]));
+};
 var $author$project$ListItem$extractTags = function (content) {
 	var lines = $elm$core$String$lines(content);
 	var blocks = $author$project$TagsUtils$processContent(lines);
@@ -14831,14 +14830,17 @@ var $author$project$TagPopup$view = function (model) {
 			$elm$html$Html$div,
 			A2(
 				$elm$core$List$cons,
+				$elm$html$Html$Attributes$id('tag-popup'),
 				A2(
-					$elm$html$Html$Events$stopPropagationOn,
-					'click',
-					$elm$json$Json$Decode$succeed(
-						_Utils_Tuple2($author$project$TagPopup$NoOp, true))),
-				_Utils_ap(
-					A3($author$project$Theme$positionStyle, top, left, width),
-					$author$project$Theme$popup)),
+					$elm$core$List$cons,
+					A2(
+						$elm$html$Html$Events$stopPropagationOn,
+						'click',
+						$elm$json$Json$Decode$succeed(
+							_Utils_Tuple2($author$project$TagPopup$NoOp, true))),
+					_Utils_ap(
+						A3($author$project$Theme$positionStyle, top, left, width),
+						$author$project$Theme$popup))),
 			A2(
 				$elm$core$List$map,
 				$author$project$TagPopup$viewPopupTag(model.highlightedTag),
@@ -14958,6 +14960,7 @@ var $author$project$Clipboard$PasteItem = F2(
 var $author$project$Main$SaveAndCreateAfter = function (a) {
 	return {$: 'SaveAndCreateAfter', a: a};
 };
+var $elm$html$Html$br = _VirtualDom_node('br');
 var $elm$html$Html$Attributes$boolProperty = F2(
 	function (key, bool) {
 		return A2(
@@ -15273,6 +15276,25 @@ var $author$project$Main$viewEditableItem = F2(
 			onTagPopupMsg: $author$project$Main$TagPopupMsg,
 			tagPopup: tagPopup
 		};
+		var addBreaks = function (lines) {
+			return $elm$core$List$concat(
+				A2(
+					$elm$core$List$indexedMap,
+					F2(
+						function (i, line) {
+							return (_Utils_cmp(
+								i,
+								$elm$core$List$length(lines) - 1) < 0) ? _List_fromArray(
+								[
+									$elm$html$Html$text(line),
+									A2($elm$html$Html$br, _List_Nil, _List_Nil)
+								]) : _List_fromArray(
+								[
+									$elm$html$Html$text(line)
+								]);
+						}),
+					lines));
+		};
 		return A2(
 			$elm$html$Html$div,
 			$author$project$Theme$flexGrow,
@@ -15292,14 +15314,8 @@ var $author$project$Main$viewEditableItem = F2(
 								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
 							]),
 						$author$project$Theme$editableDiv),
-					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							A2(
-								$elm$core$String$join,
-								'\n',
-								$author$project$ListItem$getContent(item)))
-						]))
+					addBreaks(
+						$author$project$ListItem$getContent(item)))
 				]));
 	});
 var $author$project$Main$EditItemClick = F3(

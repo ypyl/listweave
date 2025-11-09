@@ -33,14 +33,26 @@
           input.focus();
           const range = document.createRange();
           const sel = window.getSelection();
-          if (input.childNodes.length > 0) {
-            const textNode = input.childNodes[0];
-            const clampedPos = Math.min(pos, textNode.length);
-            range.setStart(textNode, clampedPos);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
+          let offset = pos;
+          for (const node of input.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+              const len = node.length;
+              if (offset <= len) {
+                range.setStart(node, offset);
+                break;
+              }
+              offset -= len;
+            } else if (node.nodeName === "BR") {
+              if (offset === 0) {
+                range.setStartBefore(node);
+                break;
+              }
+              offset -= 1;
+            }
           }
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
       });
 

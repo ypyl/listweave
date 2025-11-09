@@ -20,6 +20,7 @@ module TagPopup exposing
 
 import Actions exposing (TagPopupAction)
 import Html exposing (Html, div, text)
+import Html.Attributes exposing (id)
 import Html.Events exposing (onClick, stopPropagationOn)
 import TagsUtils
 import Theme
@@ -261,7 +262,7 @@ view model =
 
             else
                 div
-                    (stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
+                    (id "tag-popup" :: stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
         _ ->

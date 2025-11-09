@@ -5,7 +5,7 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Clipboard
-import Html exposing (Html, code, div, span, text)
+import Html exposing (Html, br, code, div, span, text)
 import Html.Attributes exposing (contenteditable, id, style)
 import Html.Events exposing (on, onBlur, onClick, stopPropagationOn)
 import Json.Decode as D
@@ -717,6 +717,19 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
             , onRestoreCutItem = ClipboardMsg (Clipboard.RestoreCutItem items)
             , onNoOp = NoOp
             }
+
+        addBreaks : List String -> List (Html Msg)
+        addBreaks lines =
+            List.indexedMap
+                (\i line ->
+                    if i < List.length lines - 1 then
+                        [ text line, br [] [] ]
+
+                    else
+                        [ text line ]
+                )
+                lines
+                |> List.concat
     in
     div Theme.flexGrow
         [ div
@@ -733,7 +746,7 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
              ]
                 ++ Theme.editableDiv
             )
-            [ text (String.join "\n" (getContent item)) ]
+            (addBreaks (getContent item))
         ]
 
 

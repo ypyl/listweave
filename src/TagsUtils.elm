@@ -165,26 +165,50 @@ processContent content =
 isInsideCodeBlock : Int -> String -> Bool
 isInsideCodeBlock cursorPos content =
     let
-        lines = String.lines content
-        blocks = processContent lines
-        
-        -- Calculate character positions for each block
-        checkPosition pos remaining =
-            case remaining of
-                [] ->
-                    False
-                
-                (isCode, blockLines) :: rest ->
+        lines =
+            String.lines content
+
+        findBlock ( inCode, pos ) line =
+            let
+                lineEnd =
+                    pos + String.length line
+
+                isCursorInLine =
+                    cursorPos >= pos && cursorPos <= lineEnd
+            in
+            if isCursorInLine then
+                -- Cursor is in this line. Return current `inCode` state and a flag to stop.
+                ( inCode, -1 )
+
+            else if String.startsWith "```" line then
+                -- This line is a fence, it flips the state for the *next* line.
+                ( not inCode, pos + String.length line + 1 )
+
+            else
+                -- Cursor not in this line, continue.
+                ( inCode, pos + String.length line + 1 )
+
+        ( wasInCode, finalPos ) =
+            List.foldl
+                (\line acc ->
                     let
-                        blockContent = String.join "\n" blockLines
-                        blockEnd = pos + String.length blockContent
+                        ( currentInCode, currentPos ) =
+                            acc
                     in
-                    if isCode && cursorPos >= pos && cursorPos <= blockEnd then
-                        True
+                    if currentPos == -1 then
+                        acc
+
                     else
-                        checkPosition (blockEnd + 1) rest
+                        findBlock acc line
+                )
+                ( False, 0 )
+                lines
     in
-    checkPosition 0 blocks
+    if finalPos == -1 then
+        wasInCode
+
+    else
+        False
 
 
 insertTagAtCursor : String -> String -> Int -> ( String, Int )
