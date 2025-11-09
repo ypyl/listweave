@@ -10815,6 +10815,19 @@ var $author$project$Main$initialModel = {
 				tags: _List_fromArray(
 					['tag', 'todo', 'created:09/08/2025', 'updated:09/08/2025']),
 				updated: $elm$time$Time$millisToPosix(1757532035027)
+			}),
+			$author$project$ListItem$newListItem(
+			{
+				children: _List_Nil,
+				collapsed: true,
+				content: _List_fromArray(
+					['test']),
+				created: $elm$time$Time$millisToPosix(1757532035027),
+				editing: false,
+				id: 8,
+				tags: _List_fromArray(
+					['created:09/08/2025', 'updated:09/08/2025']),
+				updated: $elm$time$Time$millisToPosix(1757532035027)
 			})
 		]),
 	noBlur: false,
@@ -15336,37 +15349,21 @@ var $author$project$Main$viewStaticItem = F3(
 			var isCode = _v0.a;
 			var lines = _v0.b;
 			return isCode ? A2(
-				$elm$html$Html$div,
-				_List_Nil,
+				$elm$html$Html$code,
+				$author$project$Theme$codeBlock,
 				_List_fromArray(
 					[
-						A2(
-						$elm$html$Html$code,
-						$author$project$Theme$codeBlock,
-						A2(
-							$elm$core$List$map,
-							function (line) {
-								return A2(
-									$elm$html$Html$div,
-									_List_Nil,
-									_List_fromArray(
-										[
-											$elm$html$Html$text(line)
-										]));
-							},
-							lines))
+						$elm$html$Html$text(
+						A2($elm$core$String$join, '\n', lines))
 					])) : A2(
 				$elm$html$Html$div,
-				_List_Nil,
-				A2(
-					$elm$core$List$map,
-					function (line) {
-						return A2(
-							$elm$html$Html$div,
-							$author$project$Theme$content,
-							A4($author$project$Main$viewContentWithSelectedTags, items, item, line, selectedTags));
-					},
-					lines));
+				$author$project$Theme$content,
+				A4(
+					$author$project$Main$viewContentWithSelectedTags,
+					items,
+					item,
+					A2($elm$core$String$join, '\n', lines),
+					selectedTags));
 		};
 		var onClickCustom = function () {
 			var clientYDecoder = A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$int);

@@ -1,10 +1,9 @@
 
-
+- use contenteditable="true" instead of replacing div with textarea
 - ZoomIn/ZoomOut
     ALt ->
     Alt <-
 - keyboard help
-- search using OR instead of AND for words
 - search should automatic expand items which are there. E.g. collapsed item should be expanded if it is under criteria
 - highligh words which were found
 - export to markdown (view)
@@ -13,6 +12,7 @@
 - storage (indexDB)
 - assert support (attach any file)
 
+- ✅ search using OR instead of AND for words
 - ✅ copy item
 - ✅ auto tags (created, updated, attachment, code)
 - ✅ delete icon in the top-left corner

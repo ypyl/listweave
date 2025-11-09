@@ -11,7 +11,7 @@ import Html.Events exposing (on, onBlur, onClick, preventDefaultOn, stopPropagat
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
-import ListItem exposing (ListItem(..), deleteItem, editItemFn, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, getTags, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, removeItemCompletely, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
+import ListItem exposing (ListItem(..), deleteItem, editItemFn, findEditingItem, findNextItem, findPreviousItem, getAllTags, getChildren, getContent, getId, getNextId, indentItem, insertItemAfter, isCollapsed, isEditing, mapItem, moveItemInTree, newEmptyListItem, newListItem, outdentItem, removeItemCompletely, saveItemFn, setAllCollapsed, toggleCollapseFn, updateItemContentFn)
 import Regex
 import SearchToolbar exposing (addTagToSelected, getFilteredItems, getSelectedTags, getUpdatedCursorPosition, resetUpdatedCursorPosition, selectTag)
 import TagPopup exposing (currentSource, hidePopup, isVisible, navigateDown, navigateUp, showPopup)
@@ -109,6 +109,16 @@ initialModel =
                 [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
+            }
+        , newListItem
+            { id = 8
+            , content = [ "test" ]
+            , tags = [ "created:09/08/2025", "updated:09/08/2025" ]
+            , created = millisToPosix 1757532035027
+            , updated = millisToPosix 1757532035027
+            , collapsed = True
+            , editing = False
+            , children = []
             }
         ]
     , cursorPos = Nothing
@@ -222,9 +232,9 @@ update msg model =
                     case currentSource model.tagPopup of
                         Just TagPopup.FromSearchToolbar ->
                             let
-                                (searchToolbarUpdatedModel, _ ) = SearchToolbar.update (SearchToolbar.SearchKeyDown 13) model.searchToolbar
+                                ( searchToolbarUpdatedModel, _ ) =
+                                    SearchToolbar.update (SearchToolbar.SearchKeyDown 13) model.searchToolbar
                             in
-
                             -- Tag selection from search input
                             ( { model | tagPopup = updatedmodel, searchToolbar = selectTag tag searchToolbarUpdatedModel }, Cmd.none )
 
@@ -254,7 +264,8 @@ update msg model =
                 ( updatedSearchToolbarModel, action ) =
                     SearchToolbar.update searchToolbarMsg model.searchToolbar
 
-                withSearchToolbar = { model | searchToolbar = updatedSearchToolbarModel }
+                withSearchToolbar =
+                    { model | searchToolbar = updatedSearchToolbarModel }
 
                 ( updatedModel, cmd ) =
                     case action of
@@ -619,7 +630,7 @@ viewListItem model level item =
 
                   else
                     viewStaticItem model.items (getSelectedTags model.searchToolbar) item
-                , span [ onClick (DeleteItem item), style "cursor" "pointer", style "margin-left" "10px", style "margin-left" "auto"] [ text "×" ]
+                , span [ onClick (DeleteItem item), style "cursor" "pointer", style "margin-left" "10px", style "margin-left" "auto" ] [ text "×" ]
                 ]
     in
     div Theme.listItem
@@ -644,20 +655,12 @@ viewStaticItem items selectedTags item =
 
         viewBlock ( isCode, lines ) =
             if isCode then
-                div []
-                    [ code Theme.codeBlock
-                        (List.map (\line -> div [] [ text line ]) lines)
-                    ]
+                code Theme.codeBlock
+                    [ text (String.join "\n" lines) ]
 
             else
-                div []
-                    (List.map
-                        (\line ->
-                            div Theme.content
-                                (viewContentWithSelectedTags items item line selectedTags)
-                        )
-                        lines
-                    )
+                div Theme.content
+                    (viewContentWithSelectedTags items item (String.join "\n" lines) selectedTags)
     in
     div (id ("view-item-" ++ String.fromInt (getId item)) :: Html.Attributes.tabindex -1 :: Theme.flexGrow)
         [ div [ Html.Attributes.class "content-click-area", onClickCustom ]
