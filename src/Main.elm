@@ -6,7 +6,7 @@ import Browser.Dom
 import Browser.Events
 import Clipboard
 import Html exposing (Html, br, code, div, span, text)
-import Html.Attributes exposing (contenteditable, id, style)
+import Html.Attributes exposing (attribute, contenteditable, id, style)
 import Html.Events exposing (on, onBlur, onClick, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
@@ -684,7 +684,7 @@ viewStaticItem items selectedTags item =
                 div Theme.content
                     (viewContentWithSelectedTags items item (String.join "\n" lines) selectedTags)
     in
-    div (id ("view-item-" ++ String.fromInt (getId item)) :: Html.Attributes.tabindex -1 :: Theme.flexGrow)
+    div (id ("view-item-" ++ String.fromInt (getId item)) :: attribute "contenteditable" "false" :: Html.Attributes.tabindex -1 :: Theme.flexGrow)
         [ div [ Html.Attributes.class "content-click-area", onClickCustom ]
             (if List.isEmpty (getContent item) then
                 [ span Theme.contentEmpty [ text "empty" ] ]
@@ -734,7 +734,7 @@ viewEditableItem { noBlur, tagPopup, clipboard, items } item =
     div Theme.flexGrow
         [ div
             ([ Html.Attributes.id ("input-id-" ++ String.fromInt (getId item))
-             , contenteditable True
+             , attribute "contenteditable" "true"
              , onBlur
                 (if noBlur then
                     NoOp

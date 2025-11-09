@@ -14960,15 +14960,8 @@ var $author$project$Clipboard$PasteItem = F2(
 var $author$project$Main$SaveAndCreateAfter = function (a) {
 	return {$: 'SaveAndCreateAfter', a: a};
 };
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$html$Html$br = _VirtualDom_node('br');
-var $elm$html$Html$Attributes$boolProperty = F2(
-	function (key, bool) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$bool(bool));
-	});
-var $elm$html$Html$Attributes$contenteditable = $elm$html$Html$Attributes$boolProperty('contentEditable');
 var $author$project$Theme$textarea = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
@@ -15308,7 +15301,7 @@ var $author$project$Main$viewEditableItem = F2(
 								$elm$html$Html$Attributes$id(
 								'input-id-' + $elm$core$String$fromInt(
 									$author$project$ListItem$getId(item))),
-								$elm$html$Html$Attributes$contenteditable(true),
+								A2($elm$html$Html$Attributes$attribute, 'contenteditable', 'true'),
 								$elm$html$Html$Events$onBlur(
 								noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
 								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
@@ -15490,8 +15483,11 @@ var $author$project$Main$viewStaticItem = F3(
 						$author$project$ListItem$getId(item))),
 				A2(
 					$elm$core$List$cons,
-					$elm$html$Html$Attributes$tabindex(-1),
-					$author$project$Theme$flexGrow)),
+					A2($elm$html$Html$Attributes$attribute, 'contenteditable', 'false'),
+					A2(
+						$elm$core$List$cons,
+						$elm$html$Html$Attributes$tabindex(-1),
+						$author$project$Theme$flexGrow))),
 			_List_fromArray(
 				[
 					A2(
