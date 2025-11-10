@@ -6,7 +6,7 @@ import Browser.Dom
 import Browser.Events
 import Clipboard
 import Html exposing (Html, br, code, div, span, text)
-import Html.Attributes exposing (attribute, contenteditable, id, style)
+import Html.Attributes exposing (attribute, id, style)
 import Html.Events exposing (on, onBlur, onClick, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
@@ -44,8 +44,6 @@ port requestCursorPosition : Int -> Cmd msg
 
 
 port receiveCursorPosition : (D.Value -> msg) -> Sub msg
-
-
 
 
 port getSearchInputPosition : () -> Cmd msg
@@ -683,7 +681,6 @@ viewItemContent model item =
             ++ [ attribute "id" ("item-" ++ String.fromInt (getId item))
                , attribute "contenteditable" (if isEditingItem then "true" else "false")
                , Html.Attributes.tabindex -1
-               , attribute "class" (if not isEditingItem then "content-click-area" else "")
                ]
             ++ (if isEditingItem then
                     [ onBlur (if model.noBlur then NoOp else SaveItem item)

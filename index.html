@@ -30,7 +30,7 @@
       app.ports.setCaret.subscribe(function (data) {
         const id = data.id;
         const pos = data.pos;
-        const input = document.getElementById("input-id-" + id);
+        const input = document.getElementById("item-" + id);
         if (input) {
           input.focus();
           const range = document.createRange();
@@ -59,20 +59,27 @@
       });
 
       app.ports.initEditable.subscribe(function (id) {
-        const input = document.getElementById("input-id-" + id);
-        if (input) {
-          input.addEventListener("input", function (event) {
-            const sel = window.getSelection();
-            let cursorPos = 0;
-            if (sel.rangeCount > 0) {
-              const range = sel.getRangeAt(0);
-              cursorPos = range.startOffset;
+        const element = document.getElementById("item-" + id);
+        if (element) {
+          let originalContent = "";
+          element.addEventListener("focus", function () {
+            originalContent = element.innerHTML;
+          });
+
+          element.addEventListener("blur", function () {
+            if (element.innerHTML !== originalContent) {
+              const sel = window.getSelection();
+              let cursorPos = 0;
+              if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                cursorPos = range.startOffset;
+              }
+              app.ports.editableInput.send({
+                id: id,
+                content: event.target.innerText,
+                cursorPos: cursorPos,
+              });
             }
-            app.ports.editableInput.send({
-              id: id,
-              content: event.target.innerText,
-              cursorPos: cursorPos,
-            });
           });
         }
       });
@@ -134,12 +141,7 @@
         const clientX = data.clientX;
         const clientY = data.clientY;
 
-        const viewItem = document.getElementById("view-item-" + viewItemId);
-        if (!viewItem) {
-          return;
-        }
-
-        const contentDiv = viewItem.querySelector(".content-click-area");
+        const contentDiv = document.getElementById("item-" + viewItemId);
         if (!contentDiv) {
           return;
         }
@@ -161,7 +163,6 @@
           app.ports.clickedAt.send({ id: viewItemId, pos: offset });
         }
       });
-
 
       app.ports.downloadJson.subscribe(function (data) {
         const blob = new Blob([data.content], { type: "application/json" });

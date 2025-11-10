@@ -15456,11 +15456,7 @@ var $author$project$Main$viewItemContent = F2(
 							$elm$html$Html$Attributes$attribute,
 							'contenteditable',
 							isEditingItem ? 'true' : 'false'),
-							$elm$html$Html$Attributes$tabindex(-1),
-							A2(
-							$elm$html$Html$Attributes$attribute,
-							'class',
-							(!isEditingItem) ? 'content-click-area' : '')
+							$elm$html$Html$Attributes$tabindex(-1)
 						]),
 					isEditingItem ? _Utils_ap(
 						_List_fromArray(
