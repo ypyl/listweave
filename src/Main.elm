@@ -611,6 +611,98 @@ view model =
         )
 
 
+viewItemContent : Model -> ListItem -> Html Msg
+viewItemContent model item =
+    let
+        isEditingItem =
+            isEditing item
+
+        keyboardConfig =
+            { tagPopup = model.tagPopup
+            , clipboard = model.clipboard
+            , onMoveItemUp = MoveItemUp
+            , onMoveItemDown = MoveItemDown
+            , onCutItem = \targetItem -> ClipboardMsg (Clipboard.CutItem targetItem model.items)
+            , onCopyItem = \targetItem -> GetCurrentTime (\currentTime -> ClipboardMsg (Clipboard.CopyItem targetItem model.items currentTime))
+            , onPasteItem = \targetItem -> ClipboardMsg (Clipboard.PasteItem targetItem model.items)
+            , onDeleteItem = DeleteItem
+            , onInsertSelectedTag = \targetItem tag cursorPos -> GetCurrentTime (InsertSelectedTag targetItem tag cursorPos)
+            , onSaveAndCreateAfter = SaveAndCreateAfter
+            , onIndentItem = IndentItem
+            , onOutdentItem = OutdentItem
+            , onTagPopupMsg = TagPopupMsg
+            , onNavigateToPreviousWithColumn = NavigateToPreviousWithColumn
+            , onNavigateToNextWithColumn = NavigateToNextWithColumn
+            , onRestoreCutItem = ClipboardMsg (Clipboard.RestoreCutItem model.items)
+            , onNoOp = NoOp
+            }
+
+        addBreaks : List String -> List (Html Msg)
+        addBreaks lines =
+            List.indexedMap
+                (\i line ->
+                    if i < List.length lines - 1 then
+                        [ text line, br [] [] ]
+
+                    else
+                        [ text line ]
+                )
+                lines
+                |> List.concat
+
+        staticContent =
+            let
+                contentBlocks =
+                    TagsUtils.processContent (getContent item)
+
+                viewBlock ( isCode, lines ) =
+                    if isCode then
+                        code Theme.codeBlock [ text (String.join "\n" lines) ]
+
+                    else
+                        div Theme.content (viewContentWithSelectedTags model.items item (String.join "\n" lines) (getSelectedTags model.searchToolbar))
+            in
+            if List.isEmpty (getContent item) then
+                [ span Theme.contentEmpty [ text "empty" ] ]
+
+            else
+                List.map viewBlock contentBlocks
+
+        onClickCustom =
+            let
+                clientXDecoder =
+                    D.field "clientX" D.int
+
+                clientYDecoder =
+                    D.field "clientY" D.int
+            in
+            on "click" (D.map2 (\x y -> EditItemClick item x y) clientXDecoder clientYDecoder)
+    in
+    div
+        (Theme.flexGrow
+            ++ [ attribute "id" ("item-" ++ String.fromInt (getId item))
+               , attribute "contenteditable" (if isEditingItem then "true" else "false")
+               , Html.Attributes.tabindex -1
+               , attribute "class" (if not isEditingItem then "content-click-area" else "")
+               ]
+            ++ (if isEditingItem then
+                    [ onBlur (if model.noBlur then NoOp else SaveItem item)
+                    , KeyboardHandler.onKeyDown keyboardConfig item
+                    ]
+                        ++ Theme.editableDiv
+
+                else
+                    [ onClickCustom ]
+               )
+        )
+        (if isEditingItem then
+            addBreaks (getContent item)
+
+         else
+            staticContent
+        )
+
+
 viewListItem : Model -> Int -> ListItem -> Html Msg
 viewListItem model level item =
     let
@@ -647,107 +739,12 @@ viewListItem model level item =
             div (Theme.indentStyle level ++ baseStyles)
                 [ arrow
                 , span Theme.bullet [ text "•" ]
-                , if isEditing item then
-                    viewEditableItem model item
-
-                  else
-                    viewStaticItem model.items (getSelectedTags model.searchToolbar) item
+                , viewItemContent model item
                 , span [ onClick (DeleteItem item), style "cursor" "pointer", style "margin-left" "10px", style "margin-left" "auto" ] [ text "×" ]
                 ]
     in
     div Theme.listItem
         (itemRow :: childrenBlock)
-
-
-viewStaticItem : List ListItem -> List String -> ListItem -> Html Msg
-viewStaticItem items selectedTags item =
-    let
-        onClickCustom =
-            let
-                clientXDecoder =
-                    D.field "clientX" D.int
-
-                clientYDecoder =
-                    D.field "clientY" D.int
-            in
-            on "click" (D.map2 (\x y -> EditItemClick item x y) clientXDecoder clientYDecoder)
-
-        contentBlocks =
-            TagsUtils.processContent (getContent item)
-
-        viewBlock ( isCode, lines ) =
-            if isCode then
-                code Theme.codeBlock
-                    [ text (String.join "\n" lines) ]
-
-            else
-                div Theme.content
-                    (viewContentWithSelectedTags items item (String.join "\n" lines) selectedTags)
-    in
-    div (id ("view-item-" ++ String.fromInt (getId item)) :: attribute "contenteditable" "false" :: Html.Attributes.tabindex -1 :: Theme.flexGrow)
-        [ div [ Html.Attributes.class "content-click-area", onClickCustom ]
-            (if List.isEmpty (getContent item) then
-                [ span Theme.contentEmpty [ text "empty" ] ]
-
-             else
-                List.map viewBlock contentBlocks
-            )
-        ]
-
-
-viewEditableItem : { a | noBlur : Bool, tagPopup : TagPopup.Model, clipboard : Clipboard.Model, items : List ListItem } -> ListItem -> Html Msg
-viewEditableItem { noBlur, tagPopup, clipboard, items } item =
-    let
-        keyboardConfig =
-            { tagPopup = tagPopup
-            , clipboard = clipboard
-            , onMoveItemUp = MoveItemUp
-            , onMoveItemDown = MoveItemDown
-            , onCutItem = \targetItem -> ClipboardMsg (Clipboard.CutItem targetItem items)
-            , onCopyItem = \targetItem -> GetCurrentTime (\currentTime -> ClipboardMsg (Clipboard.CopyItem targetItem items currentTime))
-            , onPasteItem = \targetItem -> ClipboardMsg (Clipboard.PasteItem targetItem items)
-            , onDeleteItem = DeleteItem
-            , onInsertSelectedTag = \targetItem tag cursorPos -> GetCurrentTime (InsertSelectedTag targetItem tag cursorPos)
-            , onSaveAndCreateAfter = SaveAndCreateAfter
-            , onIndentItem = IndentItem
-            , onOutdentItem = OutdentItem
-            , onTagPopupMsg = TagPopupMsg
-            , onNavigateToPreviousWithColumn = NavigateToPreviousWithColumn
-            , onNavigateToNextWithColumn = NavigateToNextWithColumn
-            , onRestoreCutItem = ClipboardMsg (Clipboard.RestoreCutItem items)
-            , onNoOp = NoOp
-            }
-
-        addBreaks : List String -> List (Html Msg)
-        addBreaks lines =
-            List.indexedMap
-                (\i line ->
-                    if i < List.length lines - 1 then
-                        [ text line, br [] [] ]
-
-                    else
-                        [ text line ]
-                )
-                lines
-                |> List.concat
-    in
-    div Theme.flexGrow
-        [ div
-            ([ Html.Attributes.id ("input-id-" ++ String.fromInt (getId item))
-             , attribute "contenteditable" "true"
-             , onBlur
-                (if noBlur then
-                    NoOp
-
-                 else
-                    SaveItem item
-                )
-             , KeyboardHandler.onKeyDown keyboardConfig item
-             ]
-                ++ Theme.editableDiv
-            )
-            (addBreaks (getContent item))
-        ]
 
 
 viewContentWithSelectedTags : List ListItem -> ListItem -> String -> List String -> List (Html Msg)

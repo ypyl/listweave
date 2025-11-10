@@ -12289,36 +12289,19 @@ var $author$project$TagsUtils$focusedTag = F2(
 					},
 					A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, content))));
 	});
-var $elm$core$String$lines = _String_lines;
 var $author$project$TagsUtils$isInsideCodeBlock = F2(
 	function (cursorPos, content) {
-		var lines = $elm$core$String$lines(content);
-		var findBlock = F2(
-			function (_v2, line) {
-				var inCode = _v2.a;
-				var pos = _v2.b;
-				var lineEnd = pos + $elm$core$String$length(line);
-				var isCursorInLine = (_Utils_cmp(cursorPos, pos) > -1) && (_Utils_cmp(cursorPos, lineEnd) < 1);
-				return isCursorInLine ? _Utils_Tuple2(inCode, -1) : (A2($elm$core$String$startsWith, '```', line) ? _Utils_Tuple2(
-					!inCode,
-					(pos + $elm$core$String$length(line)) + 1) : _Utils_Tuple2(
-					inCode,
-					(pos + $elm$core$String$length(line)) + 1));
-			});
-		var _v0 = A3(
-			$elm$core$List$foldl,
-			F2(
-				function (line, acc) {
-					var _v1 = acc;
-					var currentInCode = _v1.a;
-					var currentPos = _v1.b;
-					return _Utils_eq(currentPos, -1) ? acc : A2(findBlock, acc, line);
-				}),
-			_Utils_Tuple2(false, 0),
-			lines);
-		var wasInCode = _v0.a;
-		var finalPos = _v0.b;
-		return _Utils_eq(finalPos, -1) ? wasInCode : false;
+		var contentBeforeCursor = A2($elm$core$String$left, cursorPos, content);
+		var lastFence = $elm$core$List$head(
+			$elm$core$List$reverse(
+				A2($elm$core$String$indexes, '```', contentBeforeCursor)));
+		if (lastFence.$ === 'Just') {
+			var fencePos = lastFence.a;
+			var contentAfterFence = A2($elm$core$String$dropLeft, fencePos + 3, contentBeforeCursor);
+			return !A2($elm$core$String$contains, '```', contentAfterFence);
+		} else {
+			return false;
+		}
 	});
 var $author$project$TagsUtils$isInsideTagBrackets = F2(
 	function (cursorPos, content) {
@@ -12333,6 +12316,7 @@ var $author$project$TagsUtils$isInsideTagBrackets = F2(
 			},
 			A2($author$project$TagsUtils$focusedTag, cursorPos, content));
 	});
+var $elm$core$String$lines = _String_lines;
 var $elm$core$Debug$log = _Debug_log;
 var $author$project$ListItem$mapItem = F2(
 	function (fn, list) {
@@ -14830,17 +14814,14 @@ var $author$project$TagPopup$view = function (model) {
 			$elm$html$Html$div,
 			A2(
 				$elm$core$List$cons,
-				$elm$html$Html$Attributes$id('tag-popup'),
 				A2(
-					$elm$core$List$cons,
-					A2(
-						$elm$html$Html$Events$stopPropagationOn,
-						'click',
-						$elm$json$Json$Decode$succeed(
-							_Utils_Tuple2($author$project$TagPopup$NoOp, true))),
-					_Utils_ap(
-						A3($author$project$Theme$positionStyle, top, left, width),
-						$author$project$Theme$popup))),
+					$elm$html$Html$Events$stopPropagationOn,
+					'click',
+					$elm$json$Json$Decode$succeed(
+						_Utils_Tuple2($author$project$TagPopup$NoOp, true))),
+				_Utils_ap(
+					A3($author$project$Theme$positionStyle, top, left, width),
+					$author$project$Theme$popup)),
 			A2(
 				$elm$core$List$map,
 				$author$project$TagPopup$viewPopupTag(model.highlightedTag),
@@ -14882,9 +14863,6 @@ var $author$project$Theme$bullet = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'user-select', 'none'),
 		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
 	]);
-var $author$project$SearchToolbar$getSelectedTags = function (model) {
-	return model.selectedTags;
-};
 var $author$project$Theme$indentStyle = function (level) {
 	return _List_fromArray(
 		[
@@ -14929,6 +14907,10 @@ var $author$project$Clipboard$CutItem = F2(
 	function (a, b) {
 		return {$: 'CutItem', a: a, b: b};
 	});
+var $author$project$Main$EditItemClick = F3(
+	function (a, b, c) {
+		return {$: 'EditItemClick', a: a, b: b, c: c};
+	});
 var $author$project$Main$IndentItem = F2(
 	function (a, b) {
 		return {$: 'IndentItem', a: a, b: b};
@@ -14962,6 +14944,27 @@ var $author$project$Main$SaveAndCreateAfter = function (a) {
 };
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$html$Html$br = _VirtualDom_node('br');
+var $author$project$Theme$codeBlock = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'display', 'block'),
+		A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight),
+		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.codeBackground),
+		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.sm),
+		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
+		A2($elm$html$Html$Attributes$style, 'margin', $author$project$Theme$spacing.xs + ' 0'),
+		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamilyMono)
+	]);
+var $author$project$Theme$content = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
+var $author$project$Theme$contentEmpty = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.textPlaceholder),
+		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
+	]);
 var $author$project$Theme$textarea = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
@@ -14988,6 +14991,9 @@ var $author$project$Theme$flexGrow = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'flex-grow', '1')
 	]);
+var $author$project$SearchToolbar$getSelectedTags = function (model) {
+	return model.selectedTags;
+};
 var $elm$html$Html$Events$onBlur = function (msg) {
 	return A2(
 		$elm$html$Html$Events$on,
@@ -15227,115 +15233,6 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 				cursorPosDecoder,
 				valueDecoder));
 	});
-var $author$project$Main$viewEditableItem = F2(
-	function (_v0, item) {
-		var noBlur = _v0.noBlur;
-		var tagPopup = _v0.tagPopup;
-		var clipboard = _v0.clipboard;
-		var items = _v0.items;
-		var keyboardConfig = {
-			clipboard: clipboard,
-			onCopyItem: function (targetItem) {
-				return $author$project$Main$GetCurrentTime(
-					function (currentTime) {
-						return $author$project$Main$ClipboardMsg(
-							A3($author$project$Clipboard$CopyItem, targetItem, items, currentTime));
-					});
-			},
-			onCutItem: function (targetItem) {
-				return $author$project$Main$ClipboardMsg(
-					A2($author$project$Clipboard$CutItem, targetItem, items));
-			},
-			onDeleteItem: $author$project$Main$DeleteItem,
-			onIndentItem: $author$project$Main$IndentItem,
-			onInsertSelectedTag: F3(
-				function (targetItem, tag, cursorPos) {
-					return $author$project$Main$GetCurrentTime(
-						A3($author$project$Main$InsertSelectedTag, targetItem, tag, cursorPos));
-				}),
-			onMoveItemDown: $author$project$Main$MoveItemDown,
-			onMoveItemUp: $author$project$Main$MoveItemUp,
-			onNavigateToNextWithColumn: $author$project$Main$NavigateToNextWithColumn,
-			onNavigateToPreviousWithColumn: $author$project$Main$NavigateToPreviousWithColumn,
-			onNoOp: $author$project$Main$NoOp,
-			onOutdentItem: $author$project$Main$OutdentItem,
-			onPasteItem: function (targetItem) {
-				return $author$project$Main$ClipboardMsg(
-					A2($author$project$Clipboard$PasteItem, targetItem, items));
-			},
-			onRestoreCutItem: $author$project$Main$ClipboardMsg(
-				$author$project$Clipboard$RestoreCutItem(items)),
-			onSaveAndCreateAfter: $author$project$Main$SaveAndCreateAfter,
-			onTagPopupMsg: $author$project$Main$TagPopupMsg,
-			tagPopup: tagPopup
-		};
-		var addBreaks = function (lines) {
-			return $elm$core$List$concat(
-				A2(
-					$elm$core$List$indexedMap,
-					F2(
-						function (i, line) {
-							return (_Utils_cmp(
-								i,
-								$elm$core$List$length(lines) - 1) < 0) ? _List_fromArray(
-								[
-									$elm$html$Html$text(line),
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)
-								]) : _List_fromArray(
-								[
-									$elm$html$Html$text(line)
-								]);
-						}),
-					lines));
-		};
-		return A2(
-			$elm$html$Html$div,
-			$author$project$Theme$flexGrow,
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$div,
-					_Utils_ap(
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$id(
-								'input-id-' + $elm$core$String$fromInt(
-									$author$project$ListItem$getId(item))),
-								A2($elm$html$Html$Attributes$attribute, 'contenteditable', 'true'),
-								$elm$html$Html$Events$onBlur(
-								noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
-								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
-							]),
-						$author$project$Theme$editableDiv),
-					addBreaks(
-						$author$project$ListItem$getContent(item)))
-				]));
-	});
-var $author$project$Main$EditItemClick = F3(
-	function (a, b, c) {
-		return {$: 'EditItemClick', a: a, b: b, c: c};
-	});
-var $author$project$Theme$codeBlock = _List_fromArray(
-	[
-		A2($elm$html$Html$Attributes$style, 'display', 'block'),
-		A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
-		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight),
-		A2($elm$html$Html$Attributes$style, 'background', $author$project$Theme$colors.codeBackground),
-		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.sm),
-		A2($elm$html$Html$Attributes$style, 'border-radius', $author$project$Theme$layout.borderRadius),
-		A2($elm$html$Html$Attributes$style, 'margin', $author$project$Theme$spacing.xs + ' 0'),
-		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamilyMono)
-	]);
-var $author$project$Theme$content = _List_fromArray(
-	[
-		A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
-		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
-	]);
-var $author$project$Theme$contentEmpty = _List_fromArray(
-	[
-		A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.textPlaceholder),
-		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
-	]);
 var $elm$html$Html$Attributes$tabindex = function (n) {
 	return A2(
 		_VirtualDom_attribute,
@@ -15435,28 +15332,43 @@ var $author$project$Main$viewContentWithSelectedTags = F4(
 			return A5($author$project$Main$renderContentWithSelectedTags, items, item, pieces, matches, selectedTags);
 		}
 	});
-var $author$project$Main$viewStaticItem = F3(
-	function (items, selectedTags, item) {
-		var viewBlock = function (_v0) {
-			var isCode = _v0.a;
-			var lines = _v0.b;
-			return isCode ? A2(
-				$elm$html$Html$code,
-				$author$project$Theme$codeBlock,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						A2($elm$core$String$join, '\n', lines))
-					])) : A2(
-				$elm$html$Html$div,
-				$author$project$Theme$content,
-				A4(
-					$author$project$Main$viewContentWithSelectedTags,
-					items,
-					item,
-					A2($elm$core$String$join, '\n', lines),
-					selectedTags));
-		};
+var $author$project$Main$viewItemContent = F2(
+	function (model, item) {
+		var staticContent = function () {
+			var viewBlock = function (_v0) {
+				var isCode = _v0.a;
+				var lines = _v0.b;
+				return isCode ? A2(
+					$elm$html$Html$code,
+					$author$project$Theme$codeBlock,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							A2($elm$core$String$join, '\n', lines))
+						])) : A2(
+					$elm$html$Html$div,
+					$author$project$Theme$content,
+					A4(
+						$author$project$Main$viewContentWithSelectedTags,
+						model.items,
+						item,
+						A2($elm$core$String$join, '\n', lines),
+						$author$project$SearchToolbar$getSelectedTags(model.searchToolbar)));
+			};
+			var contentBlocks = $author$project$TagsUtils$processContent(
+				$author$project$ListItem$getContent(item));
+			return $elm$core$List$isEmpty(
+				$author$project$ListItem$getContent(item)) ? _List_fromArray(
+				[
+					A2(
+					$elm$html$Html$span,
+					$author$project$Theme$contentEmpty,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('empty')
+						]))
+				]) : A2($elm$core$List$map, viewBlock, contentBlocks);
+		}();
 		var onClickCustom = function () {
 			var clientYDecoder = A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$int);
 			var clientXDecoder = A2($elm$json$Json$Decode$field, 'clientX', $elm$json$Json$Decode$int);
@@ -15472,43 +15384,95 @@ var $author$project$Main$viewStaticItem = F3(
 					clientXDecoder,
 					clientYDecoder));
 		}();
-		var contentBlocks = $author$project$TagsUtils$processContent(
-			$author$project$ListItem$getContent(item));
+		var keyboardConfig = {
+			clipboard: model.clipboard,
+			onCopyItem: function (targetItem) {
+				return $author$project$Main$GetCurrentTime(
+					function (currentTime) {
+						return $author$project$Main$ClipboardMsg(
+							A3($author$project$Clipboard$CopyItem, targetItem, model.items, currentTime));
+					});
+			},
+			onCutItem: function (targetItem) {
+				return $author$project$Main$ClipboardMsg(
+					A2($author$project$Clipboard$CutItem, targetItem, model.items));
+			},
+			onDeleteItem: $author$project$Main$DeleteItem,
+			onIndentItem: $author$project$Main$IndentItem,
+			onInsertSelectedTag: F3(
+				function (targetItem, tag, cursorPos) {
+					return $author$project$Main$GetCurrentTime(
+						A3($author$project$Main$InsertSelectedTag, targetItem, tag, cursorPos));
+				}),
+			onMoveItemDown: $author$project$Main$MoveItemDown,
+			onMoveItemUp: $author$project$Main$MoveItemUp,
+			onNavigateToNextWithColumn: $author$project$Main$NavigateToNextWithColumn,
+			onNavigateToPreviousWithColumn: $author$project$Main$NavigateToPreviousWithColumn,
+			onNoOp: $author$project$Main$NoOp,
+			onOutdentItem: $author$project$Main$OutdentItem,
+			onPasteItem: function (targetItem) {
+				return $author$project$Main$ClipboardMsg(
+					A2($author$project$Clipboard$PasteItem, targetItem, model.items));
+			},
+			onRestoreCutItem: $author$project$Main$ClipboardMsg(
+				$author$project$Clipboard$RestoreCutItem(model.items)),
+			onSaveAndCreateAfter: $author$project$Main$SaveAndCreateAfter,
+			onTagPopupMsg: $author$project$Main$TagPopupMsg,
+			tagPopup: model.tagPopup
+		};
+		var isEditingItem = $author$project$ListItem$isEditing(item);
+		var addBreaks = function (lines) {
+			return $elm$core$List$concat(
+				A2(
+					$elm$core$List$indexedMap,
+					F2(
+						function (i, line) {
+							return (_Utils_cmp(
+								i,
+								$elm$core$List$length(lines) - 1) < 0) ? _List_fromArray(
+								[
+									$elm$html$Html$text(line),
+									A2($elm$html$Html$br, _List_Nil, _List_Nil)
+								]) : _List_fromArray(
+								[
+									$elm$html$Html$text(line)
+								]);
+						}),
+					lines));
+		};
 		return A2(
 			$elm$html$Html$div,
-			A2(
-				$elm$core$List$cons,
-				$elm$html$Html$Attributes$id(
-					'view-item-' + $elm$core$String$fromInt(
-						$author$project$ListItem$getId(item))),
-				A2(
-					$elm$core$List$cons,
-					A2($elm$html$Html$Attributes$attribute, 'contenteditable', 'false'),
-					A2(
-						$elm$core$List$cons,
-						$elm$html$Html$Attributes$tabindex(-1),
-						$author$project$Theme$flexGrow))),
-			_List_fromArray(
-				[
-					A2(
-					$elm$html$Html$div,
+			_Utils_ap(
+				$author$project$Theme$flexGrow,
+				_Utils_ap(
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$class('content-click-area'),
-							onClickCustom
-						]),
-					$elm$core$List$isEmpty(
-						$author$project$ListItem$getContent(item)) ? _List_fromArray(
-						[
 							A2(
-							$elm$html$Html$span,
-							$author$project$Theme$contentEmpty,
-							_List_fromArray(
-								[
-									$elm$html$Html$text('empty')
-								]))
-						]) : A2($elm$core$List$map, viewBlock, contentBlocks))
-				]));
+							$elm$html$Html$Attributes$attribute,
+							'id',
+							'item-' + $elm$core$String$fromInt(
+								$author$project$ListItem$getId(item))),
+							A2(
+							$elm$html$Html$Attributes$attribute,
+							'contenteditable',
+							isEditingItem ? 'true' : 'false'),
+							$elm$html$Html$Attributes$tabindex(-1),
+							A2(
+							$elm$html$Html$Attributes$attribute,
+							'class',
+							(!isEditingItem) ? 'content-click-area' : '')
+						]),
+					isEditingItem ? _Utils_ap(
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onBlur(
+								model.noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
+								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
+							]),
+						$author$project$Theme$editableDiv) : _List_fromArray(
+						[onClickCustom]))),
+			isEditingItem ? addBreaks(
+				$author$project$ListItem$getContent(item)) : staticContent);
 	});
 var $author$project$Main$viewListItem = F3(
 	function (model, level, item) {
@@ -15546,11 +15510,7 @@ var $author$project$Main$viewListItem = F3(
 							[
 								$elm$html$Html$text('•')
 							])),
-						$author$project$ListItem$isEditing(item) ? A2($author$project$Main$viewEditableItem, model, item) : A3(
-						$author$project$Main$viewStaticItem,
-						model.items,
-						$author$project$SearchToolbar$getSelectedTags(model.searchToolbar),
-						item),
+						A2($author$project$Main$viewItemContent, model, item),
 						A2(
 						$elm$html$Html$span,
 						_List_fromArray(

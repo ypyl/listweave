@@ -262,7 +262,7 @@ view model =
 
             else
                 div
-                    (id "tag-popup" :: stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
+                    (stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
         _ ->

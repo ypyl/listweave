@@ -165,50 +165,24 @@ processContent content =
 isInsideCodeBlock : Int -> String -> Bool
 isInsideCodeBlock cursorPos content =
     let
-        lines =
-            String.lines content
+        contentBeforeCursor =
+            String.left cursorPos content
 
-        findBlock ( inCode, pos ) line =
-            let
-                lineEnd =
-                    pos + String.length line
-
-                isCursorInLine =
-                    cursorPos >= pos && cursorPos <= lineEnd
-            in
-            if isCursorInLine then
-                -- Cursor is in this line. Return current `inCode` state and a flag to stop.
-                ( inCode, -1 )
-
-            else if String.startsWith "```" line then
-                -- This line is a fence, it flips the state for the *next* line.
-                ( not inCode, pos + String.length line + 1 )
-
-            else
-                -- Cursor not in this line, continue.
-                ( inCode, pos + String.length line + 1 )
-
-        ( wasInCode, finalPos ) =
-            List.foldl
-                (\line acc ->
-                    let
-                        ( currentInCode, currentPos ) =
-                            acc
-                    in
-                    if currentPos == -1 then
-                        acc
-
-                    else
-                        findBlock acc line
-                )
-                ( False, 0 )
-                lines
+        lastFence =
+            String.indexes "```" contentBeforeCursor
+                |> List.reverse
+                |> List.head
     in
-    if finalPos == -1 then
-        wasInCode
+    case lastFence of
+        Just fencePos ->
+            let
+                contentAfterFence =
+                    String.dropLeft (fencePos + 3) contentBeforeCursor
+            in
+            not (String.contains "```" contentAfterFence)
 
-    else
-        False
+        Nothing ->
+            False
 
 
 insertTagAtCursor : String -> String -> Int -> ( String, Int )
