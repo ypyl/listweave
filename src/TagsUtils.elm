@@ -165,26 +165,24 @@ processContent content =
 isInsideCodeBlock : Int -> String -> Bool
 isInsideCodeBlock cursorPos content =
     let
-        lines = String.lines content
-        blocks = processContent lines
-        
-        -- Calculate character positions for each block
-        checkPosition pos remaining =
-            case remaining of
-                [] ->
-                    False
-                
-                (isCode, blockLines) :: rest ->
-                    let
-                        blockContent = String.join "\n" blockLines
-                        blockEnd = pos + String.length blockContent
-                    in
-                    if isCode && cursorPos >= pos && cursorPos <= blockEnd then
-                        True
-                    else
-                        checkPosition (blockEnd + 1) rest
+        contentBeforeCursor =
+            String.left cursorPos content
+
+        lastFence =
+            String.indexes "```" contentBeforeCursor
+                |> List.reverse
+                |> List.head
     in
-    checkPosition 0 blocks
+    case lastFence of
+        Just fencePos ->
+            let
+                contentAfterFence =
+                    String.dropLeft (fencePos + 3) contentBeforeCursor
+            in
+            not (String.contains "```" contentAfterFence)
+
+        Nothing ->
+            False
 
 
 insertTagAtCursor : String -> String -> Int -> ( String, Int )

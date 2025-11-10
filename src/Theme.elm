@@ -242,6 +242,13 @@ textarea =
     ]
 
 
+editableDiv : List (Html.Attribute msg)
+editableDiv =
+    textarea
+        ++ [ style "min-height" "1.8em"
+           ]
+
+
 content : List (Html.Attribute msg)
 content =
     [ style "white-space" "pre-wrap"
