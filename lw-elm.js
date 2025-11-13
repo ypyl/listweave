@@ -10719,7 +10719,6 @@ var $author$project$Main$initialModel = {
 	caretTask: $elm$core$Maybe$Nothing,
 	clipboard: $author$project$Clipboard$init,
 	cursorPos: $elm$core$Maybe$Nothing,
-	initEditableTask: $elm$core$Maybe$Nothing,
 	items: _List_fromArray(
 		[
 			$author$project$ListItem$newListItem(
@@ -10843,13 +10842,10 @@ var $author$project$Main$GotCurrentCursorPosition = F3(
 	function (a, b, c) {
 		return {$: 'GotCurrentCursorPosition', a: a, b: b, c: c};
 	});
-var $author$project$Main$GotCursorPosition = F3(
-	function (a, b, c) {
-		return {$: 'GotCursorPosition', a: a, b: b, c: c};
+var $author$project$Main$GotCursorPosition = F5(
+	function (a, b, c, d, e) {
+		return {$: 'GotCursorPosition', a: a, b: b, c: c, d: d, e: e};
 	});
-var $author$project$Main$InitEditableTaskDone = function (a) {
-	return {$: 'InitEditableTaskDone', a: a};
-};
 var $author$project$Main$NoOp = {$: 'NoOp'};
 var $author$project$Main$ReceiveImportedModel = function (a) {
 	return {$: 'ReceiveImportedModel', a: a};
@@ -10862,6 +10858,7 @@ var $author$project$Main$SetSearchCursor = function (a) {
 	return {$: 'SetSearchCursor', a: a};
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $author$project$Main$clickedAt = _Platform_incomingPort(
 	'clickedAt',
@@ -10877,20 +10874,6 @@ var $author$project$Main$clickedAt = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int));
 		},
 		A2($elm$json$Json$Decode$field, 'pos', $elm$json$Json$Decode$int)));
-var $author$project$Main$editableInput = _Platform_incomingPort('editableInput', $elm$json$Json$Decode$value);
-var $author$project$Main$EditableInput = function (a) {
-	return {$: 'EditableInput', a: a};
-};
-var $author$project$Main$editableInputDecoder = A4(
-	$elm$json$Json$Decode$map3,
-	F3(
-		function (id, content, cursorPos) {
-			return $author$project$Main$EditableInput(
-				{content: content, cursorPos: cursorPos, id: id});
-		}),
-	A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$int),
-	A2($elm$json$Json$Decode$field, 'content', $elm$json$Json$Decode$string),
-	A2($elm$json$Json$Decode$field, 'cursorPos', $elm$json$Json$Decode$int));
 var $author$project$ListItem$getChildren = function (_v0) {
 	var item = _v0.a;
 	return item.children;
@@ -11080,72 +11063,52 @@ var $author$project$Main$subscriptions = function (model) {
 				}
 			}(),
 				function () {
-				var _v3 = model.initEditableTask;
+				var _v3 = $author$project$SearchToolbar$getUpdatedCursorPosition(model.searchToolbar);
 				if (_v3.$ === 'Just') {
-					var id = _v3.a;
+					var pos = _v3.a;
 					return $elm$browser$Browser$Events$onAnimationFrame(
 						function (_v4) {
-							return $author$project$Main$InitEditableTaskDone(id);
-						});
-				} else {
-					return $elm$core$Platform$Sub$none;
-				}
-			}(),
-				function () {
-				var _v5 = $author$project$SearchToolbar$getUpdatedCursorPosition(model.searchToolbar);
-				if (_v5.$ === 'Just') {
-					var pos = _v5.a;
-					return $elm$browser$Browser$Events$onAnimationFrame(
-						function (_v6) {
 							return $author$project$Main$SetSearchCursor(pos);
 						});
 				} else {
 					return $elm$core$Platform$Sub$none;
 				}
 			}(),
-				$author$project$Main$editableInput(
-				function (value) {
-					var _v7 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$editableInputDecoder, value);
-					if (_v7.$ === 'Ok') {
-						var msg = _v7.a;
-						return msg;
-					} else {
-						return $author$project$Main$NoOp;
-					}
-				}),
 				$author$project$Main$receiveCursorPosition(
 				function (value) {
-					var _v8 = A2(
+					var _v5 = A2(
 						$elm$json$Json$Decode$decodeValue,
-						A4(
-							$elm$json$Json$Decode$map3,
+						A6(
+							$elm$json$Json$Decode$map5,
 							$author$project$Main$GotCursorPosition,
 							A2($elm$json$Json$Decode$field, 'top', $elm$json$Json$Decode$int),
 							A2($elm$json$Json$Decode$field, 'left', $elm$json$Json$Decode$int),
-							A2($elm$json$Json$Decode$field, 'width', $elm$json$Json$Decode$int)),
+							A2($elm$json$Json$Decode$field, 'word', $elm$json$Json$Decode$string),
+							A2($elm$json$Json$Decode$field, 'ok', $elm$json$Json$Decode$bool),
+							A2($elm$json$Json$Decode$field, 'inCode', $elm$json$Json$Decode$bool)),
 						value);
-					if (_v8.$ === 'Ok') {
-						var msg = _v8.a;
+					if (_v5.$ === 'Ok') {
+						var msg = _v5.a;
 						return msg;
 					} else {
-						return A3($author$project$Main$GotCursorPosition, 0, 0, 0);
+						return A5($author$project$Main$GotCursorPosition, 0, 0, '', false, false);
 					}
 				}),
 				$author$project$Main$receiveCurrentCursorPosition(
 				function (value) {
-					var _v9 = A2(
+					var _v6 = A2(
 						$elm$json$Json$Decode$decodeValue,
 						A4(
 							$elm$json$Json$Decode$map3,
 							F3(
 								function (itemId, tag, cursorPos) {
-									var _v10 = $author$project$ListItem$findEditingItem(model.items);
-									if (_v10.$ === 'Just') {
-										var _v11 = _v10.a;
-										var editingItem = _v11.a;
-										var _v12 = model.pendingTagInsertion;
-										if (_v12.$ === 'Just') {
-											var pendingTag = _v12.a;
+									var _v7 = $author$project$ListItem$findEditingItem(model.items);
+									if (_v7.$ === 'Just') {
+										var _v8 = _v7.a;
+										var editingItem = _v8.a;
+										var _v9 = model.pendingTagInsertion;
+										if (_v9.$ === 'Just') {
+											var pendingTag = _v9.a;
 											return A3($author$project$Main$GotCurrentCursorPosition, editingItem, pendingTag, cursorPos);
 										} else {
 											return $author$project$Main$NoOp;
@@ -11158,8 +11121,8 @@ var $author$project$Main$subscriptions = function (model) {
 							A2($elm$json$Json$Decode$field, 'tag', $elm$json$Json$Decode$string),
 							A2($elm$json$Json$Decode$field, 'cursorPos', $elm$json$Json$Decode$int)),
 						value);
-					if (_v9.$ === 'Ok') {
-						var msg = _v9.a;
+					if (_v6.$ === 'Ok') {
+						var msg = _v6.a;
 						return msg;
 					} else {
 						return $author$project$Main$NoOp;
@@ -11190,17 +11153,14 @@ var $author$project$Main$InsertSelectedTag = F4(
 	function (a, b, c, d) {
 		return {$: 'InsertSelectedTag', a: a, b: b, c: c, d: d};
 	});
-var $author$project$Main$SaveItem = function (a) {
-	return {$: 'SaveItem', a: a};
-};
+var $author$project$Main$SaveItem = F3(
+	function (a, b, c) {
+		return {$: 'SaveItem', a: a, b: b, c: c};
+	});
 var $author$project$SearchToolbar$SearchKeyDown = function (a) {
 	return {$: 'SearchKeyDown', a: a};
 };
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
-var $author$project$Main$UpdateItemContent = F4(
-	function (a, b, c, d) {
-		return {$: 'UpdateItemContent', a: a, b: b, c: c, d: d};
-	});
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
 	function (resultToMessage, task) {
@@ -11223,7 +11183,6 @@ var $elm$core$Task$attempt = F2(
 var $author$project$TagPopup$currentSource = function (model) {
 	return model.source;
 };
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $author$project$Clipboard$Model = F2(
 	function (clipboard, clipboardOriginalPosition) {
 		return {clipboard: clipboard, clipboardOriginalPosition: clipboardOriginalPosition};
@@ -11357,14 +11316,12 @@ var $elm$json$Json$Decode$map4 = _Json_map4;
 var $author$project$TagPopup$positionDecoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (list) {
-		if (((list.b && list.b.b) && list.b.b.b) && (!list.b.b.b.b)) {
+		if ((list.b && list.b.b) && (!list.b.b.b)) {
 			var a = list.a;
 			var _v1 = list.b;
 			var b = _v1.a;
-			var _v2 = _v1.b;
-			var c = _v2.a;
 			return $elm$json$Json$Decode$succeed(
-				_Utils_Tuple3(a, b, c));
+				_Utils_Tuple2(a, b));
 		} else {
 			return $elm$json$Json$Decode$fail('Position list must have exactly 3 elements (top, left, width)');
 		}
@@ -11411,7 +11368,7 @@ var $author$project$Main$decode = A9(
 	$elm$json$Json$Decode$map8,
 	F8(
 		function (items, cursorPos, caretTask, pendingTagInsertion, tagPopup, searchToolbar, noBlur, clipboard) {
-			return {caretTask: caretTask, clipboard: clipboard, cursorPos: cursorPos, initEditableTask: $elm$core$Maybe$Nothing, items: items, noBlur: noBlur, pendingTagInsertion: pendingTagInsertion, searchToolbar: searchToolbar, tagPopup: tagPopup};
+			return {caretTask: caretTask, clipboard: clipboard, cursorPos: cursorPos, items: items, noBlur: noBlur, pendingTagInsertion: pendingTagInsertion, searchToolbar: searchToolbar, tagPopup: tagPopup};
 		}),
 	A2(
 		$elm$json$Json$Decode$field,
@@ -11615,12 +11572,11 @@ var $author$project$TagPopup$encode = function (model) {
 						function (_v0) {
 							var a = _v0.a;
 							var b = _v0.b;
-							var c = _v0.c;
 							return A2(
 								$elm$json$Json$Encode$list,
 								$elm$json$Json$Encode$int,
 								_List_fromArray(
-									[a, b, c]));
+									[a, b]));
 						},
 						model.position))),
 				_Utils_Tuple2(
@@ -11695,12 +11651,6 @@ var $author$project$Main$encode = function (model) {
 						},
 						model.caretTask))),
 				_Utils_Tuple2(
-				'initEditableTask',
-				A2(
-					$elm$core$Maybe$withDefault,
-					$elm$json$Json$Encode$null,
-					A2($elm$core$Maybe$map, $elm$json$Json$Encode$int, model.initEditableTask))),
-				_Utils_Tuple2(
 				'pendingTagInsertion',
 				A2(
 					$elm$core$Maybe$withDefault,
@@ -11730,38 +11680,6 @@ var $elm$core$List$filter = F2(
 				}),
 			_List_Nil,
 			list);
-	});
-var $author$project$ListItem$findById = F2(
-	function (targetId, _v0) {
-		var record = _v0.a;
-		return _Utils_eq(record.id, targetId) ? $elm$core$Maybe$Just(
-			$author$project$ListItem$ListItem(record)) : A3(
-			$elm$core$List$foldl,
-			F2(
-				function (child, acc) {
-					if (acc.$ === 'Just') {
-						return acc;
-					} else {
-						return A2($author$project$ListItem$findById, targetId, child);
-					}
-				}),
-			$elm$core$Maybe$Nothing,
-			record.children);
-	});
-var $author$project$ListItem$findInForest = F2(
-	function (targetId, items) {
-		return A3(
-			$elm$core$List$foldl,
-			F2(
-				function (item, acc) {
-					if (acc.$ === 'Just') {
-						return acc;
-					} else {
-						return A2($author$project$ListItem$findById, targetId, item);
-					}
-				}),
-			$elm$core$Maybe$Nothing,
-			items);
 	});
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
@@ -11906,31 +11824,11 @@ var $author$project$ListItem$getNextId = function (items) {
 		return A3($elm$core$List$foldl, $elm$core$Basics$max, 0, maxIds) + 1;
 	}
 };
-var $author$project$Main$getPosition = _Platform_outgoingPort(
-	'getPosition',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'clientX',
-					$elm$json$Json$Encode$int($.clientX)),
-					_Utils_Tuple2(
-					'clientY',
-					$elm$json$Json$Encode$int($.clientY)),
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$int($.id))
-				]));
-	});
 var $author$project$Main$getSearchInputPosition = _Platform_outgoingPort(
 	'getSearchInputPosition',
 	function ($) {
 		return $elm$json$Json$Encode$null;
 	});
-var $author$project$TagPopup$getTags = function (model) {
-	return model.tags;
-};
 var $author$project$TagPopup$hidePopup = function (model) {
 	return _Utils_update(
 		model,
@@ -11994,7 +11892,6 @@ var $author$project$ListItem$indentItem = F2(
 			},
 			list) : result;
 	});
-var $author$project$Main$initEditable = _Platform_outgoingPort('initEditable', $elm$json$Json$Encode$int);
 var $author$project$ListItem$monthToInt = function (month) {
 	switch (month.$) {
 		case 'Jan':
@@ -12317,7 +12214,6 @@ var $author$project$TagsUtils$isInsideTagBrackets = F2(
 			A2($author$project$TagsUtils$focusedTag, cursorPos, content));
 	});
 var $elm$core$String$lines = _String_lines;
-var $elm$core$Debug$log = _Debug_log;
 var $author$project$ListItem$mapItem = F2(
 	function (fn, list) {
 		return A2(
@@ -12325,7 +12221,6 @@ var $author$project$ListItem$mapItem = F2(
 			function (item) {
 				var _v0 = fn(item);
 				var record = _v0.a;
-				var _v1 = item;
 				return $author$project$ListItem$ListItem(
 					_Utils_update(
 						record,
@@ -12689,6 +12584,114 @@ var $author$project$ListItem$outdentItem = F2(
 			},
 			list);
 	});
+var $elm$core$String$replace = F3(
+	function (before, after, string) {
+		return A2(
+			$elm$core$String$join,
+			after,
+			A2($elm$core$String$split, before, string));
+	});
+var $author$project$ListItem$parseInnerHtml = function (html) {
+	var stripTags = function (s) {
+		stripTags:
+		while (true) {
+			var _v0 = A2($elm$core$String$indexes, '<', s);
+			if (!_v0.b) {
+				return s;
+			} else {
+				var i = _v0.a;
+				var rest = A3(
+					$elm$core$String$slice,
+					i,
+					$elm$core$String$length(s),
+					s);
+				var before = A3($elm$core$String$slice, 0, i, s);
+				var _v1 = A2($elm$core$String$indexes, '>', rest);
+				if (!_v1.b) {
+					return before;
+				} else {
+					var j = _v1.a;
+					var after = A3(
+						$elm$core$String$slice,
+						j + 1,
+						$elm$core$String$length(rest),
+						rest);
+					var $temp$s = _Utils_ap(before, after);
+					s = $temp$s;
+					continue stripTags;
+				}
+			}
+		}
+	};
+	var startMarker = '||CODE_START||';
+	var processNormal = function (s) {
+		return A2(
+			$elm$core$List$map,
+			$elm$core$String$trim,
+			A2(
+				$elm$core$String$split,
+				'\n',
+				stripTags(s)));
+	};
+	var normalizedNbsp = A3($elm$core$String$replace, '&nbsp;', ' ', html);
+	var normalizedBr = A3(
+		$elm$core$String$replace,
+		'<br>',
+		'\n',
+		A3(
+			$elm$core$String$replace,
+			'<br />',
+			'\n',
+			A3($elm$core$String$replace, '<br/>', '\n', normalizedNbsp)));
+	var withCodeMarkers = A3(
+		$elm$core$String$replace,
+		'</code></pre>',
+		'||CODE_END||',
+		A3($elm$core$String$replace, '<pre><code>', '||CODE_START||', normalizedBr));
+	var lenStart = $elm$core$String$length(startMarker);
+	var endMarker = '||CODE_END||';
+	var lenEnd = $elm$core$String$length(endMarker);
+	var helper = function (s) {
+		var _v2 = A2($elm$core$String$indexes, startMarker, s);
+		if (!_v2.b) {
+			return processNormal(s);
+		} else {
+			var idx = _v2.a;
+			var prefix = A3($elm$core$String$slice, 0, idx, s);
+			var afterStart = A3(
+				$elm$core$String$slice,
+				idx + lenStart,
+				$elm$core$String$length(s),
+				s);
+			var _v3 = A2($elm$core$String$indexes, endMarker, afterStart);
+			if (!_v3.b) {
+				return processNormal(s);
+			} else {
+				var endIdx = _v3.a;
+				var rest = A3(
+					$elm$core$String$slice,
+					endIdx + lenEnd,
+					$elm$core$String$length(afterStart),
+					afterStart);
+				var codeContent = A3($elm$core$String$slice, 0, endIdx, afterStart);
+				var codeLines = $elm$core$String$lines(codeContent);
+				var codeBlock = A2(
+					$elm$core$List$cons,
+					'```',
+					_Utils_ap(
+						codeLines,
+						_List_fromArray(
+							['```'])));
+				return _Utils_ap(
+					processNormal(prefix),
+					_Utils_ap(
+						codeBlock,
+						helper(rest)));
+			}
+		}
+	};
+	return helper(withCodeMarkers);
+};
 var $author$project$Main$readFile = _Platform_outgoingPort(
 	'readFile',
 	function ($) {
@@ -12716,7 +12719,11 @@ var $author$project$ListItem$removeItemCompletely = F2(
 			});
 		return A2(removeRecursive, item.id, list);
 	});
-var $author$project$Main$requestCursorPosition = _Platform_outgoingPort('requestCursorPosition', $elm$json$Json$Encode$int);
+var $author$project$Main$requestCursorPosition = _Platform_outgoingPort(
+	'requestCursorPosition',
+	function ($) {
+		return $elm$json$Json$Encode$null;
+	});
 var $author$project$SearchToolbar$resetUpdatedCursorPosition = function (model) {
 	return _Utils_update(
 		model,
@@ -12726,7 +12733,7 @@ var $author$project$ListItem$saveItemFn = F2(
 	function (_v0, _v1) {
 		var current = _v0.a;
 		var item = _v1.a;
-		return _Utils_eq(item.id, current.id) ? $author$project$ListItem$ListItem(
+		return _Utils_eq(item, current) ? $author$project$ListItem$ListItem(
 			_Utils_update(
 				item,
 				{editing: false})) : $author$project$ListItem$ListItem(item);
@@ -13498,8 +13505,7 @@ var $author$project$TagsUtils$processContent = function (content) {
 				_Utils_Tuple2(false, remainingLines)
 			]));
 };
-var $author$project$ListItem$extractTags = function (content) {
-	var lines = $elm$core$String$lines(content);
+var $author$project$ListItem$extractTags = function (lines) {
 	var blocks = $author$project$TagsUtils$processContent(lines);
 	var textBlocks = A2(
 		$elm$core$String$join,
@@ -13531,12 +13537,11 @@ var $author$project$ListItem$extractTags = function (content) {
 		A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, textBlocks));
 };
 var $author$project$ListItem$updateItemContentFn = F4(
-	function (_v0, content, currentTime, _v1) {
+	function (_v0, lines, currentTime, _v1) {
 		var current = _v0.a;
 		var item = _v1.a;
-		if (_Utils_eq(item.id, current.id)) {
-			var userTags = $author$project$ListItem$extractTags(content);
-			var lines = $elm$core$String$lines(content);
+		if (_Utils_eq(item, current)) {
+			var userTags = $author$project$ListItem$extractTags(lines);
 			var hasCodeBlock = A2(
 				$elm$core$List$any,
 				function (_v2) {
@@ -13571,6 +13576,10 @@ var $author$project$Main$update = F2(
 			switch (msg.$) {
 				case 'NoOp':
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				case 'GetCurrentCursorPostion':
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$requestCursorPosition(_Utils_Tuple0));
 				case 'ReceiveImportedModel':
 					var jsonValue = msg.a;
 					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$decode, jsonValue);
@@ -13641,18 +13650,6 @@ var $author$project$Main$update = F2(
 								{tagPopup: updatedmodel}),
 							$elm$core$Platform$Cmd$none);
 					}
-				case 'EditItemClick':
-					var item = msg.a;
-					var x = msg.b;
-					var y = msg.c;
-					return _Utils_Tuple2(
-						model,
-						$author$project$Main$getPosition(
-							{
-								clientX: x,
-								clientY: y,
-								id: $author$project$ListItem$getId(item)
-							}));
 				case 'ToggleNoBlur':
 					return _Utils_Tuple2(
 						_Utils_update(
@@ -13702,10 +13699,7 @@ var $author$project$Main$update = F2(
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'KeyEnter':
-									var _v14 = A2(
-										$elm$core$Debug$log,
-										'selected',
-										$author$project$TagPopup$getHighlightedTag(model.tagPopup));
+									var _v14 = $author$project$TagPopup$getHighlightedTag(model.tagPopup);
 									if (_v14.$ === 'Just') {
 										var tag = _v14.a;
 										return _Utils_Tuple2(
@@ -13854,10 +13848,7 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							updatedModel,
-							{
-								cursorPos: $elm$core$Maybe$Nothing,
-								initEditableTask: $elm$core$Maybe$Just(id)
-							}),
+							{cursorPos: $elm$core$Maybe$Nothing}),
 						command);
 				case 'SetCaret':
 					var itemId = msg.a;
@@ -13868,29 +13859,6 @@ var $author$project$Main$update = F2(
 							{caretTask: $elm$core$Maybe$Nothing}),
 						$author$project$Main$setCaret(
 							{id: itemId, pos: pos}));
-				case 'InitEditableTaskDone':
-					var id = msg.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{initEditableTask: $elm$core$Maybe$Nothing}),
-						$author$project$Main$initEditable(id));
-				case 'EditableInput':
-					var id = msg.a.id;
-					var content = msg.a.content;
-					var cursorPos = msg.a.cursorPos;
-					var _v20 = A2($author$project$ListItem$findInForest, id, model.items);
-					if (_v20.$ === 'Just') {
-						var item = _v20.a;
-						var $temp$msg = $author$project$Main$GetCurrentTime(
-							A3($author$project$Main$UpdateItemContent, item, content, cursorPos)),
-							$temp$model = model;
-						msg = $temp$msg;
-						model = $temp$model;
-						continue update;
-					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-					}
 				case 'SetSearchCursor':
 					var pos = msg.a;
 					return _Utils_Tuple2(
@@ -13904,9 +13872,9 @@ var $author$project$Main$update = F2(
 					var item = msg.a;
 					var tag = msg.b;
 					var cursorPos = msg.c;
-					return function (_v21) {
-						var m = _v21.a;
-						var c = _v21.b;
+					return function (_v20) {
+						var m = _v20.a;
+						var c = _v20.b;
 						return A2(
 							$elm$core$Tuple$mapSecond,
 							function (cmd) {
@@ -13925,53 +13893,6 @@ var $author$project$Main$update = F2(
 								model,
 								{pendingTagInsertion: $elm$core$Maybe$Nothing}),
 							$elm$core$Platform$Cmd$none));
-				case 'UpdateItemContent':
-					var item = msg.a;
-					var content = msg.b;
-					var cursorPos = msg.c;
-					var currentTime = msg.d;
-					var itemId = $author$project$ListItem$getId(item);
-					var _v22 = A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, content);
-					if (_v22.$ === 'Just') {
-						var _v23 = _v22.a;
-						var tagSearchPrefix = _v23.a;
-						var tag = _v23.b;
-						var matchingTags = A2(
-							$elm$core$List$filter,
-							$elm$core$Basics$neq(tag),
-							A2(
-								$elm$core$List$filter,
-								$elm$core$String$startsWith(tagSearchPrefix),
-								$author$project$ListItem$getAllTags(model.items)));
-						var updatedTagPopup = $elm$core$List$isEmpty(matchingTags) ? $author$project$TagPopup$hidePopup(model.tagPopup) : A2(
-							$author$project$TagPopup$setTags,
-							_Utils_Tuple2(matchingTags, $author$project$TagPopup$FromItem),
-							model.tagPopup);
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									items: A2(
-										$author$project$ListItem$mapItem,
-										A3($author$project$ListItem$updateItemContentFn, item, content, currentTime),
-										model.items),
-									noBlur: !$elm$core$List$isEmpty(matchingTags),
-									tagPopup: updatedTagPopup
-								}),
-							$author$project$Main$requestCursorPosition(itemId));
-					} else {
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									items: A2(
-										$author$project$ListItem$mapItem,
-										A3($author$project$ListItem$updateItemContentFn, item, content, currentTime),
-										model.items),
-									tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
-								}),
-							$elm$core$Platform$Cmd$none);
-					}
 				case 'MoveItemUp':
 					var cursorPosition = msg.a;
 					var item = msg.b;
@@ -13979,10 +13900,6 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{
-								caretTask: $elm$core$Maybe$Just(
-									_Utils_Tuple2(
-										$author$project$ListItem$getId(item),
-										cursorPosition)),
 								items: A3($author$project$ListItem$moveItemInTree, $author$project$ListItem$moveItemUp, item, model.items),
 								noBlur: true
 							}),
@@ -14035,40 +13952,78 @@ var $author$project$Main$update = F2(
 				case 'GotCursorPosition':
 					var top = msg.a;
 					var left = msg.b;
-					var width = msg.c;
-					var _v24 = $author$project$TagPopup$getTags(model.tagPopup);
-					if (_v24.$ === 'Just') {
-						var tags = _v24.a;
+					var fragment = msg.c;
+					var ok = msg.d;
+					var inCode = msg.e;
+					if (inCode || (!ok)) {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					} else {
+						if (A2($elm$core$String$startsWith, '@', fragment)) {
+							var matchingTags = A2(
+								$elm$core$List$filter,
+								$elm$core$String$startsWith(
+									A2($elm$core$String$dropLeft, 1, fragment)),
+								$author$project$ListItem$getAllTags(model.items));
+							var updatedTagPopup = $elm$core$List$isEmpty(matchingTags) ? $author$project$TagPopup$hidePopup(model.tagPopup) : A2(
+								$author$project$TagPopup$setTags,
+								_Utils_Tuple2(matchingTags, $author$project$TagPopup$FromItem),
+								model.tagPopup);
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										tagPopup: A3(
+											$author$project$TagPopup$showPopup,
+											_Utils_Tuple2(top, left),
+											matchingTags,
+											updatedTagPopup)
+									}),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
+					}
+				case 'SaveItem':
+					var item = msg.a;
+					var innerHTML = msg.b;
+					var currentTime = msg.c;
+					if (model.noBlur) {
+						return _Utils_Tuple2(
+							model,
+							A2(
+								$elm$core$Task$perform,
+								function (_v21) {
+									return $author$project$Main$ToggleNoBlur;
+								},
+								$elm$core$Task$succeed(_Utils_Tuple0)));
+					} else {
+						var lines = $author$project$ListItem$parseInnerHtml(innerHTML);
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
 								{
-									tagPopup: A3(
-										$author$project$TagPopup$showPopup,
-										_Utils_Tuple3(top, left, width),
-										tags,
-										model.tagPopup)
+									items: A2(
+										$elm$core$Basics$composeR,
+										$author$project$ListItem$mapItem(
+											A3($author$project$ListItem$updateItemContentFn, item, lines, currentTime)),
+										$author$project$ListItem$mapItem(
+											$author$project$ListItem$saveItemFn(item)))(model.items),
+									tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 								}),
 							$elm$core$Platform$Cmd$none);
-					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 					}
-				case 'SaveItem':
+				case 'ItemInput':
 					var item = msg.a;
-					return model.noBlur ? _Utils_Tuple2(
-						model,
-						A2(
-							$elm$core$Task$perform,
-							function (_v25) {
-								return $author$project$Main$ToggleNoBlur;
-							},
-							$elm$core$Task$succeed(_Utils_Tuple0))) : _Utils_Tuple2(
+					var innerHTML = msg.b;
+					var currentTime = msg.c;
+					var lines = $author$project$ListItem$parseInnerHtml(innerHTML);
+					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
 								items: A2(
 									$author$project$ListItem$mapItem,
-									$author$project$ListItem$saveItemFn(item),
+									A3($author$project$ListItem$updateItemContentFn, item, lines, currentTime),
 									model.items),
 								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
 							}),
@@ -14118,11 +14073,13 @@ var $author$project$Main$update = F2(
 						A2($elm$core$Task$perform, msgFn, $elm$time$Time$now));
 				case 'SaveAndCreateAfter':
 					var item = msg.a;
-					var _v26 = A2(
+					var innerHtml = msg.b;
+					var _v22 = A2(
 						$author$project$Main$update,
-						$author$project$Main$SaveItem(item),
+						$author$project$Main$GetCurrentTime(
+							A2($author$project$Main$SaveItem, item, innerHtml)),
 						model);
-					var afterSave = _v26.a;
+					var afterSave = _v22.a;
 					var $temp$msg = $author$project$Main$GetCurrentTime(
 						$author$project$Main$CreateItemAfter(item)),
 						$temp$model = afterSave;
@@ -14158,9 +14115,9 @@ var $author$project$Main$update = F2(
 						$elm$core$String$join,
 						'\n',
 						$author$project$ListItem$getContent(item));
-					var _v27 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
-					var newContent = _v27.a;
-					var newCaretPos = _v27.b;
+					var _v23 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
+					var newContent = _v23.a;
+					var newCaretPos = _v23.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -14171,7 +14128,11 @@ var $author$project$Main$update = F2(
 										newCaretPos)),
 								items: A2(
 									$author$project$ListItem$mapItem,
-									A3($author$project$ListItem$updateItemContentFn, item, newContent, currentTime),
+									A3(
+										$author$project$ListItem$updateItemContentFn,
+										item,
+										A2($elm$core$String$split, '\n', newContent),
+										currentTime),
 									model.items),
 								noBlur: false,
 								tagPopup: $author$project$TagPopup$hidePopup(model.tagPopup)
@@ -14180,9 +14141,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToPreviousWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v28 = A2($author$project$ListItem$findPreviousItem, item, model.items);
-					if (_v28.$ === 'Just') {
-						var prevItem = _v28.a;
+					var _v24 = A2($author$project$ListItem$findPreviousItem, item, model.items);
+					if (_v24.$ === 'Just') {
+						var prevItem = _v24.a;
 						var prevId = $author$project$ListItem$getId(prevItem);
 						var prevContent = A2(
 							$elm$core$String$join,
@@ -14218,9 +14179,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToNextWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v29 = A2($author$project$ListItem$findNextItem, item, model.items);
-					if (_v29.$ === 'Just') {
-						var nextItem = _v29.a;
+					var _v25 = A2($author$project$ListItem$findNextItem, item, model.items);
+					if (_v25.$ === 'Just') {
+						var nextItem = _v25.a;
 						var nextId = $author$project$ListItem$getId(nextItem);
 						var nextContent = A2(
 							$elm$core$String$join,
@@ -14252,10 +14213,10 @@ var $author$project$Main$update = F2(
 					}
 				default:
 					var clipboardMsg = msg.a;
-					var _v30 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
-					var updatedClipboard = _v30.a;
-					var updatedItems = _v30.b;
-					var maybeCaretTask = _v30.c;
+					var _v26 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
+					var updatedClipboard = _v26.a;
+					var updatedItems = _v26.b;
+					var maybeCaretTask = _v26.c;
 					var newCaretTask = function () {
 						if (maybeCaretTask.$ === 'Just') {
 							var caretTask = maybeCaretTask.a;
@@ -14743,8 +14704,8 @@ var $author$project$Theme$popup = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'overflow-y', 'auto'),
 		A2($elm$html$Html$Attributes$style, 'font-size', $author$project$Theme$typography.fontSize)
 	]);
-var $author$project$Theme$positionStyle = F3(
-	function (top, left, width) {
+var $author$project$Theme$positionStyle = F2(
+	function (top, left) {
 		return _List_fromArray(
 			[
 				A2(
@@ -14755,10 +14716,7 @@ var $author$project$Theme$positionStyle = F3(
 				$elm$html$Html$Attributes$style,
 				'left',
 				$elm$core$String$fromInt(left) + 'px'),
-				A2(
-				$elm$html$Html$Attributes$style,
-				'width',
-				$elm$core$String$fromInt(width) + 'px')
+				A2($elm$html$Html$Attributes$style, 'width', 'auto')
 			]);
 	});
 var $author$project$TagPopup$HighlightTag = function (a) {
@@ -14808,7 +14766,6 @@ var $author$project$TagPopup$view = function (model) {
 		var _v1 = _v0.a.a;
 		var top = _v1.a;
 		var left = _v1.b;
-		var width = _v1.c;
 		var matchingTags = _v0.b.a;
 		return $elm$core$List$isEmpty(matchingTags) ? $elm$html$Html$text('') : A2(
 			$elm$html$Html$div,
@@ -14820,7 +14777,7 @@ var $author$project$TagPopup$view = function (model) {
 					$elm$json$Json$Decode$succeed(
 						_Utils_Tuple2($author$project$TagPopup$NoOp, true))),
 				_Utils_ap(
-					A3($author$project$Theme$positionStyle, top, left, width),
+					A2($author$project$Theme$positionStyle, top, left),
 					$author$project$Theme$popup)),
 			A2(
 				$elm$core$List$map,
@@ -14907,10 +14864,7 @@ var $author$project$Clipboard$CutItem = F2(
 	function (a, b) {
 		return {$: 'CutItem', a: a, b: b};
 	});
-var $author$project$Main$EditItemClick = F3(
-	function (a, b, c) {
-		return {$: 'EditItemClick', a: a, b: b, c: c};
-	});
+var $author$project$Main$GetCurrentCursorPostion = {$: 'GetCurrentCursorPostion'};
 var $author$project$Main$IndentItem = F2(
 	function (a, b) {
 		return {$: 'IndentItem', a: a, b: b};
@@ -14939,9 +14893,10 @@ var $author$project$Clipboard$PasteItem = F2(
 	function (a, b) {
 		return {$: 'PasteItem', a: a, b: b};
 	});
-var $author$project$Main$SaveAndCreateAfter = function (a) {
-	return {$: 'SaveAndCreateAfter', a: a};
-};
+var $author$project$Main$SaveAndCreateAfter = F2(
+	function (a, b) {
+		return {$: 'SaveAndCreateAfter', a: a, b: b};
+	});
 var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$html$Html$br = _VirtualDom_node('br');
 var $author$project$Theme$codeBlock = _List_fromArray(
@@ -14994,12 +14949,6 @@ var $author$project$Theme$flexGrow = _List_fromArray(
 var $author$project$SearchToolbar$getSelectedTags = function (model) {
 	return model.selectedTags;
 };
-var $elm$html$Html$Events$onBlur = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'blur',
-		$elm$json$Json$Decode$succeed(msg));
-};
 var $author$project$TagPopup$Hide = {$: 'Hide'};
 var $author$project$TagPopup$NavigateDown = {$: 'NavigateDown'};
 var $author$project$TagPopup$NavigateUp = {$: 'NavigateUp'};
@@ -15050,19 +14999,20 @@ var $author$project$KeyboardHandler$keyFromCode = function (code) {
 };
 var $author$project$KeyboardHandler$onKeyDown = F2(
 	function (config, item) {
-		var valueDecoder = A2(
-			$elm$json$Json$Decode$field,
-			'target',
-			A2($elm$json$Json$Decode$field, 'value', $elm$json$Json$Decode$string));
 		var shiftKeyDecoder = A2($elm$json$Json$Decode$field, 'shiftKey', $elm$json$Json$Decode$bool);
 		var keyDecoder = A2(
 			$elm$json$Json$Decode$map,
 			$author$project$KeyboardHandler$keyFromCode,
 			A2($elm$json$Json$Decode$field, 'keyCode', $elm$json$Json$Decode$int));
+		var innerHtml = A2(
+			$elm$json$Json$Decode$at,
+			_List_fromArray(
+				['target', 'innerHTML']),
+			$elm$json$Json$Decode$string);
 		var cursorPosDecoder = A2(
 			$elm$json$Json$Decode$field,
 			'target',
-			A2($elm$json$Json$Decode$field, 'selectionStart', $elm$json$Json$Decode$int));
+			$elm$json$Json$Decode$succeed(1));
 		var altKeyDecoder = A2($elm$json$Json$Decode$field, 'altKey', $elm$json$Json$Decode$bool);
 		return A2(
 			$elm$html$Html$Events$preventDefaultOn,
@@ -15070,7 +15020,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 			A6(
 				$elm$json$Json$Decode$map5,
 				F5(
-					function (key, alt, shift, cursorPos, value) {
+					function (key, alt, shift, cursorPos, innerHtmlValue) {
 						if (alt) {
 							switch (key.$) {
 								case 'Up':
@@ -15119,7 +15069,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 												true);
 										} else {
 											return _Utils_Tuple2(
-												config.onSaveAndCreateAfter(item),
+												A2(config.onSaveAndCreateAfter, item, innerHtmlValue),
 												true);
 										}
 									} else {
@@ -15132,7 +15082,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										A2(config.onIndentItem, cursorPos, item),
 										true);
 								case 'Left':
-									var _v3 = A2($author$project$TagsUtils$focusedTag, cursorPos, value);
+									var _v3 = A2($author$project$TagsUtils$focusedTag, cursorPos, innerHtmlValue);
 									if (_v3.$ === 'Just') {
 										return _Utils_Tuple2(config.onNoOp, false);
 									} else {
@@ -15141,7 +15091,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 											false);
 									}
 								case 'Right':
-									var _v4 = A2($author$project$TagsUtils$focusedTag, cursorPos, value);
+									var _v4 = A2($author$project$TagsUtils$focusedTag, cursorPos, innerHtmlValue);
 									if (_v4.$ === 'Just') {
 										return _Utils_Tuple2(config.onNoOp, false);
 									} else {
@@ -15170,14 +15120,14 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 											config.onTagPopupMsg($author$project$TagPopup$NavigateDown),
 											true);
 									} else {
-										var lines = $elm$core$String$lines(value);
+										var lines = $elm$core$String$lines(innerHtmlValue);
 										var totalLines = $elm$core$List$length(lines);
 										var currentLineIndex = function (n) {
 											return n - 1;
 										}(
 											$elm$core$List$length(
 												$elm$core$String$lines(
-													A2($elm$core$String$left, cursorPos, value))));
+													A2($elm$core$String$left, cursorPos, innerHtmlValue))));
 										if (_Utils_cmp(currentLineIndex, totalLines - 1) > -1) {
 											var currentLine = A2(
 												$elm$core$Maybe$withDefault,
@@ -15185,7 +15135,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 												$elm$core$List$head(
 													$elm$core$List$reverse(
 														$elm$core$String$lines(
-															A2($elm$core$String$left, cursorPos, value)))));
+															A2($elm$core$String$left, cursorPos, innerHtmlValue)))));
 											var columnPos = $elm$core$String$length(currentLine);
 											return _Utils_Tuple2(
 												A2(config.onNavigateToNextWithColumn, item, columnPos),
@@ -15205,7 +15155,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										}(
 											$elm$core$List$length(
 												$elm$core$String$lines(
-													A2($elm$core$String$left, cursorPos, value))));
+													A2($elm$core$String$left, cursorPos, innerHtmlValue))));
 										if (currentLineIndex <= 0) {
 											var currentLine = A2(
 												$elm$core$Maybe$withDefault,
@@ -15213,7 +15163,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 												$elm$core$List$head(
 													$elm$core$List$reverse(
 														$elm$core$String$lines(
-															A2($elm$core$String$left, cursorPos, value)))));
+															A2($elm$core$String$left, cursorPos, innerHtmlValue)))));
 											var columnPos = $elm$core$String$length(currentLine);
 											return _Utils_Tuple2(
 												A2(config.onNavigateToPreviousWithColumn, item, columnPos),
@@ -15231,7 +15181,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 				altKeyDecoder,
 				shiftKeyDecoder,
 				cursorPosDecoder,
-				valueDecoder));
+				innerHtml));
 	});
 var $elm$html$Html$Attributes$tabindex = function (n) {
 	return A2(
@@ -15319,7 +15269,7 @@ var $author$project$Main$renderContentWithSelectedTags = F5(
 	});
 var $elm$regex$Regex$split = _Regex_splitAtMost(_Regex_infinity);
 var $author$project$Main$viewContentWithSelectedTags = F4(
-	function (items, item, content, selectedTags) {
+	function (items, item, selectedTags, content) {
 		var pieces = A2($elm$regex$Regex$split, $author$project$TagsUtils$isTagRegex, content);
 		var matches = A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, content);
 		if (pieces.b && (!pieces.b.b)) {
@@ -15334,55 +15284,33 @@ var $author$project$Main$viewContentWithSelectedTags = F4(
 	});
 var $author$project$Main$viewItemContent = F2(
 	function (model, item) {
-		var staticContent = function () {
-			var viewBlock = function (_v0) {
-				var isCode = _v0.a;
-				var lines = _v0.b;
-				return isCode ? A2(
-					$elm$html$Html$code,
-					$author$project$Theme$codeBlock,
+		var onInputCustom = A2(
+			$elm$html$Html$Events$on,
+			'input',
+			$elm$json$Json$Decode$succeed($author$project$Main$GetCurrentCursorPostion));
+		var onBlurCustom = function () {
+			if (model.noBlur) {
+				return _List_Nil;
+			} else {
+				var innerHtml = A2(
+					$elm$json$Json$Decode$at,
 					_List_fromArray(
-						[
-							$elm$html$Html$text(
-							A2($elm$core$String$join, '\n', lines))
-						])) : A2(
-					$elm$html$Html$div,
-					$author$project$Theme$content,
-					A4(
-						$author$project$Main$viewContentWithSelectedTags,
-						model.items,
-						item,
-						A2($elm$core$String$join, '\n', lines),
-						$author$project$SearchToolbar$getSelectedTags(model.searchToolbar)));
-			};
-			var contentBlocks = $author$project$TagsUtils$processContent(
-				$author$project$ListItem$getContent(item));
-			return $elm$core$List$isEmpty(
-				$author$project$ListItem$getContent(item)) ? _List_fromArray(
-				[
-					A2(
-					$elm$html$Html$span,
-					$author$project$Theme$contentEmpty,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('empty')
-						]))
-				]) : A2($elm$core$List$map, viewBlock, contentBlocks);
-		}();
-		var onClickCustom = function () {
-			var clientYDecoder = A2($elm$json$Json$Decode$field, 'clientY', $elm$json$Json$Decode$int);
-			var clientXDecoder = A2($elm$json$Json$Decode$field, 'clientX', $elm$json$Json$Decode$int);
-			return A2(
-				$elm$html$Html$Events$on,
-				'click',
-				A3(
-					$elm$json$Json$Decode$map2,
-					F2(
-						function (x, y) {
-							return A3($author$project$Main$EditItemClick, item, x, y);
-						}),
-					clientXDecoder,
-					clientYDecoder));
+						['target', 'innerHTML']),
+					$elm$json$Json$Decode$string);
+				return _List_fromArray(
+					[
+						A2(
+						$elm$html$Html$Events$on,
+						'blur',
+						A2(
+							$elm$json$Json$Decode$map,
+							function (x) {
+								return $author$project$Main$GetCurrentTime(
+									A2($author$project$Main$SaveItem, item, x));
+							},
+							innerHtml))
+					]);
+			}
 		}();
 		var keyboardConfig = {
 			clipboard: model.clipboard,
@@ -15420,26 +15348,61 @@ var $author$project$Main$viewItemContent = F2(
 			onTagPopupMsg: $author$project$Main$TagPopupMsg,
 			tagPopup: model.tagPopup
 		};
-		var isEditingItem = $author$project$ListItem$isEditing(item);
-		var addBreaks = function (lines) {
+		var addBreaks = function (elements) {
 			return $elm$core$List$concat(
 				A2(
 					$elm$core$List$indexedMap,
 					F2(
-						function (i, line) {
+						function (i, el) {
 							return (_Utils_cmp(
 								i,
-								$elm$core$List$length(lines) - 1) < 0) ? _List_fromArray(
-								[
-									$elm$html$Html$text(line),
-									A2($elm$html$Html$br, _List_Nil, _List_Nil)
-								]) : _List_fromArray(
-								[
-									$elm$html$Html$text(line)
-								]);
+								$elm$core$List$length(elements) - 1) < 0) ? _Utils_ap(
+								el,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$br, _List_Nil, _List_Nil)
+									])) : el;
 						}),
-					lines));
+					elements));
 		};
+		var staticContent = function () {
+			var viewBlock = function (_v0) {
+				var isCode = _v0.a;
+				var lines = _v0.b;
+				return isCode ? A2(
+					$elm$html$Html$code,
+					$author$project$Theme$codeBlock,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							A2($elm$core$String$join, '\n', lines))
+						])) : A2(
+					$elm$html$Html$div,
+					$author$project$Theme$content,
+					addBreaks(
+						A2(
+							$elm$core$List$map,
+							A3(
+								$author$project$Main$viewContentWithSelectedTags,
+								model.items,
+								item,
+								$author$project$SearchToolbar$getSelectedTags(model.searchToolbar)),
+							lines)));
+			};
+			var contentBlocks = $author$project$TagsUtils$processContent(
+				$author$project$ListItem$getContent(item));
+			return $elm$core$List$isEmpty(
+				$author$project$ListItem$getContent(item)) ? _List_fromArray(
+				[
+					A2(
+					$elm$html$Html$span,
+					$author$project$Theme$contentEmpty,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('empty')
+						]))
+				]) : A2($elm$core$List$map, viewBlock, contentBlocks);
+		}();
 		return A2(
 			$elm$html$Html$div,
 			_Utils_ap(
@@ -15452,23 +15415,13 @@ var $author$project$Main$viewItemContent = F2(
 							'id',
 							'item-' + $elm$core$String$fromInt(
 								$author$project$ListItem$getId(item))),
-							A2(
-							$elm$html$Html$Attributes$attribute,
-							'contenteditable',
-							isEditingItem ? 'true' : 'false'),
-							$elm$html$Html$Attributes$tabindex(-1)
+							A2($elm$html$Html$Attributes$attribute, 'contenteditable', 'true'),
+							$elm$html$Html$Attributes$tabindex(-1),
+							onInputCustom,
+							A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
 						]),
-					isEditingItem ? _Utils_ap(
-						_List_fromArray(
-							[
-								$elm$html$Html$Events$onBlur(
-								model.noBlur ? $author$project$Main$NoOp : $author$project$Main$SaveItem(item)),
-								A2($author$project$KeyboardHandler$onKeyDown, keyboardConfig, item)
-							]),
-						$author$project$Theme$editableDiv) : _List_fromArray(
-						[onClickCustom]))),
-			isEditingItem ? addBreaks(
-				$author$project$ListItem$getContent(item)) : staticContent);
+					_Utils_ap($author$project$Theme$editableDiv, onBlurCustom))),
+			staticContent);
 	});
 var $author$project$Main$viewListItem = F3(
 	function (model, level, item) {
@@ -15568,4 +15521,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"UpdateItemContent":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"SaveItem":["ListItem.ListItem"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"InitEditableTaskDone":["Basics.Int"],"EditableInput":["{ id : Basics.Int, content : String.String, cursorPos : Basics.Int }"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"EditItemClick":["ListItem.ListItem","Basics.Int","Basics.Int"],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"EditItem":["Basics.Int"],"SaveItem":["ListItem.ListItem","String.String","Time.Posix"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem","String.String"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"ClickedAt":["{ id : Basics.Int, pos : Basics.Int }"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","String.String","Basics.Bool","Basics.Bool"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"],"ItemInput":["ListItem.ListItem","String.String","Time.Posix"],"GetCurrentCursorPostion":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

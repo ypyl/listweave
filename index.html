@@ -9,23 +9,7 @@
     <div id="root"></div>
     <script src="lw-elm.js"></script>
     <script>
-      console.log("Initializing Elm app...");
       var app = Elm.Main.init({ node: document.getElementById("root") });
-      console.log("Elm app initialized.");
-
-      function getCaretCoordinates() {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          return {
-            top: rect.bottom,
-            left: rect.left,
-            width: rect.width,
-          };
-        }
-        return { top: 0, left: 0, width: 0 };
-      }
 
       app.ports.setCaret.subscribe(function (data) {
         const id = data.id;
@@ -58,39 +42,211 @@
         }
       });
 
-      app.ports.initEditable.subscribe(function (id) {
-        const element = document.getElementById("item-" + id);
-        if (element) {
-          let originalContent = "";
-          element.addEventListener("focus", function () {
-            originalContent = element.innerHTML;
-          });
+      app.ports.requestCursorPosition.subscribe(function () {
+        // Minimal payload: { top: Int, left: Int, width: Int, word: String, ok: Bool }
+        const fallback = { top: 0, left: 0, width: 0, word: "", ok: false, inCode: false };
 
-          element.addEventListener("blur", function () {
-            if (element.innerHTML !== originalContent) {
-              const sel = window.getSelection();
-              let cursorPos = 0;
-              if (sel.rangeCount > 0) {
-                const range = sel.getRangeAt(0);
-                cursorPos = range.startOffset;
-              }
-              app.ports.editableInput.send({
-                id: id,
-                content: event.target.innerText,
-                cursorPos: cursorPos,
-              });
-            }
-          });
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) {
+          if (app.ports && app.ports.receiveCursorPosition) {
+            app.ports.receiveCursorPosition.send(fallback);
+          }
+          return;
         }
-      });
 
-      app.ports.requestCursorPosition.subscribe(function (id) {
-        const coords = getCaretCoordinates();
+        const originalRange = sel.getRangeAt(0);
+        const range = originalRange.cloneRange();
+        range.collapse(true);
+
+        function findLastTextDescendant(node) {
+          if (!node) return null;
+          if (node.nodeType === Node.TEXT_NODE) return node;
+          for (let i = node.childNodes.length - 1; i >= 0; i--) {
+            const found = findLastTextDescendant(node.childNodes[i]);
+            if (found) return found;
+          }
+          return null;
+        }
+
+        function findNextTextDescendant(node) {
+          if (!node) return null;
+          if (node.nodeType === Node.TEXT_NODE) return node;
+          for (let i = 0; i < node.childNodes.length; i++) {
+            const found = findNextTextDescendant(node.childNodes[i]);
+            if (found) return found;
+          }
+          return null;
+        }
+
+        function getPreviousTextNode(node) {
+          if (!node) return null;
+          let cur = node;
+          while (cur) {
+            if (cur.previousSibling) {
+              // get last text descendant of previousSibling
+              return findLastTextDescendant(cur.previousSibling);
+            }
+            cur = cur.parentNode;
+          }
+          return null;
+        }
+
+        function getNextTextNode(node) {
+          if (!node) return null;
+          let cur = node;
+          while (cur) {
+            if (cur.nextSibling) {
+              return findNextTextDescendant(cur.nextSibling);
+            }
+            cur = cur.parentNode;
+          }
+          return null;
+        }
+
+        function findTextNodeAndOffset(container, offset) {
+          if (container.nodeType === Node.TEXT_NODE) return { node: container, offset: offset };
+          // Try child at offset
+          const child = container.childNodes[offset];
+          if (child) {
+            const nextText = findNextTextDescendant(child);
+            if (nextText) return { node: nextText, offset: 0 };
+          }
+          // Try previous sibling text
+          for (let i = offset - 1; i >= 0; i--) {
+            const prev = container.childNodes[i];
+            const lastText = findLastTextDescendant(prev);
+            if (lastText) return { node: lastText, offset: lastText.length };
+          }
+          // Walk up to find a place
+          let cur = container;
+          while (cur) {
+            if (cur.nodeType === Node.TEXT_NODE) return { node: cur, offset: offset };
+            cur = cur.parentNode;
+          }
+          // As a last resort, search the document for any text node
+          const walker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT, null);
+          const any = walker.nextNode();
+          if (any) return { node: any, offset: 0 };
+          return null;
+        }
+
+        const caret = findTextNodeAndOffset(range.startContainer, range.startOffset);
+        if (!caret || !caret.node) {
+          if (app.ports && app.ports.receiveCursorPosition) {
+            app.ports.receiveCursorPosition.send(fallback);
+          }
+          return;
+        }
+
+        const textNode = caret.node;
+        // Detect whether caret is inside a <code> element by walking ancestors
+        // Stop walking once we reach the element that explicitly sets `contenteditable`.
+        let inCode = false;
+        let anc = textNode && textNode.parentNode;
+        while (anc) {
+          if (anc.nodeName && anc.nodeName.toUpperCase() === "CODE") {
+            inCode = true;
+            break;
+          }
+          // If this ancestor explicitly sets the `contenteditable` attribute, stop here.
+          // Treat presence of the attribute as the boundary unless it's explicitly 'false'.
+          const attr = anc.getAttribute && anc.getAttribute("contenteditable");
+          if (attr !== null && attr !== "false") {
+            break;
+          }
+          anc = anc.parentNode;
+        }
+        let offsetInNode = Math.max(0, Math.min(caret.offset, textNode.length));
+
+        // Define word characters. Include @ to support mentions like @yauhen.
+        const isWordChar = (ch) => /[A-Za-z0-9_@\u00C0-\uFFFF-]/.test(ch);
+
+        // Walk backwards across text nodes to build the fragment before the caret
+        let fragment = "";
+        const maxChars = 1024;
+        let charsLeft = maxChars;
+        let currentNode = textNode;
+        let pos = offsetInNode;
+        let stop = false;
+
+        while (currentNode && charsLeft > 0 && !stop) {
+          const txt = currentNode.nodeValue || "";
+          let i = pos - 1;
+          for (; i >= 0 && charsLeft > 0; i--, charsLeft--) {
+            const ch = txt.charAt(i);
+            if (!isWordChar(ch)) {
+              stop = true;
+              break;
+            }
+            fragment = ch + fragment;
+          }
+          if (!stop) {
+            // move to previous text node and set pos to its length
+            currentNode = getPreviousTextNode(currentNode);
+            pos = currentNode ? currentNode.length : 0;
+          }
+        }
+
+        // Measure caret coordinates
+        function measureCollapsedRangeCoordinates(collapsedRange) {
+          let rect = null;
+          const rects = collapsedRange.getClientRects();
+          if (rects && rects.length > 0) rect = rects[0];
+          if (!rect || (rect.width === 0 && rect.height === 0)) {
+            // insert temporary marker
+            const marker = document.createElement("span");
+            marker.textContent = "\u200B";
+            marker.style.display = "inline";
+            marker.style.padding = "0";
+            marker.style.margin = "0";
+            marker.style.lineHeight = "0";
+            try {
+              collapsedRange.insertNode(marker);
+              rect = marker.getBoundingClientRect();
+            } finally {
+              // remove marker and normalize if needed
+              if (marker.parentNode) marker.parentNode.removeChild(marker);
+            }
+          } else {
+            // use bounding rect if available
+            if (!rect || (rect.width === 0 && rect.height === 0)) rect = collapsedRange.getBoundingClientRect();
+          }
+          return rect;
+        }
+
+        let coordsRect = null;
+        try {
+          coordsRect = measureCollapsedRangeCoordinates(range);
+        } catch (err) {
+          coordsRect = null;
+        }
+
+        if (!coordsRect) {
+          if (app.ports && app.ports.receiveCursorPosition) {
+            app.ports.receiveCursorPosition.send(fallback);
+          }
+          return;
+        }
+
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
+        const top = Math.ceil(coordsRect.bottom + scrollTop);
+        const left = Math.ceil(coordsRect.left + scrollLeft);
+
         if (app.ports && app.ports.receiveCursorPosition) {
+          // console.log("Sending cursor position:", {
+          //   top: top,
+          //   left: left,
+          //   word: fragment,
+          //   ok: true,
+          //   inCode: inCode,
+          // });
           app.ports.receiveCursorPosition.send({
-            top: Math.ceil(coords.top),
-            left: Math.ceil(coords.left),
-            width: Math.ceil(coords.width),
+            top: top,
+            left: left,
+            word: fragment,
+            ok: true,
+            inCode: inCode,
           });
         }
       });
@@ -132,35 +288,6 @@
             tag: "", // Will be handled by Elm
             cursorPos: cursorPos,
           });
-        }
-      });
-
-      app.ports.getPosition.subscribe(function (data) {
-        // data: { id: number, clientX: number, clientY: number }
-        const viewItemId = data.id;
-        const clientX = data.clientX;
-        const clientY = data.clientY;
-
-        const contentDiv = document.getElementById("item-" + viewItemId);
-        if (!contentDiv) {
-          return;
-        }
-
-        const clickRange = document.caretRangeFromPoint
-          ? document.caretRangeFromPoint(clientX, clientY)
-          : document.caretPositionFromPoint?.(clientX, clientY);
-
-        if (!clickRange || !contentDiv.contains(clickRange.startContainer)) {
-          return;
-        }
-
-        const totalRange = document.createRange();
-        totalRange.selectNodeContents(contentDiv);
-        totalRange.setEnd(clickRange.startContainer, clickRange.startOffset);
-        const offset = totalRange.toString().length;
-
-        if (app.ports.clickedAt) {
-          app.ports.clickedAt.send({ id: viewItemId, pos: offset });
         }
       });
 

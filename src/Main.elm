@@ -7,7 +7,7 @@ import Browser.Events
 import Clipboard
 import Html exposing (Html, br, code, div, span, text)
 import Html.Attributes exposing (attribute, id, style)
-import Html.Events exposing (on, onBlur, onClick, stopPropagationOn)
+import Html.Events exposing (on, onBlur, onClick, onInput, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
@@ -31,16 +31,7 @@ port clickedAt : ({ id : Int, pos : Int } -> msg) -> Sub msg
 port setCaret : { id : Int, pos : Int } -> Cmd msg
 
 
-port initEditable : Int -> Cmd msg
-
-
-port editableInput : (D.Value -> msg) -> Sub msg
-
-
-port getPosition : { id : Int, clientX : Int, clientY : Int } -> Cmd msg
-
-
-port requestCursorPosition : Int -> Cmd msg
+port requestCursorPosition : () -> Cmd msg
 
 
 port receiveCursorPosition : (D.Value -> msg) -> Sub msg
@@ -75,7 +66,6 @@ type alias Model =
     { items : List ListItem
     , cursorPos : Maybe Int
     , caretTask : Maybe ( Int, Int )
-    , initEditableTask : Maybe Int
     , pendingTagInsertion : Maybe String
     , tagPopup : TagPopup.Model
     , searchToolbar : SearchToolbar.Model
@@ -127,7 +117,6 @@ initialModel =
         ]
     , cursorPos = Nothing
     , caretTask = Nothing
-    , initEditableTask = Nothing
     , pendingTagInsertion = Nothing
     , tagPopup = TagPopup.init
     , searchToolbar = SearchToolbar.init
@@ -142,7 +131,6 @@ decode =
             { items = items
             , cursorPos = cursorPos
             , caretTask = caretTask
-            , initEditableTask = Nothing
             , pendingTagInsertion = pendingTagInsertion
             , tagPopup = tagPopup
             , searchToolbar = searchToolbar
@@ -168,7 +156,6 @@ encode model =
         , ( "caretTask"
           , Maybe.map (\( a, b ) -> Encode.list Encode.int [ a, b ]) model.caretTask |> Maybe.withDefault Encode.null
           )
-        , ( "initEditableTask", Maybe.map Encode.int model.initEditableTask |> Maybe.withDefault Encode.null )
         , ( "pendingTagInsertion", Maybe.map Encode.string model.pendingTagInsertion |> Maybe.withDefault Encode.null )
         , ( "tagPopup", TagPopup.encode model.tagPopup )
         , ( "searchToolbar", SearchToolbar.encoder model.searchToolbar )
@@ -184,8 +171,8 @@ encode model =
 type Msg
     = ToggleCollapse ListItem
     | EditItem Int
-    | UpdateItemContent ListItem String Int Posix
-    | SaveItem ListItem
+      -- | UpdateItemContent ListItem String Int Posix
+    | SaveItem ListItem String Posix
     | CreateItemAfter ListItem Posix
     | CreateItemAtStart Posix
     | GetCurrentTime (Posix -> Msg)
@@ -193,27 +180,26 @@ type Msg
     | OutdentItem Int ListItem
     | DeleteItem ListItem
     | DeleteItemWithChildren ListItem
-    | SaveAndCreateAfter ListItem
+    | SaveAndCreateAfter ListItem String
     | FocusResult (Result Browser.Dom.Error ())
     | ClickedAt { id : Int, pos : Int }
     | SetCaret Int Int
-    | InitEditableTaskDone Int
-    | EditableInput { id : Int, content : String, cursorPos : Int }
     | SetSearchCursor Int
-    | GotCursorPosition Int Int Int
+    | GotCursorPosition Int Int String Bool Bool
     | GotCurrentCursorPosition ListItem String Int
     | NoOp
     | MoveItemUp Int ListItem
     | SearchToolbarMsg SearchToolbar.Msg
     | MoveItemDown Int ListItem
     | ToggleNoBlur
-    | EditItemClick ListItem Int Int
     | InsertSelectedTag ListItem String Int Posix
     | NavigateToPreviousWithColumn ListItem Int
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
     | TagPopupMsg TagPopup.Msg
     | ReceiveImportedModel D.Value
+    | ItemInput ListItem String Posix
+    | GetCurrentCursorPostion
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -221,6 +207,9 @@ update msg model =
     case msg of
         NoOp ->
             ( model, Cmd.none )
+
+        GetCurrentCursorPostion ->
+            ( model, requestCursorPosition () )
 
         ReceiveImportedModel jsonValue ->
             case D.decodeValue decode jsonValue of
@@ -262,9 +251,6 @@ update msg model =
                 _ ->
                     ( { model | tagPopup = updatedmodel }, Cmd.none )
 
-        EditItemClick item x y ->
-            ( model, getPosition { id = getId item, clientX = x, clientY = y } )
-
         ToggleNoBlur ->
             ( { model | noBlur = not model.noBlur }, Cmd.none )
 
@@ -293,7 +279,7 @@ update msg model =
                                     ( { withSearchToolbar | items = ListItem.sortItemsByDate sortOrder withSearchToolbar.items }, Cmd.none )
 
                                 Actions.KeyEnter ->
-                                    case TagPopup.getHighlightedTag model.tagPopup |> Debug.log "selected" of
+                                    case TagPopup.getHighlightedTag model.tagPopup of
                                         Just tag ->
                                             ( { withSearchToolbar | searchToolbar = selectTag tag updatedSearchToolbarModel, tagPopup = hidePopup withSearchToolbar.tagPopup }, Cmd.none )
 
@@ -372,21 +358,10 @@ update msg model =
                             in
                             ( newModel, Task.attempt FocusResult (Browser.Dom.focus inputId) )
             in
-            ( { updatedModel | cursorPos = Nothing, initEditableTask = Just id }, command )
+            ( { updatedModel | cursorPos = Nothing }, command )
 
         SetCaret itemId pos ->
             ( { model | caretTask = Nothing }, setCaret { id = itemId, pos = pos } )
-
-        InitEditableTaskDone id ->
-            ( { model | initEditableTask = Nothing }, initEditable id )
-
-        EditableInput { id, content, cursorPos } ->
-            case ListItem.findInForest id model.items of
-                Just item ->
-                    update (GetCurrentTime (UpdateItemContent item content cursorPos)) model
-
-                Nothing ->
-                    ( model, Cmd.none )
 
         SetSearchCursor pos ->
             ( { model | searchToolbar = resetUpdatedCursorPosition model.searchToolbar }, setSearchInputCursor pos )
@@ -395,44 +370,40 @@ update msg model =
             ( { model | pendingTagInsertion = Nothing }, Cmd.none )
                 |> (\( m, c ) -> update (GetCurrentTime (InsertSelectedTag item tag cursorPos)) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
 
-        UpdateItemContent item content cursorPos currentTime ->
-            let
-                itemId =
-                    getId item
-            in
-            case isInsideTagBrackets cursorPos content of
-                Just ( tagSearchPrefix, tag ) ->
-                    let
-                        matchingTags =
-                            getAllTags model.items
-                                |> List.filter (String.startsWith tagSearchPrefix)
-                                |> List.filter ((/=) tag)
-
-                        updatedTagPopup =
-                            if List.isEmpty matchingTags then
-                                hidePopup model.tagPopup
-
-                            else
-                                TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
-                    in
-                    ( { model
-                        | items = mapItem (updateItemContentFn item content currentTime) model.items
-                        , tagPopup = updatedTagPopup
-                        , noBlur = List.isEmpty matchingTags |> not
-                      }
-                    , requestCursorPosition itemId
-                    )
-
-                Nothing ->
-                    ( { model
-                        | items = mapItem (updateItemContentFn item content currentTime) model.items
-                        , tagPopup = hidePopup model.tagPopup
-                      }
-                    , Cmd.none
-                    )
-
+        -- UpdateItemContent item content cursorPos currentTime ->
+        --     let
+        --         itemId =
+        --             getId item
+        --     in
+        --     case isInsideTagBrackets cursorPos content of
+        --         Just ( tagSearchPrefix, tag ) ->
+        --             let
+        --                 matchingTags =
+        --                     getAllTags model.items
+        --                         |> List.filter (String.startsWith tagSearchPrefix)
+        --                         |> List.filter ((/=) tag)
+        --                 updatedTagPopup =
+        --                     if List.isEmpty matchingTags then
+        --                         hidePopup model.tagPopup
+        --                     else
+        --                         TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
+        --             in
+        --             ( { model
+        --                 | items = mapItem (updateItemContentFn item (String.split "\n" content) currentTime) model.items
+        --                 , tagPopup = updatedTagPopup
+        --                 , noBlur = List.isEmpty matchingTags |> not
+        --               }
+        --             , requestCursorPosition itemId
+        --             )
+        --         Nothing ->
+        --             ( { model
+        --                 | items = mapItem (updateItemContentFn item (String.split "\n" content) currentTime) model.items
+        --                 , tagPopup = hidePopup model.tagPopup
+        --               }
+        --             , Cmd.none
+        --             )
         MoveItemUp cursorPosition item ->
-            ( { model | noBlur = True, items = moveItemInTree ListItem.moveItemUp item model.items, caretTask = Just ( getId item, cursorPosition ) }, Cmd.none )
+            ( { model | noBlur = True, items = moveItemInTree ListItem.moveItemUp item model.items }, Cmd.none )
 
         MoveItemDown cursorPosition item ->
             ( { model | noBlur = True, items = moveItemInTree ListItem.moveItemDown item model.items, caretTask = Just ( getId item, cursorPosition ) }, Cmd.none )
@@ -443,25 +414,53 @@ update msg model =
         OutdentItem cursorPosition item ->
             ( { model | noBlur = True, items = outdentItem item model.items, caretTask = Just ( getId item, cursorPosition ) }, Cmd.none )
 
-        GotCursorPosition top left width ->
-            case TagPopup.getTags model.tagPopup of
-                Just tags ->
-                    ( { model | tagPopup = showPopup ( top, left, width ) tags model.tagPopup }, Cmd.none )
+        GotCursorPosition top left fragment ok inCode ->
+            if inCode || not ok then
+                ( model, Cmd.none )
 
-                Nothing ->
+            else
+                if String.startsWith "@" fragment then
+                    let
+                        matchingTags =
+                            getAllTags model.items
+                                |> List.filter (String.startsWith (String.dropLeft 1 fragment))
+                        updatedTagPopup =
+                            if List.isEmpty matchingTags then
+                                hidePopup model.tagPopup
+                            else
+                                TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
+                    in
+                    ( { model | tagPopup = showPopup ( top, left ) matchingTags updatedTagPopup }, Cmd.none )
+                else
                     ( model, Cmd.none )
 
-        SaveItem item ->
+        SaveItem item innerHTML currentTime ->
             if model.noBlur then
                 ( model, Task.perform (\_ -> ToggleNoBlur) (Task.succeed ()) )
 
             else
+                let
+                    lines =
+                        ListItem.parseInnerHtml innerHTML
+                in
                 ( { model
-                    | items = mapItem (saveItemFn item) model.items
+                    | items = (mapItem (updateItemContentFn item lines currentTime) >> mapItem (saveItemFn item)) model.items
                     , tagPopup = hidePopup model.tagPopup
                   }
                 , Cmd.none
                 )
+
+        ItemInput item innerHTML currentTime ->
+            let
+                lines =
+                    ListItem.parseInnerHtml innerHTML
+            in
+            ( { model
+                | items = mapItem (updateItemContentFn item lines currentTime) model.items
+                , tagPopup = hidePopup model.tagPopup
+              }
+            , Cmd.none
+            )
 
         CreateItemAfter item currentTime ->
             let
@@ -488,10 +487,10 @@ update msg model =
         GetCurrentTime msgFn ->
             ( model, Task.perform msgFn Time.now )
 
-        SaveAndCreateAfter item ->
+        SaveAndCreateAfter item innerHtml ->
             let
                 ( afterSave, _ ) =
-                    update (SaveItem item) model
+                    update (GetCurrentTime (SaveItem item innerHtml)) model
             in
             update (GetCurrentTime (CreateItemAfter item)) afterSave
 
@@ -513,7 +512,7 @@ update msg model =
                     TagsUtils.insertTagAtCursor content tag cursorPos
             in
             ( { model
-                | items = mapItem (updateItemContentFn item newContent currentTime) model.items
+                | items = mapItem (updateItemContentFn item (String.split "\n" newContent) currentTime) model.items
                 , tagPopup = hidePopup model.tagPopup
                 , noBlur = False
                 , caretTask = Just ( getId item, newCaretPos )
@@ -612,9 +611,6 @@ view model =
 viewItemContent : Model -> ListItem -> Html Msg
 viewItemContent model item =
     let
-        isEditingItem =
-            isEditing item
-
         keyboardConfig =
             { tagPopup = model.tagPopup
             , clipboard = model.clipboard
@@ -635,17 +631,17 @@ viewItemContent model item =
             , onNoOp = NoOp
             }
 
-        addBreaks : List String -> List (Html Msg)
-        addBreaks lines =
+        addBreaks : List (List (Html Msg)) -> List (Html Msg)
+        addBreaks elements =
             List.indexedMap
-                (\i line ->
-                    if i < List.length lines - 1 then
-                        [ text line, br [] [] ]
+                (\i el ->
+                    if i < List.length elements - 1 then
+                        el ++ [ br [] [] ]
 
                     else
-                        [ text line ]
+                        el
                 )
-                lines
+                elements
                 |> List.concat
 
         staticContent =
@@ -658,7 +654,7 @@ viewItemContent model item =
                         code Theme.codeBlock [ text (String.join "\n" lines) ]
 
                     else
-                        div Theme.content (viewContentWithSelectedTags model.items item (String.join "\n" lines) (getSelectedTags model.searchToolbar))
+                        lines |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar)) |> addBreaks |> div Theme.content
             in
             if List.isEmpty (getContent item) then
                 [ span Theme.contentEmpty [ text "empty" ] ]
@@ -666,38 +662,32 @@ viewItemContent model item =
             else
                 List.map viewBlock contentBlocks
 
-        onClickCustom =
-            let
-                clientXDecoder =
-                    D.field "clientX" D.int
+        onBlurCustom =
+            if model.noBlur then
+                []
 
-                clientYDecoder =
-                    D.field "clientY" D.int
-            in
-            on "click" (D.map2 (\x y -> EditItemClick item x y) clientXDecoder clientYDecoder)
+            else
+                let
+                    innerHtml =
+                        D.at [ "target", "innerHTML" ] D.string
+                in
+                [ on "blur" (D.map (\x -> GetCurrentTime (SaveItem item x)) innerHtml) ]
+
+        onInputCustom =
+            on "input" (D.succeed GetCurrentCursorPostion)
     in
     div
         (Theme.flexGrow
             ++ [ attribute "id" ("item-" ++ String.fromInt (getId item))
-               , attribute "contenteditable" (if isEditingItem then "true" else "false")
+               , attribute "contenteditable" "true"
                , Html.Attributes.tabindex -1
+               , onInputCustom
+               , KeyboardHandler.onKeyDown keyboardConfig item
                ]
-            ++ (if isEditingItem then
-                    [ onBlur (if model.noBlur then NoOp else SaveItem item)
-                    , KeyboardHandler.onKeyDown keyboardConfig item
-                    ]
-                        ++ Theme.editableDiv
-
-                else
-                    [ onClickCustom ]
-               )
+            ++ Theme.editableDiv
+            ++ onBlurCustom
         )
-        (if isEditingItem then
-            addBreaks (getContent item)
-
-         else
-            staticContent
-        )
+        staticContent
 
 
 viewListItem : Model -> Int -> ListItem -> Html Msg
@@ -744,8 +734,8 @@ viewListItem model level item =
         (itemRow :: childrenBlock)
 
 
-viewContentWithSelectedTags : List ListItem -> ListItem -> String -> List String -> List (Html Msg)
-viewContentWithSelectedTags items item content selectedTags =
+viewContentWithSelectedTags : List ListItem -> ListItem -> List String -> String -> List (Html Msg)
+viewContentWithSelectedTags items item selectedTags content =
     let
         pieces =
             Regex.split isTagRegex content
@@ -823,12 +813,6 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
-        , case model.initEditableTask of
-            Just id ->
-                Browser.Events.onAnimationFrame (\_ -> InitEditableTaskDone id)
-
-            Nothing ->
-                Sub.none
         , case getUpdatedCursorPosition model.searchToolbar of
             Just pos ->
                 Browser.Events.onAnimationFrame
@@ -836,23 +820,14 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
-        , editableInput
-            (\value ->
-                case D.decodeValue editableInputDecoder value of
-                    Ok msg ->
-                        msg
-
-                    Err _ ->
-                        NoOp
-            )
         , receiveCursorPosition
             (\value ->
-                case D.decodeValue (D.map3 GotCursorPosition (D.field "top" D.int) (D.field "left" D.int) (D.field "width" D.int)) value of
+                case D.decodeValue (D.map5 GotCursorPosition (D.field "top" D.int) (D.field "left" D.int) (D.field "word" D.string) (D.field "ok" D.bool) (D.field "inCode" D.bool)) value of
                     Ok msg ->
                         msg
 
                     Err _ ->
-                        GotCursorPosition 0 0 0
+                        GotCursorPosition 0 0 "" False False
             )
         , receiveCurrentCursorPosition
             (\value ->
@@ -886,11 +861,3 @@ subscriptions model =
             )
         , receiveFile ReceiveImportedModel
         ]
-
-
-editableInputDecoder : D.Decoder Msg
-editableInputDecoder =
-    D.map3 (\id content cursorPos -> EditableInput { id = id, content = content, cursorPos = cursorPos })
-        (D.field "id" D.int)
-        (D.field "content" D.string)
-        (D.field "cursorPos" D.int)

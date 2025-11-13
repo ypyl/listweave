@@ -37,7 +37,7 @@ type Source
 
 
 type alias Model =
-    { position : Maybe ( Int, Int, Int ) -- top, left, width
+    { position : Maybe ( Int, Int ) -- top, left
     , tags : Maybe (List String)
     , highlightedTag : Maybe String
     , source : Maybe Source
@@ -49,7 +49,7 @@ encode : Model -> Encode.Value
 encode model =
     Encode.object
         [ ( "position"
-          , Maybe.map (\( a, b, c ) -> Encode.list Encode.int [ a, b, c ]) model.position
+          , Maybe.map (\( a, b ) -> Encode.list Encode.int [ a, b ]) model.position
                 |> Maybe.withDefault Encode.null
           )
         , ( "tags"
@@ -77,14 +77,14 @@ decode =
 
 
 -- Helper decoder for the position tuple (Int, Int, Int)
-positionDecoder : Decoder ( Int, Int, Int )
+positionDecoder : Decoder ( Int, Int )
 positionDecoder =
     Decode.list Decode.int
         |> Decode.andThen
             (\list ->
                 case list of
-                    [ a, b, c ] ->
-                        Decode.succeed ( a, b, c )
+                    [ a, b ] ->
+                        Decode.succeed ( a, b )
 
                     _ ->
                         Decode.fail "Position list must have exactly 3 elements (top, left, width)"
@@ -231,7 +231,7 @@ hidePopup model =
     }
 
 
-showPopup : ( Int, Int, Int ) -> List String -> Model -> Model
+showPopup : ( Int, Int ) -> List String -> Model -> Model
 showPopup position tags model =
     let
         selectedTag =
@@ -256,13 +256,13 @@ showPopup position tags model =
 view : Model -> Html Msg
 view model =
     case ( model.position, model.tags ) of
-        ( Just ( top, left, width ), Just matchingTags ) ->
+        ( Just ( top, left ), Just matchingTags ) ->
             if List.isEmpty matchingTags then
                 text ""
 
             else
                 div
-                    (stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
+                    (stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left ++ Theme.popup)
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
         _ ->

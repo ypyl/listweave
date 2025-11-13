@@ -74,7 +74,7 @@ onKeyDown :
     , onPasteItem : ListItem -> msg
     , onDeleteItem : ListItem -> msg
     , onInsertSelectedTag : ListItem -> String -> Int -> msg
-    , onSaveAndCreateAfter : ListItem -> msg
+    , onSaveAndCreateAfter : ListItem -> String -> msg
     , onIndentItem : Int -> ListItem -> msg
     , onOutdentItem : Int -> ListItem -> msg
     , onTagPopupMsg : TagPopup.Msg -> msg
@@ -98,14 +98,14 @@ onKeyDown config item =
             D.field "shiftKey" D.bool
 
         cursorPosDecoder =
-            D.field "target" (D.field "selectionStart" D.int)
+            D.field "target" (D.succeed 1)
 
-        valueDecoder =
-            D.field "target" (D.field "value" D.string)
+        innerHtml =
+            D.at ["target", "innerHTML"] (D.string)
     in
     preventDefaultOn "keydown"
         (D.map5
-            (\key alt shift cursorPos value ->
+            (\key alt shift cursorPos innerHtmlValue ->
                 if alt then
                     case key of
                         Up ->
@@ -144,7 +144,7 @@ onKeyDown config item =
                                     ( config.onNoOp, False )
 
                                 _ ->
-                                    ( config.onSaveAndCreateAfter item, True )
+                                    ( config.onSaveAndCreateAfter item innerHtmlValue, True )
 
                         Tab ->
                             if shift then
@@ -154,7 +154,7 @@ onKeyDown config item =
                                 ( config.onIndentItem cursorPos item, True )
 
                         Left ->
-                            case TagsUtils.focusedTag cursorPos value of
+                            case TagsUtils.focusedTag cursorPos innerHtmlValue of
                                 Just _ ->
                                     ( config.onNoOp, False )
 
@@ -162,7 +162,7 @@ onKeyDown config item =
                                     ( config.onTagPopupMsg TagPopup.Hide, False )
 
                         Right ->
-                            case TagsUtils.focusedTag cursorPos value of
+                            case TagsUtils.focusedTag cursorPos innerHtmlValue of
                                 Just _ ->
                                     ( config.onNoOp, False )
 
@@ -187,13 +187,13 @@ onKeyDown config item =
                             else
                                 let
                                     lines =
-                                        String.lines value
+                                        String.lines innerHtmlValue
 
                                     totalLines =
                                         List.length lines
 
                                     currentLineIndex =
-                                        String.left cursorPos value
+                                        String.left cursorPos innerHtmlValue
                                             |> String.lines
                                             |> List.length
                                             |> (\n -> n - 1)
@@ -201,7 +201,7 @@ onKeyDown config item =
                                 if currentLineIndex >= totalLines - 1 then
                                     let
                                         currentLine =
-                                            String.left cursorPos value |> String.lines |> List.reverse |> List.head |> Maybe.withDefault ""
+                                            String.left cursorPos innerHtmlValue |> String.lines |> List.reverse |> List.head |> Maybe.withDefault ""
 
                                         columnPos =
                                             String.length currentLine
@@ -218,7 +218,7 @@ onKeyDown config item =
                             else
                                 let
                                     currentLineIndex =
-                                        String.left cursorPos value
+                                        String.left cursorPos innerHtmlValue
                                             |> String.lines
                                             |> List.length
                                             |> (\n -> n - 1)
@@ -226,7 +226,7 @@ onKeyDown config item =
                                 if currentLineIndex <= 0 then
                                     let
                                         currentLine =
-                                            String.left cursorPos value |> String.lines |> List.reverse |> List.head |> Maybe.withDefault ""
+                                            String.left cursorPos innerHtmlValue |> String.lines |> List.reverse |> List.head |> Maybe.withDefault ""
 
                                         columnPos =
                                             String.length currentLine
@@ -243,5 +243,5 @@ onKeyDown config item =
             altKeyDecoder
             shiftKeyDecoder
             cursorPosDecoder
-            valueDecoder
+            innerHtml
         )

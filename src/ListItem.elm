@@ -246,6 +246,101 @@ getContent (ListItem record) =
     record.content
 
 
+{-| Parse innerHTML from a contentEditable element into the same
+    representation used by the app: a list of lines. The parser handles:
+
+    - <br>, <br/> and <br /> as line separators
+    - <pre><code>...</code></pre> code blocks: the inner code is inserted
+      as raw lines and wrapped with lines containing "```" before and after
+    - <span>...</span> and other inline tags: tags are stripped and inner
+      text is preserved
+
+    This is intentionally forgiving (simple string scanning) to avoid
+    pulling in an HTML parser dependency.
+-}
+parseInnerHtml : String -> List String
+parseInnerHtml html =
+    let
+        -- normalize a couple of HTML entities and common BR variants
+        normalizedNbsp = String.replace "&nbsp;" " " html
+        normalizedBr =
+            normalizedNbsp
+                |> String.replace "<br/>" "\n"
+                |> String.replace "<br />" "\n"
+                |> String.replace "<br>" "\n"
+
+        -- temporarily mark code blocks so we don't strip their tags
+        withCodeMarkers =
+            normalizedBr
+                |> String.replace "<pre><code>" "||CODE_START||"
+                |> String.replace "</code></pre>" "||CODE_END||"
+
+        -- strip any HTML tag like <span ...> or </span> but preserve inner text
+        stripTags : String -> String
+        stripTags s =
+            case String.indexes "<" s of
+                [] ->
+                    s
+
+                i :: _ ->
+                    let
+                        before = String.slice 0 i s
+                        rest = String.slice i (String.length s) s
+                    in
+                    case String.indexes ">" rest of
+                        [] ->
+                            -- malformed tag: return what we have
+                            before
+
+                        j :: _ ->
+                            let
+                                after = String.slice (j + 1) (String.length rest) rest
+                            in
+                            -- recurse to remove more tags
+                            stripTags (before ++ after)
+
+        -- process normal (non-code) HTML: strip tags then split on newlines
+        processNormal : String -> List String
+        processNormal s =
+            s
+                |> stripTags
+                |> String.split "\n"
+                |> List.map String.trim
+
+        startMarker = "||CODE_START||"
+        endMarker = "||CODE_END||"
+        lenStart = String.length startMarker
+        lenEnd = String.length endMarker
+
+        -- recursive helper that walks the string and expands code blocks
+        helper : String -> List String
+        helper s =
+            case String.indexes startMarker s of
+                [] ->
+                    processNormal s
+
+                idx :: _ ->
+                    let
+                        prefix = String.slice 0 idx s
+                        afterStart = String.slice (idx + lenStart) (String.length s) s
+                    in
+                    case String.indexes endMarker afterStart of
+                        [] ->
+                            -- no matching end marker: treat whole text as normal
+                            processNormal s
+
+                        endIdx :: _ ->
+                            let
+                                codeContent = String.slice 0 endIdx afterStart
+                                rest = String.slice (endIdx + lenEnd) (String.length afterStart) afterStart
+                                codeLines = String.lines codeContent
+                                codeBlock = "```" :: (codeLines ++ [ "```" ])
+                            in
+                            (processNormal prefix) ++ codeBlock ++ (helper rest)
+    in
+    helper withCodeMarkers
+
+
 getTags : ListItem -> List String
 getTags (ListItem record) =
     record.tags
@@ -460,9 +555,6 @@ mapItem fn list =
             let
                 (ListItem record) =
                     fn item
-
-                (ListItem _) =
-                    item
             in
             ListItem { record | children = mapItem fn record.children }
         )
@@ -521,13 +613,10 @@ editItemFn id (ListItem item) =
         ListItem { item | editing = False }
 
 
-updateItemContentFn : ListItem -> String -> Posix -> ListItem -> ListItem
-updateItemContentFn (ListItem current) content currentTime (ListItem item) =
-    if item.id == current.id then
+updateItemContentFn : ListItem -> List String -> Posix -> ListItem -> ListItem
+updateItemContentFn (ListItem current) lines currentTime (ListItem item) =
+    if item == current then
         let
-            lines =
-                String.lines content
-
             finalLines =
                 if List.all String.isEmpty lines then
                     []
@@ -536,7 +625,7 @@ updateItemContentFn (ListItem current) content currentTime (ListItem item) =
                     lines
 
             userTags =
-                extractTags content
+                extractTags lines
 
             hasCodeBlock =
                 TagsUtils.processContent lines
@@ -562,12 +651,9 @@ updateItemContentFn (ListItem current) content currentTime (ListItem item) =
         ListItem item
 
 
-extractTags : String -> List String
-extractTags content =
+extractTags : List String -> List String
+extractTags lines =
     let
-        lines =
-            String.lines content
-
         blocks =
             TagsUtils.processContent lines
 
@@ -592,7 +678,7 @@ extractTags content =
 
 saveItemFn : ListItem -> ListItem -> ListItem
 saveItemFn (ListItem current) (ListItem item) =
-    if item.id == current.id then
+    if item == current then
         ListItem { item | editing = False }
 
     else
