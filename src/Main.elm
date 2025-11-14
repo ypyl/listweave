@@ -25,9 +25,6 @@ import Time exposing (Month(..), Posix, millisToPosix)
 -- PORTS
 
 
-port clickedAt : ({ id : Int, pos : Int } -> msg) -> Sub msg
-
-
 port setCaret : { id : Int, pos : Int } -> Cmd msg
 
 
@@ -170,7 +167,6 @@ encode model =
 
 type Msg
     = ToggleCollapse ListItem
-    | EditItem Int
       -- | UpdateItemContent ListItem String Int Posix
     | SaveItem ListItem String Posix
     | CreateItemAfter ListItem Posix
@@ -182,7 +178,6 @@ type Msg
     | DeleteItemWithChildren ListItem
     | SaveAndCreateAfter ListItem String
     | FocusResult (Result Browser.Dom.Error ())
-    | ClickedAt { id : Int, pos : Int }
     | SetCaret Int Int
     | SetSearchCursor Int
     | GotCursorPosition Int Int String Bool Bool
@@ -337,28 +332,6 @@ update msg model =
             ( { model | items = mapItem (toggleCollapseFn item) model.items }
             , Cmd.none
             )
-
-        ClickedAt { id, pos } ->
-            update (EditItem id) { model | cursorPos = Just pos }
-
-        EditItem id ->
-            let
-                newModel =
-                    { model | items = mapItem (editItemFn id) model.items }
-
-                ( updatedModel, command ) =
-                    case model.cursorPos of
-                        Just pos ->
-                            ( { newModel | caretTask = Just ( id, pos ) }, Cmd.none )
-
-                        Nothing ->
-                            let
-                                inputId =
-                                    "input-id-" ++ String.fromInt id
-                            in
-                            ( newModel, Task.attempt FocusResult (Browser.Dom.focus inputId) )
-            in
-            ( { updatedModel | cursorPos = Nothing }, command )
 
         SetCaret itemId pos ->
             ( { model | caretTask = Nothing }, setCaret { id = itemId, pos = pos } )
@@ -651,16 +624,16 @@ viewItemContent model item =
 
                 viewBlock ( isCode, lines ) =
                     if isCode then
-                        code Theme.codeBlock [ text (String.join "\n" lines) ]
+                        [code Theme.codeBlock [ text (String.join "\n" lines) ]]
 
                     else
-                        lines |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar)) |> addBreaks |> div Theme.content
+                        lines |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar)) |> addBreaks
             in
             if List.isEmpty (getContent item) then
                 [ span Theme.contentEmpty [ text "empty" ] ]
 
             else
-                List.map viewBlock contentBlocks
+                List.map viewBlock contentBlocks |> List.concat
 
         onBlurCustom =
             if model.noBlur then
@@ -805,8 +778,7 @@ main =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ clickedAt ClickedAt
-        , case model.caretTask of
+        [ case model.caretTask of
             Just ( id, pos ) ->
                 Browser.Events.onAnimationFrame
                     (\_ -> SetCaret id pos)
