@@ -141,6 +141,10 @@ onKeyDown config item =
                                     ( config.onInsertSelectedTag item tag cursorPos, True )
 
                                 ( True, _, _ ) ->
+                                    if key == Enter then
+                                        ( config.onNoOp, True )
+
+                                    else
                                     ( config.onNoOp, False )
 
                                 _ ->

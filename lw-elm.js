@@ -14872,6 +14872,7 @@ var $author$project$Theme$flexGrow = _List_fromArray(
 var $author$project$SearchToolbar$getSelectedTags = function (model) {
 	return model.selectedTags;
 };
+var $author$project$KeyboardHandler$Enter = {$: 'Enter'};
 var $author$project$TagPopup$Hide = {$: 'Hide'};
 var $author$project$TagPopup$NavigateDown = {$: 'NavigateDown'};
 var $author$project$TagPopup$NavigateUp = {$: 'NavigateUp'};
@@ -14881,7 +14882,6 @@ var $author$project$Clipboard$hasItem = function (model) {
 var $author$project$KeyboardHandler$Backspace = {$: 'Backspace'};
 var $author$project$KeyboardHandler$C = {$: 'C'};
 var $author$project$KeyboardHandler$Down = {$: 'Down'};
-var $author$project$KeyboardHandler$Enter = {$: 'Enter'};
 var $author$project$KeyboardHandler$Escape = {$: 'Escape'};
 var $author$project$KeyboardHandler$Left = {$: 'Left'};
 var $author$project$KeyboardHandler$Other = function (a) {
@@ -14996,7 +14996,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 												true);
 										}
 									} else {
-										return _Utils_Tuple2(config.onNoOp, false);
+										return _Utils_eq(key, $author$project$KeyboardHandler$Enter) ? _Utils_Tuple2(config.onNoOp, true) : _Utils_Tuple2(config.onNoOp, false);
 									}
 								case 'Tab':
 									return shift ? _Utils_Tuple2(
