@@ -42,14 +42,13 @@
         }
       });
 
-      app.ports.requestCursorPosition.subscribe(function () {
-        // Minimal payload: { top: Int, left: Int, width: Int, word: String, ok: Bool }
-        const fallback = { top: 0, left: 0, width: 0, word: "", ok: false, inCode: false };
+      app.ports.requestCursorCoordinates.subscribe(function () {
+        const fallback = { top: 0, left: 0, width: 0, word: "", ok: false, inCode: false, line: 0, column: 0 };
 
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) {
-          if (app.ports && app.ports.receiveCursorPosition) {
-            app.ports.receiveCursorPosition.send(fallback);
+          if (app.ports && app.ports.receiveCursorCoordinates) {
+            app.ports.receiveCursorCoordinates.send(fallback);
           }
           return;
         }
@@ -233,15 +232,8 @@
         const top = Math.ceil(coordsRect.bottom + scrollTop);
         const left = Math.ceil(coordsRect.left + scrollLeft);
 
-        if (app.ports && app.ports.receiveCursorPosition) {
-          // console.log("Sending cursor position:", {
-          //   top: top,
-          //   left: left,
-          //   word: fragment,
-          //   ok: true,
-          //   inCode: inCode,
-          // });
-          app.ports.receiveCursorPosition.send({
+        if (app.ports && app.ports.receiveCursorCoordinates) {
+          app.ports.receiveCursorCoordinates.send({
             top: top,
             left: left,
             word: fragment,
@@ -278,16 +270,90 @@
         }
       });
 
-      app.ports.getCurrentCursorPosition.subscribe(function (itemId) {
+      app.ports.requestCursorPosition.subscribe(function (itemId) {
         const sel = window.getSelection();
         if (sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
-          const cursorPos = range.startOffset;
-          app.ports.receiveCurrentCursorPosition.send({
-            itemId: itemId,
-            tag: "", // Will be handled by Elm
-            cursorPos: cursorPos,
-          });
+
+          // Find contenteditable root
+          let editableRoot = range.startContainer;
+          while (editableRoot && (!editableRoot.getAttribute || !editableRoot.getAttribute("contenteditable"))) {
+            editableRoot = editableRoot.parentNode;
+          }
+
+          if (editableRoot) {
+            function findTextNodeAndOffset(container, offset) {
+              if (container.nodeType === Node.TEXT_NODE) return { node: container, offset: offset };
+              const child = container.childNodes[offset];
+              if (child && child.nodeType === Node.TEXT_NODE) return { node: child, offset: 0 };
+              return { node: container, offset: offset };
+            }
+
+            const caret = findTextNodeAndOffset(range.startContainer, range.startOffset);
+            const textNode = caret.node;
+            const offsetInNode = caret.offset;
+
+            // Calculate line and column position
+            let line = 0;
+            let column = 0;
+            let charCount = 0;
+            let found = false;
+
+            function traverse(node) {
+              if (found) return;
+              if (node === textNode) {
+                const text = node.nodeValue || "";
+                const textUpToCursor = text.substring(0, offsetInNode);
+                const lines = textUpToCursor.split('\n');
+                if (lines.length > 1) {
+                  line += lines.length - 1;
+                  column = lines[lines.length - 1].length;
+                } else {
+                  column = charCount + offsetInNode;
+                }
+                found = true;
+                return;
+              }
+              if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.nodeValue || "";
+                for (let i = 0; i < text.length; i++) {
+                  if (text[i] === '\n') {
+                    line++;
+                    charCount = 0;
+                  } else {
+                    charCount++;
+                  }
+                }
+              } else if (node.nodeName === "BR") {
+                line++;
+                charCount = 0;
+              } else if (node.nodeName === "CODE") {
+                line += 2;
+                charCount = 0;
+                for (let child of node.childNodes) {
+                  traverse(child);
+                  if (found) return;
+                }
+                line += 2;
+              } else {
+                for (let child of node.childNodes) {
+                  traverse(child);
+                  if (found) return;
+                }
+              }
+            }
+
+            for (let child of editableRoot.childNodes) {
+              traverse(child);
+              if (found) break;
+            }
+
+            app.ports.receiveCursorPosition.send({
+              line: line,
+              column: column,
+              itemId: itemId,
+            });
+          }
         }
       });
 

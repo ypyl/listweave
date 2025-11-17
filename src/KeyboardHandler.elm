@@ -81,6 +81,7 @@ onKeyDown :
     , onNavigateToPreviousWithColumn : ListItem -> Int -> msg
     , onNavigateToNextWithColumn : ListItem -> Int -> msg
     , onRestoreCutItem : msg
+    , onAddNewLineAfter : ListItem -> msg
     , onNoOp : msg
     }
     -> ListItem
@@ -142,7 +143,7 @@ onKeyDown config item =
 
                                 ( True, _, _ ) ->
                                     if key == Enter then
-                                        ( config.onNoOp, True )
+                                        ( config.onAddNewLineAfter item, True )
 
                                     else
                                     ( config.onNoOp, False )

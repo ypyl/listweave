@@ -5,7 +5,7 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Clipboard
-import Html exposing (Html, br, code, div, span, text)
+import Html exposing (Html, br, code, div, span, text, pre)
 import Html.Attributes exposing (attribute, id, style)
 import Html.Events exposing (on, onBlur, onClick, onInput, stopPropagationOn)
 import Json.Decode as D
@@ -19,6 +19,8 @@ import TagsUtils exposing (Change(..), isInsideTagBrackets, isTagRegex)
 import Task
 import Theme
 import Time exposing (Month(..), Posix, millisToPosix)
+import Html.Attributes exposing (target)
+import ListItem exposing (findInForest)
 
 
 
@@ -28,10 +30,10 @@ import Time exposing (Month(..), Posix, millisToPosix)
 port setCaret : { id : Int, pos : Int } -> Cmd msg
 
 
-port requestCursorPosition : () -> Cmd msg
+port requestCursorCoordinates : () -> Cmd msg
 
 
-port receiveCursorPosition : (D.Value -> msg) -> Sub msg
+port receiveCursorCoordinates : (D.Value -> msg) -> Sub msg
 
 
 port getSearchInputPosition : () -> Cmd msg
@@ -40,10 +42,10 @@ port getSearchInputPosition : () -> Cmd msg
 port setSearchInputCursor : Int -> Cmd msg
 
 
-port getCurrentCursorPosition : Int -> Cmd msg
+port requestCursorPosition : Int -> Cmd msg
 
 
-port receiveCurrentCursorPosition : (D.Value -> msg) -> Sub msg
+port receiveCursorPosition : (D.Value -> msg) -> Sub msg
 
 
 port downloadJson : { filename : String, content : String } -> Cmd msg
@@ -180,8 +182,8 @@ type Msg
     | FocusResult (Result Browser.Dom.Error ())
     | SetCaret Int Int
     | SetSearchCursor Int
-    | GotCursorPosition Int Int String Bool Bool
-    | GotCurrentCursorPosition ListItem String Int
+    | GotCursorCoordinates Int Int String Bool Bool
+    | ReceiveCursorPosition Int Int Int
     | NoOp
     | MoveItemUp Int ListItem
     | SearchToolbarMsg SearchToolbar.Msg
@@ -194,7 +196,9 @@ type Msg
     | TagPopupMsg TagPopup.Msg
     | ReceiveImportedModel D.Value
     | ItemInput ListItem String Posix
-    | GetCurrentCursorPostion
+    | GetCurrentCursorCoordinates
+    | AddNewLineAfter ListItem
+    | SplitLine ListItem (Int, Int) Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -203,8 +207,30 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        GetCurrentCursorPostion ->
-            ( model, requestCursorPosition () )
+        AddNewLineAfter item ->
+            ( model, requestCursorPosition (getId item))
+
+        SplitLine item (line, column) currentTime ->
+            let
+                content = getContent item
+                updatedContent =
+                    case List.head (List.drop line content) of
+                        Just targetLine ->
+                            let
+                                before = String.left column targetLine
+                                after = String.dropLeft column targetLine
+                                beforeLines = List.take line content
+                                afterLines = List.drop (line + 1) content
+                            in
+                            beforeLines ++ [before, after] ++ afterLines
+                        Nothing ->
+                            content
+                updatedItems = mapItem (updateItemContentFn item updatedContent currentTime) model.items
+            in
+            ( { model | items = updatedItems }, Cmd.none )
+
+        GetCurrentCursorCoordinates ->
+            ( model, requestCursorCoordinates () )
 
         ReceiveImportedModel jsonValue ->
             case D.decodeValue decode jsonValue of
@@ -235,7 +261,7 @@ update msg model =
                             -- Tag selection from textarea - get current cursor position
                             case findEditingItem model.items of
                                 Just ( editingItem, _ ) ->
-                                    ( { model | tagPopup = updatedmodel, pendingTagInsertion = Just tag }, getCurrentCursorPosition (getId editingItem) )
+                                    ( { model | tagPopup = updatedmodel, pendingTagInsertion = Just tag }, requestCursorPosition (getId editingItem) )
 
                                 Nothing ->
                                     ( { model | tagPopup = updatedmodel }, Cmd.none )
@@ -339,9 +365,20 @@ update msg model =
         SetSearchCursor pos ->
             ( { model | searchToolbar = resetUpdatedCursorPosition model.searchToolbar }, setSearchInputCursor pos )
 
-        GotCurrentCursorPosition item tag cursorPos ->
-            ( { model | pendingTagInsertion = Nothing }, Cmd.none )
-                |> (\( m, c ) -> update (GetCurrentTime (InsertSelectedTag item tag cursorPos)) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
+        ReceiveCursorPosition line column itemId ->
+            let
+                targetItem = findInForest itemId model.items
+
+            in
+            case targetItem of
+                Just item ->
+                    update (GetCurrentTime (SplitLine item (line, column))) model
+                Nothing ->
+                    ( model, Cmd.none )
+
+            -- ( { model | pendingTagInsertion = Nothing }, Cmd.none )
+            --     |> (\( m, c ) -> update (GetCurrentTime (InsertSelectedTag item tag cursorPos)) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
+
 
         -- UpdateItemContent item content cursorPos currentTime ->
         --     let
@@ -387,7 +424,7 @@ update msg model =
         OutdentItem cursorPosition item ->
             ( { model | noBlur = True, items = outdentItem item model.items, caretTask = Just ( getId item, cursorPosition ) }, Cmd.none )
 
-        GotCursorPosition top left fragment ok inCode ->
+        GotCursorCoordinates top left fragment ok inCode ->
             if inCode || not ok then
                 ( model, Cmd.none )
 
@@ -601,6 +638,7 @@ viewItemContent model item =
             , onNavigateToPreviousWithColumn = NavigateToPreviousWithColumn
             , onNavigateToNextWithColumn = NavigateToNextWithColumn
             , onRestoreCutItem = ClipboardMsg (Clipboard.RestoreCutItem model.items)
+            , onAddNewLineAfter = \targetItem -> AddNewLineAfter targetItem
             , onNoOp = NoOp
             }
 
@@ -624,7 +662,7 @@ viewItemContent model item =
 
                 viewBlock ( isCode, lines ) =
                     if isCode then
-                        [code Theme.codeBlock [ text (String.join "\n" lines) ]]
+                        [pre [] [ code Theme.codeBlock [ text (String.join "\n" lines) ] ]]
 
                     else
                         lines |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar)) |> addBreaks
@@ -647,7 +685,7 @@ viewItemContent model item =
                 [ on "blur" (D.map (\x -> GetCurrentTime (SaveItem item x)) innerHtml) ]
 
         onInputCustom =
-            on "input" (D.succeed GetCurrentCursorPostion)
+            on "input" (D.succeed GetCurrentCursorCoordinates)
     in
     div
         (Theme.flexGrow
@@ -792,36 +830,28 @@ subscriptions model =
 
             Nothing ->
                 Sub.none
-        , receiveCursorPosition
+        , receiveCursorCoordinates
             (\value ->
-                case D.decodeValue (D.map5 GotCursorPosition (D.field "top" D.int) (D.field "left" D.int) (D.field "word" D.string) (D.field "ok" D.bool) (D.field "inCode" D.bool)) value of
+                case D.decodeValue (D.map5 GotCursorCoordinates (D.field "top" D.int) (D.field "left" D.int) (D.field "word" D.string) (D.field "ok" D.bool) (D.field "inCode" D.bool)) value of
                     Ok msg ->
                         msg
 
                     Err _ ->
-                        GotCursorPosition 0 0 "" False False
+                        GotCursorCoordinates 0 0 "" False False
             )
-        , receiveCurrentCursorPosition
+        , receiveCursorPosition
             (\value ->
                 case
                     D.decodeValue
                         (D.map3
-                            (\itemId tag cursorPos ->
-                                case findEditingItem model.items of
-                                    Just ( editingItem, _ ) ->
-                                        case model.pendingTagInsertion of
-                                            Just pendingTag ->
-                                                GotCurrentCursorPosition editingItem pendingTag cursorPos
+                            (\line column itemId->
+                                ReceiveCursorPosition line column itemId
 
-                                            Nothing ->
-                                                NoOp
-
-                                    Nothing ->
-                                        NoOp
                             )
+                            (D.field "line" D.int)
+                            (D.field "column" D.int)
                             (D.field "itemId" D.int)
-                            (D.field "tag" D.string)
-                            (D.field "cursorPos" D.int)
+
                         )
                         value
                 of

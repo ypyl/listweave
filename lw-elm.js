@@ -10835,15 +10835,15 @@ var $author$project$Main$initialModel = {
 	searchToolbar: $author$project$SearchToolbar$init,
 	tagPopup: $author$project$TagPopup$init
 };
-var $author$project$Main$GotCurrentCursorPosition = F3(
-	function (a, b, c) {
-		return {$: 'GotCurrentCursorPosition', a: a, b: b, c: c};
-	});
-var $author$project$Main$GotCursorPosition = F5(
+var $author$project$Main$GotCursorCoordinates = F5(
 	function (a, b, c, d, e) {
-		return {$: 'GotCursorPosition', a: a, b: b, c: c, d: d, e: e};
+		return {$: 'GotCursorCoordinates', a: a, b: b, c: c, d: d, e: e};
 	});
 var $author$project$Main$NoOp = {$: 'NoOp'};
+var $author$project$Main$ReceiveCursorPosition = F3(
+	function (a, b, c) {
+		return {$: 'ReceiveCursorPosition', a: a, b: b, c: c};
+	});
 var $author$project$Main$ReceiveImportedModel = function (a) {
 	return {$: 'ReceiveImportedModel', a: a};
 };
@@ -10856,43 +10856,6 @@ var $author$project$Main$SetSearchCursor = function (a) {
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
-var $author$project$ListItem$getChildren = function (_v0) {
-	var item = _v0.a;
-	return item.children;
-};
-var $author$project$ListItem$isEditing = function (_v0) {
-	var item = _v0.a;
-	return item.editing;
-};
-var $author$project$ListItem$findEditingItem = function (items) {
-	var findInList = function (itemList) {
-		findInList:
-		while (true) {
-			if (!itemList.b) {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var item = itemList.a;
-				var rest = itemList.b;
-				if ($author$project$ListItem$isEditing(item)) {
-					return $elm$core$Maybe$Just(
-						_Utils_Tuple2(item, 0));
-				} else {
-					var _v1 = findInList(
-						$author$project$ListItem$getChildren(item));
-					if (_v1.$ === 'Just') {
-						var found = _v1.a;
-						return $elm$core$Maybe$Just(found);
-					} else {
-						var $temp$itemList = rest;
-						itemList = $temp$itemList;
-						continue findInList;
-					}
-				}
-			}
-		}
-	};
-	return findInList(items);
-};
 var $author$project$SearchToolbar$getUpdatedCursorPosition = function (model) {
 	return model.updatedCursorPosition;
 };
@@ -11022,7 +10985,7 @@ var $elm$browser$Browser$AnimationManager$onAnimationFrame = function (tagger) {
 		$elm$browser$Browser$AnimationManager$Time(tagger));
 };
 var $elm$browser$Browser$Events$onAnimationFrame = $elm$browser$Browser$AnimationManager$onAnimationFrame;
-var $author$project$Main$receiveCurrentCursorPosition = _Platform_incomingPort('receiveCurrentCursorPosition', $elm$json$Json$Decode$value);
+var $author$project$Main$receiveCursorCoordinates = _Platform_incomingPort('receiveCursorCoordinates', $elm$json$Json$Decode$value);
 var $author$project$Main$receiveCursorPosition = _Platform_incomingPort('receiveCursorPosition', $elm$json$Json$Decode$value);
 var $author$project$Main$receiveFile = _Platform_incomingPort('receiveFile', $elm$json$Json$Decode$value);
 var $author$project$Main$subscriptions = function (model) {
@@ -11055,13 +11018,13 @@ var $author$project$Main$subscriptions = function (model) {
 					return $elm$core$Platform$Sub$none;
 				}
 			}(),
-				$author$project$Main$receiveCursorPosition(
+				$author$project$Main$receiveCursorCoordinates(
 				function (value) {
 					var _v5 = A2(
 						$elm$json$Json$Decode$decodeValue,
 						A6(
 							$elm$json$Json$Decode$map5,
-							$author$project$Main$GotCursorPosition,
+							$author$project$Main$GotCursorCoordinates,
 							A2($elm$json$Json$Decode$field, 'top', $elm$json$Json$Decode$int),
 							A2($elm$json$Json$Decode$field, 'left', $elm$json$Json$Decode$int),
 							A2($elm$json$Json$Decode$field, 'word', $elm$json$Json$Decode$string),
@@ -11072,35 +11035,22 @@ var $author$project$Main$subscriptions = function (model) {
 						var msg = _v5.a;
 						return msg;
 					} else {
-						return A5($author$project$Main$GotCursorPosition, 0, 0, '', false, false);
+						return A5($author$project$Main$GotCursorCoordinates, 0, 0, '', false, false);
 					}
 				}),
-				$author$project$Main$receiveCurrentCursorPosition(
+				$author$project$Main$receiveCursorPosition(
 				function (value) {
 					var _v6 = A2(
 						$elm$json$Json$Decode$decodeValue,
 						A4(
 							$elm$json$Json$Decode$map3,
 							F3(
-								function (itemId, tag, cursorPos) {
-									var _v7 = $author$project$ListItem$findEditingItem(model.items);
-									if (_v7.$ === 'Just') {
-										var _v8 = _v7.a;
-										var editingItem = _v8.a;
-										var _v9 = model.pendingTagInsertion;
-										if (_v9.$ === 'Just') {
-											var pendingTag = _v9.a;
-											return A3($author$project$Main$GotCurrentCursorPosition, editingItem, pendingTag, cursorPos);
-										} else {
-											return $author$project$Main$NoOp;
-										}
-									} else {
-										return $author$project$Main$NoOp;
-									}
+								function (line, column, itemId) {
+									return A3($author$project$Main$ReceiveCursorPosition, line, column, itemId);
 								}),
-							A2($elm$json$Json$Decode$field, 'itemId', $elm$json$Json$Decode$int),
-							A2($elm$json$Json$Decode$field, 'tag', $elm$json$Json$Decode$string),
-							A2($elm$json$Json$Decode$field, 'cursorPos', $elm$json$Json$Decode$int)),
+							A2($elm$json$Json$Decode$field, 'line', $elm$json$Json$Decode$int),
+							A2($elm$json$Json$Decode$field, 'column', $elm$json$Json$Decode$int),
+							A2($elm$json$Json$Decode$field, 'itemId', $elm$json$Json$Decode$int)),
 						value);
 					if (_v6.$ === 'Ok') {
 						var msg = _v6.a;
@@ -11127,10 +11077,6 @@ var $author$project$TagPopup$FromSearchToolbar = {$: 'FromSearchToolbar'};
 var $author$project$Main$GetCurrentTime = function (a) {
 	return {$: 'GetCurrentTime', a: a};
 };
-var $author$project$Main$InsertSelectedTag = F4(
-	function (a, b, c, d) {
-		return {$: 'InsertSelectedTag', a: a, b: b, c: c, d: d};
-	});
 var $author$project$Main$SaveItem = F3(
 	function (a, b, c) {
 		return {$: 'SaveItem', a: a, b: b, c: c};
@@ -11138,6 +11084,10 @@ var $author$project$Main$SaveItem = F3(
 var $author$project$SearchToolbar$SearchKeyDown = function (a) {
 	return {$: 'SearchKeyDown', a: a};
 };
+var $author$project$Main$SplitLine = F3(
+	function (a, b, c) {
+		return {$: 'SplitLine', a: a, b: b, c: c};
+	});
 var $author$project$Main$ToggleNoBlur = {$: 'ToggleNoBlur'};
 var $elm$core$Task$onError = _Scheduler_onError;
 var $elm$core$Task$attempt = F2(
@@ -11660,6 +11610,75 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
+var $author$project$ListItem$getChildren = function (_v0) {
+	var item = _v0.a;
+	return item.children;
+};
+var $author$project$ListItem$isEditing = function (_v0) {
+	var item = _v0.a;
+	return item.editing;
+};
+var $author$project$ListItem$findEditingItem = function (items) {
+	var findInList = function (itemList) {
+		findInList:
+		while (true) {
+			if (!itemList.b) {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var item = itemList.a;
+				var rest = itemList.b;
+				if ($author$project$ListItem$isEditing(item)) {
+					return $elm$core$Maybe$Just(
+						_Utils_Tuple2(item, 0));
+				} else {
+					var _v1 = findInList(
+						$author$project$ListItem$getChildren(item));
+					if (_v1.$ === 'Just') {
+						var found = _v1.a;
+						return $elm$core$Maybe$Just(found);
+					} else {
+						var $temp$itemList = rest;
+						itemList = $temp$itemList;
+						continue findInList;
+					}
+				}
+			}
+		}
+	};
+	return findInList(items);
+};
+var $author$project$ListItem$findById = F2(
+	function (targetId, _v0) {
+		var record = _v0.a;
+		return _Utils_eq(record.id, targetId) ? $elm$core$Maybe$Just(
+			$author$project$ListItem$ListItem(record)) : A3(
+			$elm$core$List$foldl,
+			F2(
+				function (child, acc) {
+					if (acc.$ === 'Just') {
+						return acc;
+					} else {
+						return A2($author$project$ListItem$findById, targetId, child);
+					}
+				}),
+			$elm$core$Maybe$Nothing,
+			record.children);
+	});
+var $author$project$ListItem$findInForest = F2(
+	function (targetId, items) {
+		return A3(
+			$elm$core$List$foldl,
+			F2(
+				function (item, acc) {
+					if (acc.$ === 'Just') {
+						return acc;
+					} else {
+						return A2($author$project$ListItem$findById, targetId, item);
+					}
+				}),
+			$elm$core$Maybe$Nothing,
+			items);
+	});
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
 		if (maybeValue.$ === 'Just') {
@@ -11778,7 +11797,6 @@ var $author$project$ListItem$getContent = function (_v0) {
 	var record = _v0.a;
 	return record.content;
 };
-var $author$project$Main$getCurrentCursorPosition = _Platform_outgoingPort('getCurrentCursorPosition', $elm$json$Json$Encode$int);
 var $author$project$TagPopup$getHighlightedTag = function (model) {
 	return model.highlightedTag;
 };
@@ -12209,14 +12227,6 @@ var $author$project$ListItem$mapItem = F2(
 			},
 			list);
 	});
-var $elm$core$Tuple$mapSecond = F2(
-	function (func, _v0) {
-		var x = _v0.a;
-		var y = _v0.b;
-		return _Utils_Tuple2(
-			x,
-			func(y));
-	});
 var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
@@ -12622,11 +12632,45 @@ var $author$project$ListItem$parseInnerHtml = function (html) {
 			'<br />',
 			'\n',
 			A3($elm$core$String$replace, '<br/>', '\n', normalizedNbsp)));
-	var withCodeMarkers = A3(
-		$elm$core$String$replace,
-		'</code></pre>',
-		'||CODE_END||',
-		A3($elm$core$String$replace, '<pre><code>', '||CODE_START||', normalizedBr));
+	var withCodeMarkers = function () {
+		var prefix = '<pre><code';
+		var replacePreCode = function (s) {
+			replacePreCode:
+			while (true) {
+				var _v4 = A2($elm$core$String$indexes, prefix, s);
+				if (!_v4.b) {
+					return s;
+				} else {
+					var idx = _v4.a;
+					var rest = A3(
+						$elm$core$String$slice,
+						idx + $elm$core$String$length(prefix),
+						$elm$core$String$length(s),
+						s);
+					var before = A3($elm$core$String$slice, 0, idx, s);
+					var _v5 = A2($elm$core$String$indexes, '>', rest);
+					if (!_v5.b) {
+						return s;
+					} else {
+						var closeIdx = _v5.a;
+						var after = A3(
+							$elm$core$String$slice,
+							closeIdx + 1,
+							$elm$core$String$length(rest),
+							rest);
+						var $temp$s = before + ('||CODE_START||' + after);
+						s = $temp$s;
+						continue replacePreCode;
+					}
+				}
+			}
+		};
+		return A3(
+			$elm$core$String$replace,
+			'</code></pre>',
+			'||CODE_END||',
+			replacePreCode(normalizedBr));
+	}();
 	var lenStart = $elm$core$String$length(startMarker);
 	var endMarker = '||CODE_END||';
 	var lenEnd = $elm$core$String$length(endMarker);
@@ -12698,11 +12742,12 @@ var $author$project$ListItem$removeItemCompletely = F2(
 			});
 		return A2(removeRecursive, item.id, list);
 	});
-var $author$project$Main$requestCursorPosition = _Platform_outgoingPort(
-	'requestCursorPosition',
+var $author$project$Main$requestCursorCoordinates = _Platform_outgoingPort(
+	'requestCursorCoordinates',
 	function ($) {
 		return $elm$json$Json$Encode$null;
 	});
+var $author$project$Main$requestCursorPosition = _Platform_outgoingPort('requestCursorPosition', $elm$json$Json$Encode$int);
 var $author$project$SearchToolbar$resetUpdatedCursorPosition = function (model) {
 	return _Utils_update(
 		model,
@@ -12834,6 +12879,132 @@ var $author$project$ListItem$sortItemsByDate = F2(
 						}));
 			},
 			sortedItems);
+	});
+var $elm$core$List$takeReverse = F3(
+	function (n, list, kept) {
+		takeReverse:
+		while (true) {
+			if (n <= 0) {
+				return kept;
+			} else {
+				if (!list.b) {
+					return kept;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs,
+						$temp$kept = A2($elm$core$List$cons, x, kept);
+					n = $temp$n;
+					list = $temp$list;
+					kept = $temp$kept;
+					continue takeReverse;
+				}
+			}
+		}
+	});
+var $elm$core$List$takeTailRec = F2(
+	function (n, list) {
+		return $elm$core$List$reverse(
+			A3($elm$core$List$takeReverse, n, list, _List_Nil));
+	});
+var $elm$core$List$takeFast = F3(
+	function (ctr, n, list) {
+		if (n <= 0) {
+			return _List_Nil;
+		} else {
+			var _v0 = _Utils_Tuple2(n, list);
+			_v0$1:
+			while (true) {
+				_v0$5:
+				while (true) {
+					if (!_v0.b.b) {
+						return list;
+					} else {
+						if (_v0.b.b.b) {
+							switch (_v0.a) {
+								case 1:
+									break _v0$1;
+								case 2:
+									var _v2 = _v0.b;
+									var x = _v2.a;
+									var _v3 = _v2.b;
+									var y = _v3.a;
+									return _List_fromArray(
+										[x, y]);
+								case 3:
+									if (_v0.b.b.b.b) {
+										var _v4 = _v0.b;
+										var x = _v4.a;
+										var _v5 = _v4.b;
+										var y = _v5.a;
+										var _v6 = _v5.b;
+										var z = _v6.a;
+										return _List_fromArray(
+											[x, y, z]);
+									} else {
+										break _v0$5;
+									}
+								default:
+									if (_v0.b.b.b.b && _v0.b.b.b.b.b) {
+										var _v7 = _v0.b;
+										var x = _v7.a;
+										var _v8 = _v7.b;
+										var y = _v8.a;
+										var _v9 = _v8.b;
+										var z = _v9.a;
+										var _v10 = _v9.b;
+										var w = _v10.a;
+										var tl = _v10.b;
+										return (ctr > 1000) ? A2(
+											$elm$core$List$cons,
+											x,
+											A2(
+												$elm$core$List$cons,
+												y,
+												A2(
+													$elm$core$List$cons,
+													z,
+													A2(
+														$elm$core$List$cons,
+														w,
+														A2($elm$core$List$takeTailRec, n - 4, tl))))) : A2(
+											$elm$core$List$cons,
+											x,
+											A2(
+												$elm$core$List$cons,
+												y,
+												A2(
+													$elm$core$List$cons,
+													z,
+													A2(
+														$elm$core$List$cons,
+														w,
+														A3($elm$core$List$takeFast, ctr + 1, n - 4, tl)))));
+									} else {
+										break _v0$5;
+									}
+							}
+						} else {
+							if (_v0.a === 1) {
+								break _v0$1;
+							} else {
+								break _v0$5;
+							}
+						}
+					}
+				}
+				return list;
+			}
+			var _v1 = _v0.b;
+			var x = _v1.a;
+			return _List_fromArray(
+				[x]);
+		}
+	});
+var $elm$core$List$take = F2(
+	function (n, list) {
+		return A3($elm$core$List$takeFast, 0, n, list);
 	});
 var $author$project$ListItem$toggleCollapseFn = F2(
 	function (_v0, _v1) {
@@ -12968,132 +13139,6 @@ var $author$project$ListItem$insertClipboardItemAfter = F3(
 			}
 		};
 		return insertInList(items);
-	});
-var $elm$core$List$takeReverse = F3(
-	function (n, list, kept) {
-		takeReverse:
-		while (true) {
-			if (n <= 0) {
-				return kept;
-			} else {
-				if (!list.b) {
-					return kept;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs,
-						$temp$kept = A2($elm$core$List$cons, x, kept);
-					n = $temp$n;
-					list = $temp$list;
-					kept = $temp$kept;
-					continue takeReverse;
-				}
-			}
-		}
-	});
-var $elm$core$List$takeTailRec = F2(
-	function (n, list) {
-		return $elm$core$List$reverse(
-			A3($elm$core$List$takeReverse, n, list, _List_Nil));
-	});
-var $elm$core$List$takeFast = F3(
-	function (ctr, n, list) {
-		if (n <= 0) {
-			return _List_Nil;
-		} else {
-			var _v0 = _Utils_Tuple2(n, list);
-			_v0$1:
-			while (true) {
-				_v0$5:
-				while (true) {
-					if (!_v0.b.b) {
-						return list;
-					} else {
-						if (_v0.b.b.b) {
-							switch (_v0.a) {
-								case 1:
-									break _v0$1;
-								case 2:
-									var _v2 = _v0.b;
-									var x = _v2.a;
-									var _v3 = _v2.b;
-									var y = _v3.a;
-									return _List_fromArray(
-										[x, y]);
-								case 3:
-									if (_v0.b.b.b.b) {
-										var _v4 = _v0.b;
-										var x = _v4.a;
-										var _v5 = _v4.b;
-										var y = _v5.a;
-										var _v6 = _v5.b;
-										var z = _v6.a;
-										return _List_fromArray(
-											[x, y, z]);
-									} else {
-										break _v0$5;
-									}
-								default:
-									if (_v0.b.b.b.b && _v0.b.b.b.b.b) {
-										var _v7 = _v0.b;
-										var x = _v7.a;
-										var _v8 = _v7.b;
-										var y = _v8.a;
-										var _v9 = _v8.b;
-										var z = _v9.a;
-										var _v10 = _v9.b;
-										var w = _v10.a;
-										var tl = _v10.b;
-										return (ctr > 1000) ? A2(
-											$elm$core$List$cons,
-											x,
-											A2(
-												$elm$core$List$cons,
-												y,
-												A2(
-													$elm$core$List$cons,
-													z,
-													A2(
-														$elm$core$List$cons,
-														w,
-														A2($elm$core$List$takeTailRec, n - 4, tl))))) : A2(
-											$elm$core$List$cons,
-											x,
-											A2(
-												$elm$core$List$cons,
-												y,
-												A2(
-													$elm$core$List$cons,
-													z,
-													A2(
-														$elm$core$List$cons,
-														w,
-														A3($elm$core$List$takeFast, ctr + 1, n - 4, tl)))));
-									} else {
-										break _v0$5;
-									}
-							}
-						} else {
-							if (_v0.a === 1) {
-								break _v0$1;
-							} else {
-								break _v0$5;
-							}
-						}
-					}
-				}
-				return list;
-			}
-			var _v1 = _v0.b;
-			var x = _v1.a;
-			return _List_fromArray(
-				[x]);
-		}
-	});
-var $elm$core$List$take = F2(
-	function (n, list) {
-		return A3($elm$core$List$takeFast, 0, n, list);
 	});
 var $author$project$ListItem$splitAt = F2(
 	function (n, list) {
@@ -13555,35 +13600,76 @@ var $author$project$Main$update = F2(
 			switch (msg.$) {
 				case 'NoOp':
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				case 'GetCurrentCursorPostion':
+				case 'AddNewLineAfter':
+					var item = msg.a;
 					return _Utils_Tuple2(
 						model,
-						$author$project$Main$requestCursorPosition(_Utils_Tuple0));
+						$author$project$Main$requestCursorPosition(
+							$author$project$ListItem$getId(item)));
+				case 'SplitLine':
+					var item = msg.a;
+					var _v1 = msg.b;
+					var line = _v1.a;
+					var column = _v1.b;
+					var currentTime = msg.c;
+					var content = $author$project$ListItem$getContent(item);
+					var updatedContent = function () {
+						var _v2 = $elm$core$List$head(
+							A2($elm$core$List$drop, line, content));
+						if (_v2.$ === 'Just') {
+							var targetLine = _v2.a;
+							var beforeLines = A2($elm$core$List$take, line, content);
+							var before = A2($elm$core$String$left, column, targetLine);
+							var afterLines = A2($elm$core$List$drop, line + 1, content);
+							var after = A2($elm$core$String$dropLeft, column, targetLine);
+							return _Utils_ap(
+								beforeLines,
+								_Utils_ap(
+									_List_fromArray(
+										[before, after]),
+									afterLines));
+						} else {
+							return content;
+						}
+					}();
+					var updatedItems = A2(
+						$author$project$ListItem$mapItem,
+						A3($author$project$ListItem$updateItemContentFn, item, updatedContent, currentTime),
+						model.items);
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{items: updatedItems}),
+						$elm$core$Platform$Cmd$none);
+				case 'GetCurrentCursorCoordinates':
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$requestCursorCoordinates(_Utils_Tuple0));
 				case 'ReceiveImportedModel':
 					var jsonValue = msg.a;
-					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$decode, jsonValue);
-					if (_v1.$ === 'Ok') {
-						var newModel = _v1.a;
+					var _v3 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$decode, jsonValue);
+					if (_v3.$ === 'Ok') {
+						var newModel = _v3.a;
 						return _Utils_Tuple2(newModel, $elm$core$Platform$Cmd$none);
 					} else {
 						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 					}
 				case 'TagPopupMsg':
 					var tagPopupMsg = msg.a;
-					var _v2 = A2($author$project$TagPopup$update, tagPopupMsg, model.tagPopup);
-					var updatedmodel = _v2.a;
-					var action = _v2.b;
+					var _v4 = A2($author$project$TagPopup$update, tagPopupMsg, model.tagPopup);
+					var updatedmodel = _v4.a;
+					var action = _v4.b;
 					if (action.$ === 'Just') {
 						var tag = action.a.a;
-						var _v4 = $author$project$TagPopup$currentSource(model.tagPopup);
-						if (_v4.$ === 'Just') {
-							if (_v4.a.$ === 'FromSearchToolbar') {
-								var _v5 = _v4.a;
-								var _v6 = A2(
+						var _v6 = $author$project$TagPopup$currentSource(model.tagPopup);
+						if (_v6.$ === 'Just') {
+							if (_v6.a.$ === 'FromSearchToolbar') {
+								var _v7 = _v6.a;
+								var _v8 = A2(
 									$author$project$SearchToolbar$update,
 									$author$project$SearchToolbar$SearchKeyDown(13),
 									model.searchToolbar);
-								var searchToolbarUpdatedModel = _v6.a;
+								var searchToolbarUpdatedModel = _v8.a;
 								return _Utils_Tuple2(
 									_Utils_update(
 										model,
@@ -13593,11 +13679,11 @@ var $author$project$Main$update = F2(
 										}),
 									$elm$core$Platform$Cmd$none);
 							} else {
-								var _v7 = _v4.a;
-								var _v8 = $author$project$ListItem$findEditingItem(model.items);
-								if (_v8.$ === 'Just') {
-									var _v9 = _v8.a;
-									var editingItem = _v9.a;
+								var _v9 = _v6.a;
+								var _v10 = $author$project$ListItem$findEditingItem(model.items);
+								if (_v10.$ === 'Just') {
+									var _v11 = _v10.a;
+									var editingItem = _v11.a;
 									return _Utils_Tuple2(
 										_Utils_update(
 											model,
@@ -13605,7 +13691,7 @@ var $author$project$Main$update = F2(
 												pendingTagInsertion: $elm$core$Maybe$Just(tag),
 												tagPopup: updatedmodel
 											}),
-										$author$project$Main$getCurrentCursorPosition(
+										$author$project$Main$requestCursorPosition(
 											$author$project$ListItem$getId(editingItem)));
 								} else {
 									return _Utils_Tuple2(
@@ -13637,13 +13723,13 @@ var $author$project$Main$update = F2(
 						$elm$core$Platform$Cmd$none);
 				case 'SearchToolbarMsg':
 					var searchToolbarMsg = msg.a;
-					var _v10 = A2($author$project$SearchToolbar$update, searchToolbarMsg, model.searchToolbar);
-					var updatedSearchToolbarModel = _v10.a;
-					var action = _v10.b;
+					var _v12 = A2($author$project$SearchToolbar$update, searchToolbarMsg, model.searchToolbar);
+					var updatedSearchToolbarModel = _v12.a;
+					var action = _v12.b;
 					var withSearchToolbar = _Utils_update(
 						model,
 						{searchToolbar: updatedSearchToolbarModel});
-					var _v11 = function () {
+					var _v13 = function () {
 						if (action.$ === 'Just') {
 							var act = action.a;
 							switch (act.$) {
@@ -13678,9 +13764,9 @@ var $author$project$Main$update = F2(
 											}),
 										$elm$core$Platform$Cmd$none);
 								case 'KeyEnter':
-									var _v14 = $author$project$TagPopup$getHighlightedTag(model.tagPopup);
-									if (_v14.$ === 'Just') {
-										var tag = _v14.a;
+									var _v16 = $author$project$TagPopup$getHighlightedTag(model.tagPopup);
+									if (_v16.$ === 'Just') {
+										var tag = _v16.a;
 										return _Utils_Tuple2(
 											_Utils_update(
 												withSearchToolbar,
@@ -13726,15 +13812,15 @@ var $author$project$Main$update = F2(
 									var cursorPos = act.b;
 									var tagPopupTags = A2(
 										$elm$core$Maybe$map,
-										function (_v17) {
-											var tagSearchPrefix = _v17.a;
+										function (_v19) {
+											var tagSearchPrefix = _v19.a;
 											return A2(
 												$elm$core$List$filter,
 												$elm$core$String$startsWith(tagSearchPrefix),
 												$author$project$ListItem$getAllTags(withSearchToolbar.items));
 										},
 										A2($author$project$TagsUtils$isInsideTagBrackets, cursorPos, query));
-									var _v15 = function () {
+									var _v17 = function () {
 										if (tagPopupTags.$ === 'Just') {
 											var tags = tagPopupTags.a;
 											return $elm$core$List$isEmpty(tags) ? _Utils_Tuple2(
@@ -13751,8 +13837,8 @@ var $author$project$Main$update = F2(
 												$elm$core$Platform$Cmd$none);
 										}
 									}();
-									var updatedTagPopup = _v15.a;
-									var updatedCmd = _v15.b;
+									var updatedTagPopup = _v17.a;
+									var updatedCmd = _v17.b;
 									return _Utils_Tuple2(
 										_Utils_update(
 											withSearchToolbar,
@@ -13763,8 +13849,8 @@ var $author$project$Main$update = F2(
 							return _Utils_Tuple2(withSearchToolbar, $elm$core$Platform$Cmd$none);
 						}
 					}();
-					var updatedModel = _v11.a;
-					var cmd = _v11.b;
+					var updatedModel = _v13.a;
+					var cmd = _v13.b;
 					return _Utils_Tuple2(updatedModel, cmd);
 				case 'ToggleCollapse':
 					var item = msg.a;
@@ -13796,31 +13882,25 @@ var $author$project$Main$update = F2(
 								searchToolbar: $author$project$SearchToolbar$resetUpdatedCursorPosition(model.searchToolbar)
 							}),
 						$author$project$Main$setSearchInputCursor(pos));
-				case 'GotCurrentCursorPosition':
-					var item = msg.a;
-					var tag = msg.b;
-					var cursorPos = msg.c;
-					return function (_v18) {
-						var m = _v18.a;
-						var c = _v18.b;
-						return A2(
-							$elm$core$Tuple$mapSecond,
-							function (cmd) {
-								return $elm$core$Platform$Cmd$batch(
-									_List_fromArray(
-										[c, cmd]));
-							},
+				case 'ReceiveCursorPosition':
+					var line = msg.a;
+					var column = msg.b;
+					var itemId = msg.c;
+					var targetItem = A2($author$project$ListItem$findInForest, itemId, model.items);
+					if (targetItem.$ === 'Just') {
+						var item = targetItem.a;
+						var $temp$msg = $author$project$Main$GetCurrentTime(
 							A2(
-								$author$project$Main$update,
-								$author$project$Main$GetCurrentTime(
-									A3($author$project$Main$InsertSelectedTag, item, tag, cursorPos)),
-								m));
-					}(
-						_Utils_Tuple2(
-							_Utils_update(
-								model,
-								{pendingTagInsertion: $elm$core$Maybe$Nothing}),
-							$elm$core$Platform$Cmd$none));
+								$author$project$Main$SplitLine,
+								item,
+								_Utils_Tuple2(line, column))),
+							$temp$model = model;
+						msg = $temp$msg;
+						model = $temp$model;
+						continue update;
+					} else {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					}
 				case 'MoveItemUp':
 					var cursorPosition = msg.a;
 					var item = msg.b;
@@ -13877,7 +13957,7 @@ var $author$project$Main$update = F2(
 								noBlur: true
 							}),
 						$elm$core$Platform$Cmd$none);
-				case 'GotCursorPosition':
+				case 'GotCursorCoordinates':
 					var top = msg.a;
 					var left = msg.b;
 					var fragment = msg.c;
@@ -13920,7 +14000,7 @@ var $author$project$Main$update = F2(
 							model,
 							A2(
 								$elm$core$Task$perform,
-								function (_v19) {
+								function (_v21) {
 									return $author$project$Main$ToggleNoBlur;
 								},
 								$elm$core$Task$succeed(_Utils_Tuple0)));
@@ -14002,12 +14082,12 @@ var $author$project$Main$update = F2(
 				case 'SaveAndCreateAfter':
 					var item = msg.a;
 					var innerHtml = msg.b;
-					var _v20 = A2(
+					var _v22 = A2(
 						$author$project$Main$update,
 						$author$project$Main$GetCurrentTime(
 							A2($author$project$Main$SaveItem, item, innerHtml)),
 						model);
-					var afterSave = _v20.a;
+					var afterSave = _v22.a;
 					var $temp$msg = $author$project$Main$GetCurrentTime(
 						$author$project$Main$CreateItemAfter(item)),
 						$temp$model = afterSave;
@@ -14043,9 +14123,9 @@ var $author$project$Main$update = F2(
 						$elm$core$String$join,
 						'\n',
 						$author$project$ListItem$getContent(item));
-					var _v21 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
-					var newContent = _v21.a;
-					var newCaretPos = _v21.b;
+					var _v23 = A3($author$project$TagsUtils$insertTagAtCursor, content, tag, cursorPos);
+					var newContent = _v23.a;
+					var newCaretPos = _v23.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -14069,9 +14149,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToPreviousWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v22 = A2($author$project$ListItem$findPreviousItem, item, model.items);
-					if (_v22.$ === 'Just') {
-						var prevItem = _v22.a;
+					var _v24 = A2($author$project$ListItem$findPreviousItem, item, model.items);
+					if (_v24.$ === 'Just') {
+						var prevItem = _v24.a;
 						var prevId = $author$project$ListItem$getId(prevItem);
 						var prevContent = A2(
 							$elm$core$String$join,
@@ -14107,9 +14187,9 @@ var $author$project$Main$update = F2(
 				case 'NavigateToNextWithColumn':
 					var item = msg.a;
 					var columnPos = msg.b;
-					var _v23 = A2($author$project$ListItem$findNextItem, item, model.items);
-					if (_v23.$ === 'Just') {
-						var nextItem = _v23.a;
+					var _v25 = A2($author$project$ListItem$findNextItem, item, model.items);
+					if (_v25.$ === 'Just') {
+						var nextItem = _v25.a;
 						var nextId = $author$project$ListItem$getId(nextItem);
 						var nextContent = A2(
 							$elm$core$String$join,
@@ -14141,10 +14221,10 @@ var $author$project$Main$update = F2(
 					}
 				default:
 					var clipboardMsg = msg.a;
-					var _v24 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
-					var updatedClipboard = _v24.a;
-					var updatedItems = _v24.b;
-					var maybeCaretTask = _v24.c;
+					var _v26 = A2($author$project$Clipboard$update, clipboardMsg, model.clipboard);
+					var updatedClipboard = _v26.a;
+					var updatedItems = _v26.b;
+					var maybeCaretTask = _v26.c;
 					var newCaretTask = function () {
 						if (maybeCaretTask.$ === 'Just') {
 							var caretTask = maybeCaretTask.a;
@@ -14781,6 +14861,9 @@ var $author$project$Theme$listItemRowWithChildren = _Utils_ap(
 		[
 			A2($elm$html$Html$Attributes$style, 'margin-bottom', '5px')
 		]));
+var $author$project$Main$AddNewLineAfter = function (a) {
+	return {$: 'AddNewLineAfter', a: a};
+};
 var $author$project$Main$ClipboardMsg = function (a) {
 	return {$: 'ClipboardMsg', a: a};
 };
@@ -14792,10 +14875,14 @@ var $author$project$Clipboard$CutItem = F2(
 	function (a, b) {
 		return {$: 'CutItem', a: a, b: b};
 	});
-var $author$project$Main$GetCurrentCursorPostion = {$: 'GetCurrentCursorPostion'};
+var $author$project$Main$GetCurrentCursorCoordinates = {$: 'GetCurrentCursorCoordinates'};
 var $author$project$Main$IndentItem = F2(
 	function (a, b) {
 		return {$: 'IndentItem', a: a, b: b};
+	});
+var $author$project$Main$InsertSelectedTag = F4(
+	function (a, b, c, d) {
+		return {$: 'InsertSelectedTag', a: a, b: b, c: c, d: d};
 	});
 var $author$project$Main$MoveItemDown = F2(
 	function (a, b) {
@@ -14996,7 +15083,9 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 												true);
 										}
 									} else {
-										return _Utils_eq(key, $author$project$KeyboardHandler$Enter) ? _Utils_Tuple2(config.onNoOp, true) : _Utils_Tuple2(config.onNoOp, false);
+										return _Utils_eq(key, $author$project$KeyboardHandler$Enter) ? _Utils_Tuple2(
+											config.onAddNewLineAfter(item),
+											true) : _Utils_Tuple2(config.onNoOp, false);
 									}
 								case 'Tab':
 									return shift ? _Utils_Tuple2(
@@ -15106,6 +15195,7 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 				cursorPosDecoder,
 				innerHtml));
 	});
+var $elm$html$Html$pre = _VirtualDom_node('pre');
 var $elm$html$Html$Attributes$tabindex = function (n) {
 	return A2(
 		_VirtualDom_attribute,
@@ -15210,7 +15300,7 @@ var $author$project$Main$viewItemContent = F2(
 		var onInputCustom = A2(
 			$elm$html$Html$Events$on,
 			'input',
-			$elm$json$Json$Decode$succeed($author$project$Main$GetCurrentCursorPostion));
+			$elm$json$Json$Decode$succeed($author$project$Main$GetCurrentCursorCoordinates));
 		var onBlurCustom = function () {
 			if (model.noBlur) {
 				return _List_Nil;
@@ -15237,6 +15327,9 @@ var $author$project$Main$viewItemContent = F2(
 		}();
 		var keyboardConfig = {
 			clipboard: model.clipboard,
+			onAddNewLineAfter: function (targetItem) {
+				return $author$project$Main$AddNewLineAfter(targetItem);
+			},
 			onCopyItem: function (targetItem) {
 				return $author$project$Main$GetCurrentTime(
 					function (currentTime) {
@@ -15295,12 +15388,18 @@ var $author$project$Main$viewItemContent = F2(
 				return isCode ? _List_fromArray(
 					[
 						A2(
-						$elm$html$Html$code,
-						$author$project$Theme$codeBlock,
+						$elm$html$Html$pre,
+						_List_Nil,
 						_List_fromArray(
 							[
-								$elm$html$Html$text(
-								A2($elm$core$String$join, '\n', lines))
+								A2(
+								$elm$html$Html$code,
+								$author$project$Theme$codeBlock,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(
+										A2($elm$core$String$join, '\n', lines))
+									]))
 							]))
 					]) : addBreaks(
 					A2(
@@ -15445,4 +15544,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"SaveItem":["ListItem.ListItem","String.String","Time.Posix"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem","String.String"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorPosition":["Basics.Int","Basics.Int","String.String","Basics.Bool","Basics.Bool"],"GotCurrentCursorPosition":["ListItem.ListItem","String.String","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"],"ItemInput":["ListItem.ListItem","String.String","Time.Posix"],"GetCurrentCursorPostion":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"SaveItem":["ListItem.ListItem","String.String","Time.Posix"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["Basics.Int","ListItem.ListItem"],"OutdentItem":["Basics.Int","ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem","String.String"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"SetCaret":["Basics.Int","Basics.Int"],"SetSearchCursor":["Basics.Int"],"GotCursorCoordinates":["Basics.Int","Basics.Int","String.String","Basics.Bool","Basics.Bool"],"ReceiveCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"NoOp":[],"MoveItemUp":["Basics.Int","ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["Basics.Int","ListItem.ListItem"],"ToggleNoBlur":[],"InsertSelectedTag":["ListItem.ListItem","String.String","Basics.Int","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"],"ItemInput":["ListItem.ListItem","String.String","Time.Posix"],"GetCurrentCursorCoordinates":[],"AddNewLineAfter":["ListItem.ListItem"],"SplitLine":["ListItem.ListItem","( Basics.Int, Basics.Int )","Time.Posix"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

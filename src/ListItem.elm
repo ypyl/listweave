@@ -271,8 +271,27 @@ parseInnerHtml html =
 
         -- temporarily mark code blocks so we don't strip their tags
         withCodeMarkers =
+            let
+                prefix = "<pre><code"
+                -- Replace <pre><code...> sequence with ||CODE_START||
+                replacePreCode s =
+                    case String.indexes prefix s of
+                        [] -> s
+                        idx :: _ ->
+                            let
+                                before = String.slice 0 idx s
+                                rest = String.slice (idx + String.length prefix) (String.length s) s
+                            in
+                            case String.indexes ">" rest of
+                                [] -> s
+                                closeIdx :: _ ->
+                                    let
+                                        after = String.slice (closeIdx + 1) (String.length rest) rest
+                                    in
+                                    replacePreCode (before ++ "||CODE_START||" ++ after)
+            in
             normalizedBr
-                |> String.replace "<pre><code>" "||CODE_START||"
+                |> replacePreCode
                 |> String.replace "</code></pre>" "||CODE_END||"
 
         -- strip any HTML tag like <span ...> or </span> but preserve inner text
