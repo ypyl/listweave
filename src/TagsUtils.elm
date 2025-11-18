@@ -185,26 +185,33 @@ isInsideCodeBlock cursorPos content =
             False
 
 
-insertTagAtCursor : String -> String -> Int -> ( String, Int )
-insertTagAtCursor content tag cursorPos =
+insertTagAtCursor : List String -> String -> (Int, Int) -> ( List String, (Int, Int) )
+insertTagAtCursor content tag (line, column) =
     let
-        before = String.left cursorPos content
-        after = String.dropLeft cursorPos content
-
+        targetLine = 
+            List.drop line content |> List.head |> Maybe.withDefault ""
+        
+        beforeColumn = String.left column targetLine
+        afterColumn = String.dropLeft column targetLine
+        
         tagStart =
-            String.reverse before
+            String.reverse beforeColumn
                 |> String.indexes tagPrefix
                 |> List.head
-                |> Maybe.map (\i -> cursorPos - i - 1)
-                |> Maybe.withDefault cursorPos
-
-        newContent =
-            String.left tagStart content
+                |> Maybe.map (\i -> column - i - 1)
+                |> Maybe.withDefault column
+        
+        newLine = 
+            String.left tagStart targetLine
                 ++ tagPrefix
                 ++ tag
-                ++ after
-
-        newCaretPos =
-            tagStart + String.length tagPrefix + String.length tag
+                ++ afterColumn
+        
+        newContent =
+            List.take line content
+                ++ [ newLine ]
+                ++ List.drop (line + 1) content
+        
+        newColumn = tagStart + String.length tagPrefix + String.length tag
     in
-    ( newContent, newCaretPos )
+    ( newContent, (line, newColumn) )

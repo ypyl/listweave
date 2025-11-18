@@ -11,31 +11,159 @@
     <script>
       var app = Elm.Main.init({ node: document.getElementById("root") });
 
-      app.ports.setCaret.subscribe(function (data) {
+      app.ports.requestCursorPosition.subscribe(function (data) {
+        const itemId = data.itemId;
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+
+          // Find contenteditable root
+          let editableRoot = range.startContainer;
+          while (editableRoot && (!editableRoot.getAttribute || !editableRoot.getAttribute("contenteditable"))) {
+            editableRoot = editableRoot.parentNode;
+          }
+
+          if (editableRoot) {
+            function findTextNodeAndOffset(container, offset) {
+              if (container.nodeType === Node.TEXT_NODE) return { node: container, offset: offset };
+              const child = container.childNodes[offset];
+              if (child && child.nodeType === Node.TEXT_NODE) return { node: child, offset: 0 };
+              return { node: container, offset: offset };
+            }
+
+            const caret = findTextNodeAndOffset(range.startContainer, range.startOffset);
+            const textNode = caret.node;
+            const offsetInNode = caret.offset;
+
+            // Calculate line and column position
+            let line = 0;
+            let column = 0;
+            let charCount = 0;
+            let found = false;
+
+            function traverse(node) {
+              if (found) return;
+              if (node === textNode) {
+                const text = node.nodeValue || "";
+                const textUpToCursor = text.substring(0, offsetInNode);
+                const lines = textUpToCursor.split("\n");
+                if (lines.length > 1) {
+                  line += lines.length - 1;
+                  column = lines[lines.length - 1].length;
+                } else {
+                  column = charCount + offsetInNode;
+                }
+                found = true;
+                return;
+              }
+              if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.nodeValue || "";
+                for (let i = 0; i < text.length; i++) {
+                  if (text[i] === "\n") {
+                    line++;
+                    charCount = 0;
+                  } else {
+                    charCount++;
+                  }
+                }
+              } else if (node.nodeName === "BR") {
+                line++;
+                charCount = 0;
+              } else if (node.nodeName === "CODE") {
+                line += 2;
+                charCount = 0;
+                for (let child of node.childNodes) {
+                  traverse(child);
+                  if (found) return;
+                }
+                line += 2;
+              } else {
+                for (let child of node.childNodes) {
+                  traverse(child);
+                  if (found) return;
+                }
+              }
+            }
+
+            for (let child of editableRoot.childNodes) {
+              traverse(child);
+              if (found) break;
+            }
+
+            app.ports.receiveCursorPosition.send({
+              line: line,
+              column: column,
+              itemId: itemId,
+            });
+          }
+        }
+      });
+
+      app.ports.setCursorPosition.subscribe(function (data) {
         const id = data.id;
-        const pos = data.pos;
+        const line = data.line;
+        const column = data.column;
         const input = document.getElementById("item-" + id);
         if (input) {
           input.focus();
           const range = document.createRange();
           const sel = window.getSelection();
-          let offset = pos;
-          for (const node of input.childNodes) {
+
+          let currentLine = 0;
+          let currentColumn = 0;
+          let found = false;
+
+          function traverse(node) {
+            if (found) return;
+
             if (node.nodeType === Node.TEXT_NODE) {
-              const len = node.length;
-              if (offset <= len) {
-                range.setStart(node, offset);
-                break;
+              const text = node.nodeValue || "";
+              for (let i = 0; i < text.length; i++) {
+                if (currentLine === line && currentColumn === column) {
+                  range.setStart(node, i);
+                  found = true;
+                  return;
+                }
+                if (text[i] === "\n") {
+                  currentLine++;
+                  currentColumn = 0;
+                } else {
+                  currentColumn++;
+                }
               }
-              offset -= len;
+              if (currentLine === line && currentColumn === column) {
+                range.setStart(node, text.length);
+                found = true;
+              }
             } else if (node.nodeName === "BR") {
-              if (offset === 0) {
+              if (currentLine === line && currentColumn === column) {
                 range.setStartBefore(node);
-                break;
+                found = true;
+                return;
               }
-              offset -= 1;
+              currentLine++;
+              currentColumn = 0;
+            } else if (node.nodeName === "CODE") {
+              currentLine++;
+              currentColumn = 0;
+              for (let child of node.childNodes) {
+                traverse(child);
+                if (found) return;
+              }
+              currentLine++;
+            } else {
+              for (let child of node.childNodes) {
+                traverse(child);
+                if (found) return;
+              }
             }
           }
+
+          for (let child of input.childNodes) {
+            traverse(child);
+            if (found) break;
+          }
+
           range.collapse(true);
           sel.removeAllRanges();
           sel.addRange(range);
@@ -267,93 +395,6 @@
         if (searchInput) {
           searchInput.focus();
           searchInput.setSelectionRange(position, position);
-        }
-      });
-
-      app.ports.requestCursorPosition.subscribe(function (itemId) {
-        const sel = window.getSelection();
-        if (sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
-
-          // Find contenteditable root
-          let editableRoot = range.startContainer;
-          while (editableRoot && (!editableRoot.getAttribute || !editableRoot.getAttribute("contenteditable"))) {
-            editableRoot = editableRoot.parentNode;
-          }
-
-          if (editableRoot) {
-            function findTextNodeAndOffset(container, offset) {
-              if (container.nodeType === Node.TEXT_NODE) return { node: container, offset: offset };
-              const child = container.childNodes[offset];
-              if (child && child.nodeType === Node.TEXT_NODE) return { node: child, offset: 0 };
-              return { node: container, offset: offset };
-            }
-
-            const caret = findTextNodeAndOffset(range.startContainer, range.startOffset);
-            const textNode = caret.node;
-            const offsetInNode = caret.offset;
-
-            // Calculate line and column position
-            let line = 0;
-            let column = 0;
-            let charCount = 0;
-            let found = false;
-
-            function traverse(node) {
-              if (found) return;
-              if (node === textNode) {
-                const text = node.nodeValue || "";
-                const textUpToCursor = text.substring(0, offsetInNode);
-                const lines = textUpToCursor.split('\n');
-                if (lines.length > 1) {
-                  line += lines.length - 1;
-                  column = lines[lines.length - 1].length;
-                } else {
-                  column = charCount + offsetInNode;
-                }
-                found = true;
-                return;
-              }
-              if (node.nodeType === Node.TEXT_NODE) {
-                const text = node.nodeValue || "";
-                for (let i = 0; i < text.length; i++) {
-                  if (text[i] === '\n') {
-                    line++;
-                    charCount = 0;
-                  } else {
-                    charCount++;
-                  }
-                }
-              } else if (node.nodeName === "BR") {
-                line++;
-                charCount = 0;
-              } else if (node.nodeName === "CODE") {
-                line += 2;
-                charCount = 0;
-                for (let child of node.childNodes) {
-                  traverse(child);
-                  if (found) return;
-                }
-                line += 2;
-              } else {
-                for (let child of node.childNodes) {
-                  traverse(child);
-                  if (found) return;
-                }
-              }
-            }
-
-            for (let child of editableRoot.childNodes) {
-              traverse(child);
-              if (found) break;
-            }
-
-            app.ports.receiveCursorPosition.send({
-              line: line,
-              column: column,
-              itemId: itemId,
-            });
-          }
         }
       });
 
