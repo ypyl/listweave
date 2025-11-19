@@ -5,6 +5,7 @@ import Browser
 import Browser.Dom
 import Browser.Events
 import Clipboard
+import ContentBlock exposing (ContentBlock(..), contentBlocksToLines, linesToContentBlocks)
 import Html exposing (Html, br, code, div, pre, span, text)
 import Html.Attributes exposing (attribute, id, style, target)
 import Html.Events exposing (on, onBlur, onClick, onInput, stopPropagationOn)
@@ -87,34 +88,34 @@ initialModel =
     { items =
         [ newListItem
             { id = 1
-            , content = [ "Meeting notes 2025-09-01", "Discussed project timeline with team. Action items: @todo @exercise" ]
+            , content = [ TextBlock "Meeting notes 2025-09-01\nDiscussed project timeline with team. Action items: @todo @exercise" ]
             , tags = [ "todo", "exercise", "created:09/08/2025", "updated:09/08/2025" ]
             , collapsed = True
             , editing = False
             , created = millisToPosix 1757532035027
             , updated = millisToPosix 1757532035027
             , children =
-                [ newListItem { id = 2, content = [ "Review requirements @todo" ], tags = [ "todo", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
-                , newListItem { id = 7, content = [ "Schedule next meeting 2 @calendar" ], tags = [ "calendar", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
-                , newListItem { id = 3, content = [ "Code example:", "```", "function test() {", "  // This @todo should not be clickable", "  return @value;", "}", "```", "But this @todo should work" ], tags = [ "todo", "code", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                [ newListItem { id = 2, content = [ TextBlock "Review requirements @todo" ], tags = [ "todo", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 7, content = [ TextBlock "Schedule next meeting 2 @calendar" ], tags = [ "calendar", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 3, content = [ TextBlock "Code example:", CodeBlock "function test() {\n  // This @todo should not be clickable\n  return @value;\n}", TextBlock "But this @todo should work" ], tags = [ "todo", "code", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
             }
         , newListItem
             { id = 4
-            , content = [ "Search Tutorial - How to use the search box", "Type text to search content across all items", "Use @tag to filter by specific tags (e.g., @todo)", "Selected tags appear as chips below search box" ]
+            , content = [ TextBlock "Search Tutorial - How to use the search box\nType text to search content across all items\nUse @tag to filter by specific tags (e.g., @todo)\nSelected tags appear as chips below search box" ]
             , tags = [ "tag", "todo", "created:09/08/2025", "updated:09/08/2025" ]
             , created = millisToPosix 1757532035027
             , updated = millisToPosix 1757532035027
             , collapsed = True
             , editing = False
             , children =
-                [ newListItem { id = 5, content = [ "Text Search: Type any word to find matching items @search" ], tags = [ "search", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
-                , newListItem { id = 6, content = [ "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                [ newListItem { id = 5, content = [ TextBlock "Text Search: Type any word to find matching items @search" ], tags = [ "search", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
+                , newListItem { id = 6, content = [ TextBlock "Tag Filtering: Type @tutorial to see only tutorial items @tutorial" ], tags = [ "tutorial", "created:09/08/2025", "updated:09/08/2025" ], collapsed = True, editing = False, children = [], created = millisToPosix 1757532035027, updated = millisToPosix 1757532035027 }
                 ]
             }
         , newListItem
             { id = 8
-            , content = [ "test" ]
+            , content = [ TextBlock "test" ]
             , tags = [ "created:09/08/2025", "updated:09/08/2025" ]
             , created = millisToPosix 1757532035027
             , updated = millisToPosix 1757532035027
@@ -249,32 +250,21 @@ update msg model =
 
         SplitLine item ( line, column ) currentTime ->
             let
-                content =
-                    getContent item
-
-                updatedContent =
-                    case List.head (List.drop line content) of
+                lines = contentBlocksToLines (getContent item)
+                updatedLines =
+                    case List.head (List.drop line lines) of
                         Just targetLine ->
                             let
-                                before =
-                                    String.left column targetLine
-
-                                after =
-                                    String.dropLeft column targetLine
-
-                                beforeLines =
-                                    List.take line content
-
-                                afterLines =
-                                    List.drop (line + 1) content
+                                before = String.left column targetLine
+                                after = String.dropLeft column targetLine
+                                beforeLines = List.take line lines
+                                afterLines = List.drop (line + 1) lines
                             in
                             beforeLines ++ [ before, after ] ++ afterLines
-
                         Nothing ->
-                            content
-
-                updatedItems =
-                    mapItem (updateItemContentFn item updatedContent currentTime) model.items
+                            lines
+                updatedContent = linesToContentBlocks updatedLines
+                updatedItems = mapItem (updateItemContentFn item updatedContent currentTime) model.items
             in
             ( { model | items = updatedItems, setCursorPositionTask = Just ( getId item, line + 1, 0 ) }, Cmd.none )
 
@@ -471,9 +461,9 @@ update msg model =
                 Just NavigatePreviousData ->
                     case findInForest itemId model.items of
                         Just item ->
-                            if (line |> Debug.log "line") > 0 then
+                            if line > 0 then
                                 let
-                                    currentLines = getContent item
+                                    currentLines = contentBlocksToLines (getContent item)
                                     targetLine = line - 1
                                     targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
                                     targetColumn = min column (String.length targetLineText)
@@ -483,11 +473,11 @@ update msg model =
                                 case findPreviousItem item model.items of
                                     Just prevItem ->
                                         let
-                                            prevId = getId prevItem |> Debug.log "prevId"
-                                            prevLines = getContent prevItem
+                                            prevId = getId prevItem
+                                            prevLines = contentBlocksToLines (getContent prevItem)
                                             lastLine = List.reverse prevLines |> List.head |> Maybe.withDefault ""
-                                            targetColumn = min column (String.length lastLine) |> Debug.log "targetColumn"
-                                            targetLine = (List.length prevLines - 1) |> Debug.log "targetLine"
+                                            targetColumn = min column (String.length lastLine)
+                                            targetLine = List.length prevLines - 1
                                         in
                                         ( { model | items = mapItem (editItemFn prevId) model.items, setCursorPositionTask = Just ( prevId, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
                                     Nothing ->
@@ -499,14 +489,14 @@ update msg model =
                     case findInForest itemId model.items of
                         Just item ->
                             let
-                                currentLines = getContent item
+                                currentLines = contentBlocksToLines (getContent item) |> Debug.log "currentLines"
                                 lastLineIndex = List.length currentLines - 1
                             in
                             if line < lastLineIndex then
                                 let
                                     targetLine = line + 1
-                                    targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
-                                    targetColumn = min column (String.length targetLineText)
+                                    targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault "" |> Debug.log "targetLineText"
+                                    targetColumn = min column (String.length targetLineText) |> Debug.log "targetColumn"
                                 in
                                 ( { model | setCursorPositionTask = Just ( getId item, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
                             else
@@ -514,7 +504,7 @@ update msg model =
                                     Just nextItem ->
                                         let
                                             nextId = getId nextItem
-                                            nextLines = getContent nextItem
+                                            nextLines = contentBlocksToLines (getContent nextItem)
                                             firstLine = List.head nextLines |> Maybe.withDefault ""
                                             targetColumn = min column (String.length firstLine)
                                         in
@@ -683,7 +673,7 @@ update msg model =
                 Just prevItem ->
                     let
                         prevId = getId prevItem
-                        prevLines = getContent prevItem
+                        prevLines = contentBlocksToLines (getContent prevItem)
                         lastLine = List.reverse prevLines |> List.head |> Maybe.withDefault ""
                         targetColumn = min columnPos (String.length lastLine)
                         targetLine = List.length prevLines - 1
@@ -697,7 +687,7 @@ update msg model =
                 Just nextItem ->
                     let
                         nextId = getId nextItem
-                        nextLines = getContent nextItem
+                        nextLines = contentBlocksToLines (getContent nextItem)
                         firstLine = List.head nextLines |> Maybe.withDefault ""
                         targetColumn = min columnPos (String.length firstLine)
                     in
@@ -781,21 +771,19 @@ viewItemContent model item =
 
         staticContent =
             let
-                contentBlocks =
-                    TagsUtils.processContent (getContent item)
-
-                viewBlock ( isCode, lines ) =
-                    if isCode then
-                        [ pre [] [ code Theme.codeBlock [ text (String.join "\n" lines) ] ] ]
-
-                    else
-                        lines |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar)) |> addBreaks
+                viewBlock block =
+                    case block of
+                        CodeBlock code ->
+                            [ pre [] [ Html.code Theme.codeBlock [ text code ] ] ]
+                        TextBlock text ->
+                            String.split "\n" text
+                                |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar))
+                                |> addBreaks
             in
             if List.isEmpty (getContent item) then
                 [ span Theme.contentEmpty [ text "empty" ] ]
-
             else
-                List.map viewBlock contentBlocks |> List.concat
+                List.concatMap viewBlock (getContent item)
 
         onBlurCustom =
             if model.noBlur then

@@ -70,13 +70,14 @@
                 line++;
                 charCount = 0;
               } else if (node.nodeName === "CODE") {
-                line += 2;
+                line++;
                 charCount = 0;
                 for (let child of node.childNodes) {
                   traverse(child);
                   if (found) return;
                 }
-                line += 2;
+                line++;
+                charCount = 0;
               } else {
                 for (let child of node.childNodes) {
                   traverse(child);
@@ -144,13 +145,14 @@
               currentLine++;
               currentColumn = 0;
             } else if (node.nodeName === "CODE") {
-              currentLine += 2;
+              currentLine++;
               currentColumn = 0;
               for (let child of node.childNodes) {
                 traverse(child);
                 if (found) return;
               }
-              currentLine += 2;
+              currentColumn = 0;
+              currentLine++;
             } else {
               for (let child of node.childNodes) {
                 traverse(child);

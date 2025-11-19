@@ -10701,6 +10701,12 @@ var $elm$core$Basics$never = function (_v0) {
 	}
 };
 var $elm$browser$Browser$element = _Browser_element;
+var $author$project$ContentBlock$CodeBlock = function (a) {
+	return {$: 'CodeBlock', a: a};
+};
+var $author$project$ContentBlock$TextBlock = function (a) {
+	return {$: 'TextBlock', a: a};
+};
 var $author$project$Clipboard$init = {clipboard: $elm$core$Maybe$Nothing, clipboardOriginalPosition: $elm$core$Maybe$Nothing};
 var $author$project$SearchToolbar$init = {searchQuery: '', selectedTags: _List_Nil, updatedCursorPosition: $elm$core$Maybe$Nothing};
 var $author$project$TagPopup$init = {highlightedTag: $elm$core$Maybe$Nothing, position: $elm$core$Maybe$Nothing, source: $elm$core$Maybe$Nothing, tags: $elm$core$Maybe$Nothing};
@@ -10729,7 +10735,9 @@ var $author$project$Main$initialModel = {
 							children: _List_Nil,
 							collapsed: true,
 							content: _List_fromArray(
-								['Review requirements @todo']),
+								[
+									$author$project$ContentBlock$TextBlock('Review requirements @todo')
+								]),
 							created: $elm$time$Time$millisToPosix(1757532035027),
 							editing: false,
 							id: 2,
@@ -10742,7 +10750,9 @@ var $author$project$Main$initialModel = {
 							children: _List_Nil,
 							collapsed: true,
 							content: _List_fromArray(
-								['Schedule next meeting 2 @calendar']),
+								[
+									$author$project$ContentBlock$TextBlock('Schedule next meeting 2 @calendar')
+								]),
 							created: $elm$time$Time$millisToPosix(1757532035027),
 							editing: false,
 							id: 7,
@@ -10755,7 +10765,11 @@ var $author$project$Main$initialModel = {
 							children: _List_Nil,
 							collapsed: true,
 							content: _List_fromArray(
-								['Code example:', '```', 'function test() {', '  // This @todo should not be clickable', '  return @value;', '}', '```', 'But this @todo should work']),
+								[
+									$author$project$ContentBlock$TextBlock('Code example:'),
+									$author$project$ContentBlock$CodeBlock('function test() {\n  // This @todo should not be clickable\n  return @value;\n}'),
+									$author$project$ContentBlock$TextBlock('But this @todo should work')
+								]),
 							created: $elm$time$Time$millisToPosix(1757532035027),
 							editing: false,
 							id: 3,
@@ -10766,7 +10780,9 @@ var $author$project$Main$initialModel = {
 					]),
 				collapsed: true,
 				content: _List_fromArray(
-					['Meeting notes 2025-09-01', 'Discussed project timeline with team. Action items: @todo @exercise']),
+					[
+						$author$project$ContentBlock$TextBlock('Meeting notes 2025-09-01\nDiscussed project timeline with team. Action items: @todo @exercise')
+					]),
 				created: $elm$time$Time$millisToPosix(1757532035027),
 				editing: false,
 				id: 1,
@@ -10783,7 +10799,9 @@ var $author$project$Main$initialModel = {
 							children: _List_Nil,
 							collapsed: true,
 							content: _List_fromArray(
-								['Text Search: Type any word to find matching items @search']),
+								[
+									$author$project$ContentBlock$TextBlock('Text Search: Type any word to find matching items @search')
+								]),
 							created: $elm$time$Time$millisToPosix(1757532035027),
 							editing: false,
 							id: 5,
@@ -10796,7 +10814,9 @@ var $author$project$Main$initialModel = {
 							children: _List_Nil,
 							collapsed: true,
 							content: _List_fromArray(
-								['Tag Filtering: Type @tutorial to see only tutorial items @tutorial']),
+								[
+									$author$project$ContentBlock$TextBlock('Tag Filtering: Type @tutorial to see only tutorial items @tutorial')
+								]),
 							created: $elm$time$Time$millisToPosix(1757532035027),
 							editing: false,
 							id: 6,
@@ -10807,7 +10827,9 @@ var $author$project$Main$initialModel = {
 					]),
 				collapsed: true,
 				content: _List_fromArray(
-					['Search Tutorial - How to use the search box', 'Type text to search content across all items', 'Use @tag to filter by specific tags (e.g., @todo)', 'Selected tags appear as chips below search box']),
+					[
+						$author$project$ContentBlock$TextBlock('Search Tutorial - How to use the search box\nType text to search content across all items\nUse @tag to filter by specific tags (e.g., @todo)\nSelected tags appear as chips below search box')
+					]),
 				created: $elm$time$Time$millisToPosix(1757532035027),
 				editing: false,
 				id: 4,
@@ -10820,7 +10842,9 @@ var $author$project$Main$initialModel = {
 				children: _List_Nil,
 				collapsed: true,
 				content: _List_fromArray(
-					['test']),
+					[
+						$author$project$ContentBlock$TextBlock('test')
+					]),
 				created: $elm$time$Time$millisToPosix(1757532035027),
 				editing: false,
 				id: 8,
@@ -11126,6 +11150,20 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
+var $author$project$ContentBlock$contentBlocksToLines = function (blocks) {
+	return A2(
+		$elm$core$List$concatMap,
+		function (block) {
+			if (block.$ === 'TextBlock') {
+				var text = block.a;
+				return A2($elm$core$String$split, '\n', text);
+			} else {
+				var code = block.a;
+				return A2($elm$core$String$split, '\n', code);
+			}
+		},
+		blocks);
+};
 var $author$project$TagPopup$currentSource = function (model) {
 	return model.source;
 };
@@ -11174,6 +11212,25 @@ var $author$project$Clipboard$clipboardPositionDecoder = A2(
 	},
 	$elm$json$Json$Decode$list(
 		$elm$json$Json$Decode$nullable($elm$json$Json$Decode$int)));
+var $author$project$ListItem$decodeContentBlock = A2(
+	$elm$json$Json$Decode$andThen,
+	function (blockType) {
+		switch (blockType) {
+			case 'text':
+				return A2(
+					$elm$json$Json$Decode$map,
+					$author$project$ContentBlock$TextBlock,
+					A2($elm$json$Json$Decode$field, 'content', $elm$json$Json$Decode$string));
+			case 'code':
+				return A2(
+					$elm$json$Json$Decode$map,
+					$author$project$ContentBlock$CodeBlock,
+					A2($elm$json$Json$Decode$field, 'content', $elm$json$Json$Decode$string));
+			default:
+				return $elm$json$Json$Decode$fail('Unknown content block type');
+		}
+	},
+	A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string));
 var $elm$json$Json$Decode$lazy = function (thunk) {
 	return A2(
 		$elm$json$Json$Decode$andThen,
@@ -11203,7 +11260,7 @@ function $author$project$ListItem$cyclic$decode() {
 			A2(
 				$elm$json$Json$Decode$field,
 				'content',
-				$elm$json$Json$Decode$list($elm$json$Json$Decode$string)),
+				$elm$json$Json$Decode$list($author$project$ListItem$decodeContentBlock)),
 			A2(
 				$elm$json$Json$Decode$field,
 				'tags',
@@ -11424,6 +11481,33 @@ var $author$project$ListItem$editItemFn = F2(
 				{editing: false}));
 	});
 var $elm$json$Json$Encode$bool = _Json_wrap;
+var $author$project$ListItem$encodeContentBlock = function (block) {
+	if (block.$ === 'TextBlock') {
+		var text = block.a;
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'type',
+					$elm$json$Json$Encode$string('text')),
+					_Utils_Tuple2(
+					'content',
+					$elm$json$Json$Encode$string(text))
+				]));
+	} else {
+		var code = block.a;
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'type',
+					$elm$json$Json$Encode$string('code')),
+					_Utils_Tuple2(
+					'content',
+					$elm$json$Json$Encode$string(code))
+				]));
+	}
+};
 var $elm$json$Json$Encode$float = _Json_wrap;
 var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$time$Time$posixToMillis = function (_v0) {
@@ -11440,7 +11524,7 @@ var $author$project$ListItem$encode = function (_v0) {
 				$elm$json$Json$Encode$int(item.id)),
 				_Utils_Tuple2(
 				'content',
-				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, item.content)),
+				A2($elm$json$Json$Encode$list, $author$project$ListItem$encodeContentBlock, item.content)),
 				_Utils_Tuple2(
 				'tags',
 				A2($elm$json$Json$Encode$list, $elm$json$Json$Encode$string, item.tags)),
@@ -12128,6 +12212,101 @@ var $author$project$ListItem$insertItemAfter = F4(
 				A4($author$project$ListItem$insertItemAfter, after, newId, rest, currentTime));
 		}
 	});
+var $author$project$ContentBlock$linesToContentBlocks = function (lines) {
+	var helper = F4(
+		function (remaining, acc, inCode, codeAcc) {
+			helper:
+			while (true) {
+				if (!remaining.b) {
+					return inCode ? $elm$core$List$reverse(
+						A2(
+							$elm$core$List$cons,
+							$author$project$ContentBlock$CodeBlock(
+								A2(
+									$elm$core$String$join,
+									'\n',
+									$elm$core$List$reverse(codeAcc))),
+							acc)) : ($elm$core$List$isEmpty(acc) ? _List_Nil : $elm$core$List$reverse(acc));
+				} else {
+					var line = remaining.a;
+					var rest = remaining.b;
+					if (A2($elm$core$String$startsWith, '```', line)) {
+						if (inCode) {
+							var $temp$remaining = rest,
+								$temp$acc = A2(
+								$elm$core$List$cons,
+								$author$project$ContentBlock$CodeBlock(
+									A2(
+										$elm$core$String$join,
+										'\n',
+										$elm$core$List$reverse(codeAcc))),
+								acc),
+								$temp$inCode = false,
+								$temp$codeAcc = _List_Nil;
+							remaining = $temp$remaining;
+							acc = $temp$acc;
+							inCode = $temp$inCode;
+							codeAcc = $temp$codeAcc;
+							continue helper;
+						} else {
+							var $temp$remaining = rest,
+								$temp$acc = acc,
+								$temp$inCode = true,
+								$temp$codeAcc = _List_Nil;
+							remaining = $temp$remaining;
+							acc = $temp$acc;
+							inCode = $temp$inCode;
+							codeAcc = $temp$codeAcc;
+							continue helper;
+						}
+					} else {
+						if (inCode) {
+							var $temp$remaining = rest,
+								$temp$acc = acc,
+								$temp$inCode = true,
+								$temp$codeAcc = A2($elm$core$List$cons, line, codeAcc);
+							remaining = $temp$remaining;
+							acc = $temp$acc;
+							inCode = $temp$inCode;
+							codeAcc = $temp$codeAcc;
+							continue helper;
+						} else {
+							if (acc.b && (acc.a.$ === 'TextBlock')) {
+								var text = acc.a.a;
+								var accRest = acc.b;
+								var $temp$remaining = rest,
+									$temp$acc = A2(
+									$elm$core$List$cons,
+									$author$project$ContentBlock$TextBlock(text + ('\n' + line)),
+									accRest),
+									$temp$inCode = false,
+									$temp$codeAcc = _List_Nil;
+								remaining = $temp$remaining;
+								acc = $temp$acc;
+								inCode = $temp$inCode;
+								codeAcc = $temp$codeAcc;
+								continue helper;
+							} else {
+								var $temp$remaining = rest,
+									$temp$acc = A2(
+									$elm$core$List$cons,
+									$author$project$ContentBlock$TextBlock(line),
+									acc),
+									$temp$inCode = false,
+									$temp$codeAcc = _List_Nil;
+								remaining = $temp$remaining;
+								acc = $temp$acc;
+								inCode = $temp$inCode;
+								codeAcc = $temp$codeAcc;
+								continue helper;
+							}
+						}
+					}
+				}
+			}
+		});
+	return A4(helper, lines, _List_Nil, false, _List_Nil);
+};
 var $elm$core$String$reverse = _String_reverse;
 var $author$project$TagsUtils$tagPrefix = '@';
 var $elm$core$List$takeReverse = F3(
@@ -12257,14 +12436,15 @@ var $elm$core$List$take = F2(
 		return A3($elm$core$List$takeFast, 0, n, list);
 	});
 var $author$project$TagsUtils$insertTagAtCursor = F3(
-	function (content, tag, _v0) {
+	function (blocks, tag, _v0) {
 		var line = _v0.a;
 		var column = _v0.b;
+		var lines = $author$project$ContentBlock$contentBlocksToLines(blocks);
 		var targetLine = A2(
 			$elm$core$Maybe$withDefault,
 			'',
 			$elm$core$List$head(
-				A2($elm$core$List$drop, line, content)));
+				A2($elm$core$List$drop, line, lines)));
 		var beforeColumn = A2($elm$core$String$left, column, targetLine);
 		var tagStart = A2(
 			$elm$core$Maybe$withDefault,
@@ -12286,14 +12466,14 @@ var $author$project$TagsUtils$insertTagAtCursor = F3(
 			_Utils_ap(
 				$author$project$TagsUtils$tagPrefix,
 				_Utils_ap(tag, afterColumn)));
-		var newContent = _Utils_ap(
-			A2($elm$core$List$take, line, content),
+		var newLines = _Utils_ap(
+			A2($elm$core$List$take, line, lines),
 			_Utils_ap(
 				_List_fromArray(
 					[newLine]),
-				A2($elm$core$List$drop, line + 1, content)));
+				A2($elm$core$List$drop, line + 1, lines)));
 		return _Utils_Tuple2(
-			newContent,
+			$author$project$ContentBlock$linesToContentBlocks(newLines),
 			_Utils_Tuple2(line, newColumn));
 	});
 var $elm$regex$Regex$Match = F4(
@@ -12732,7 +12912,6 @@ var $author$project$ListItem$outdentItem = F2(
 			},
 			list);
 	});
-var $elm$core$String$lines = _String_lines;
 var $elm$core$String$replace = F3(
 	function (before, after, string) {
 		return A2(
@@ -12773,15 +12952,6 @@ var $author$project$ListItem$parseInnerHtml = function (html) {
 		}
 	};
 	var startMarker = '||CODE_START||';
-	var processNormal = function (s) {
-		return A2(
-			$elm$core$List$map,
-			$elm$core$String$trim,
-			A2(
-				$elm$core$String$split,
-				'\n',
-				stripTags(s)));
-	};
 	var normalizedNbsp = A3($elm$core$String$replace, '&nbsp;', ' ', html);
 	var normalizedBr = A3(
 		$elm$core$String$replace,
@@ -12837,7 +13007,12 @@ var $author$project$ListItem$parseInnerHtml = function (html) {
 	var helper = function (s) {
 		var _v2 = A2($elm$core$String$indexes, startMarker, s);
 		if (!_v2.b) {
-			return processNormal(s);
+			var text = $elm$core$String$trim(
+				stripTags(s));
+			return $elm$core$String$isEmpty(text) ? _List_Nil : _List_fromArray(
+				[
+					$author$project$ContentBlock$TextBlock(text)
+				]);
 		} else {
 			var idx = _v2.a;
 			var prefix = A3($elm$core$String$slice, 0, idx, s);
@@ -12848,7 +13023,12 @@ var $author$project$ListItem$parseInnerHtml = function (html) {
 				s);
 			var _v3 = A2($elm$core$String$indexes, endMarker, afterStart);
 			if (!_v3.b) {
-				return processNormal(s);
+				var text = $elm$core$String$trim(
+					stripTags(s));
+				return $elm$core$String$isEmpty(text) ? _List_Nil : _List_fromArray(
+					[
+						$author$project$ContentBlock$TextBlock(text)
+					]);
 			} else {
 				var endIdx = _v3.a;
 				var rest = A3(
@@ -12856,19 +13036,20 @@ var $author$project$ListItem$parseInnerHtml = function (html) {
 					endIdx + lenEnd,
 					$elm$core$String$length(afterStart),
 					afterStart);
+				var prefixText = $elm$core$String$trim(
+					stripTags(prefix));
+				var prefixBlocks = $elm$core$String$isEmpty(prefixText) ? _List_Nil : _List_fromArray(
+					[
+						$author$project$ContentBlock$TextBlock(prefixText)
+					]);
 				var codeContent = A3($elm$core$String$slice, 0, endIdx, afterStart);
-				var codeLines = $elm$core$String$lines(codeContent);
-				var codeBlock = A2(
-					$elm$core$List$cons,
-					'```',
-					_Utils_ap(
-						codeLines,
-						_List_fromArray(
-							['```'])));
 				return _Utils_ap(
-					processNormal(prefix),
+					prefixBlocks,
 					_Utils_ap(
-						codeBlock,
+						_List_fromArray(
+							[
+								$author$project$ContentBlock$CodeBlock(codeContent)
+							]),
 						helper(rest)));
 			}
 		}
@@ -13522,83 +13703,21 @@ var $author$project$TagPopup$update = F2(
 				return _Utils_Tuple2(model, $elm$core$Maybe$Nothing);
 		}
 	});
-var $elm$core$List$all = F2(
-	function (isOkay, list) {
-		return !A2(
-			$elm$core$List$any,
-			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
-			list);
-	});
-var $author$project$TagsUtils$processContent = function (content) {
-	var isCodeBlock = function (line) {
-		return A2($elm$core$String$startsWith, '```', line);
-	};
-	var processLines = A3(
-		$elm$core$List$foldl,
-		F2(
-			function (line, _v1) {
-				var currentLines = _v1.a;
-				var inCode = _v1.b;
-				var acc = _v1.c;
-				return isCodeBlock(line) ? (inCode ? _Utils_Tuple3(
-					_List_Nil,
-					false,
-					_Utils_ap(
-						acc,
-						_List_fromArray(
-							[
-								_Utils_Tuple2(true, currentLines)
-							]))) : _Utils_Tuple3(
-					_List_Nil,
-					true,
-					$elm$core$List$isEmpty(currentLines) ? acc : _Utils_ap(
-						acc,
-						_List_fromArray(
-							[
-								_Utils_Tuple2(false, currentLines)
-							])))) : (inCode ? _Utils_Tuple3(
-					_Utils_ap(
-						currentLines,
-						_List_fromArray(
-							[line])),
-					inCode,
-					acc) : _Utils_Tuple3(
-					_Utils_ap(
-						currentLines,
-						_List_fromArray(
-							[line])),
-					inCode,
-					acc));
-			}),
-		_Utils_Tuple3(_List_Nil, false, _List_Nil),
-		content);
-	var remainingLines = processLines.a;
-	var blocks = processLines.c;
-	return $elm$core$List$isEmpty(remainingLines) ? blocks : _Utils_ap(
-		blocks,
-		_List_fromArray(
-			[
-				_Utils_Tuple2(false, remainingLines)
-			]));
-};
-var $author$project$ListItem$extractTags = function (lines) {
-	var blocks = $author$project$TagsUtils$processContent(lines);
-	var textBlocks = A2(
+var $author$project$ListItem$extractTags = function (blocks) {
+	var textContent = A2(
 		$elm$core$String$join,
 		'\n',
 		A2(
-			$elm$core$List$concatMap,
-			function (_v2) {
-				var blockLines = _v2.b;
-				return blockLines;
+			$elm$core$List$filterMap,
+			function (block) {
+				if (block.$ === 'TextBlock') {
+					var text = block.a;
+					return $elm$core$Maybe$Just(text);
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
 			},
-			A2(
-				$elm$core$List$filter,
-				function (_v1) {
-					var isCode = _v1.a;
-					return !isCode;
-				},
-				blocks)));
+			blocks));
 	return A2(
 		$elm$core$List$filterMap,
 		function (m) {
@@ -13610,22 +13729,24 @@ var $author$project$ListItem$extractTags = function (lines) {
 				return $elm$core$Maybe$Nothing;
 			}
 		},
-		A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, textBlocks));
+		A2($elm$regex$Regex$find, $author$project$TagsUtils$isTagRegex, textContent));
 };
 var $author$project$ListItem$updateItemContentFn = F4(
-	function (_v0, lines, currentTime, _v1) {
+	function (_v0, blocks, currentTime, _v1) {
 		var current = _v0.a;
 		var item = _v1.a;
 		if (_Utils_eq(item, current)) {
-			var userTags = $author$project$ListItem$extractTags(lines);
+			var userTags = $author$project$ListItem$extractTags(blocks);
 			var hasCodeBlock = A2(
 				$elm$core$List$any,
-				function (_v2) {
-					var isCode = _v2.a;
-					return isCode;
+				function (b) {
+					if (b.$ === 'CodeBlock') {
+						return true;
+					} else {
+						return false;
+					}
 				},
-				$author$project$TagsUtils$processContent(lines));
-			var finalLines = A2($elm$core$List$all, $elm$core$String$isEmpty, lines) ? _List_Nil : lines;
+				blocks);
 			var autoTags = _Utils_ap(
 				_List_fromArray(
 					[
@@ -13640,7 +13761,7 @@ var $author$project$ListItem$updateItemContentFn = F4(
 			return $author$project$ListItem$ListItem(
 				_Utils_update(
 					item,
-					{content: finalLines, tags: allTags, updated: currentTime}));
+					{content: blocks, tags: allTags, updated: currentTime}));
 		} else {
 			return $author$project$ListItem$ListItem(item);
 		}
@@ -13756,15 +13877,16 @@ var $author$project$Main$update = F2(
 					var line = _v1.a;
 					var column = _v1.b;
 					var currentTime = msg.c;
-					var content = $author$project$ListItem$getContent(item);
-					var updatedContent = function () {
+					var lines = $author$project$ContentBlock$contentBlocksToLines(
+						$author$project$ListItem$getContent(item));
+					var updatedLines = function () {
 						var _v2 = $elm$core$List$head(
-							A2($elm$core$List$drop, line, content));
+							A2($elm$core$List$drop, line, lines));
 						if (_v2.$ === 'Just') {
 							var targetLine = _v2.a;
-							var beforeLines = A2($elm$core$List$take, line, content);
+							var beforeLines = A2($elm$core$List$take, line, lines);
 							var before = A2($elm$core$String$left, column, targetLine);
-							var afterLines = A2($elm$core$List$drop, line + 1, content);
+							var afterLines = A2($elm$core$List$drop, line + 1, lines);
 							var after = A2($elm$core$String$dropLeft, column, targetLine);
 							return _Utils_ap(
 								beforeLines,
@@ -13773,9 +13895,10 @@ var $author$project$Main$update = F2(
 										[before, after]),
 									afterLines));
 						} else {
-							return content;
+							return lines;
 						}
 					}();
+					var updatedContent = $author$project$ContentBlock$linesToContentBlocks(updatedLines);
 					var updatedItems = A2(
 						$author$project$ListItem$mapItem,
 						A3($author$project$ListItem$updateItemContentFn, item, updatedContent, currentTime),
@@ -14201,9 +14324,10 @@ var $author$project$Main$update = F2(
 								var _v34 = A2($author$project$ListItem$findInForest, itemId, model.items);
 								if (_v34.$ === 'Just') {
 									var item = _v34.a;
-									if (A2($elm$core$Debug$log, 'line', line) > 0) {
+									if (line > 0) {
 										var targetLine = line - 1;
-										var currentLines = $author$project$ListItem$getContent(item);
+										var currentLines = $author$project$ContentBlock$contentBlocksToLines(
+											$author$project$ListItem$getContent(item));
 										var targetLineText = A2(
 											$elm$core$Maybe$withDefault,
 											'',
@@ -14229,27 +14353,19 @@ var $author$project$Main$update = F2(
 										var _v35 = A2($author$project$ListItem$findPreviousItem, item, model.items);
 										if (_v35.$ === 'Just') {
 											var prevItem = _v35.a;
-											var prevLines = $author$project$ListItem$getContent(prevItem);
-											var targetLine = A2(
-												$elm$core$Debug$log,
-												'targetLine',
-												$elm$core$List$length(prevLines) - 1);
-											var prevId = A2(
-												$elm$core$Debug$log,
-												'prevId',
-												$author$project$ListItem$getId(prevItem));
+											var prevLines = $author$project$ContentBlock$contentBlocksToLines(
+												$author$project$ListItem$getContent(prevItem));
+											var targetLine = $elm$core$List$length(prevLines) - 1;
+											var prevId = $author$project$ListItem$getId(prevItem);
 											var lastLine = A2(
 												$elm$core$Maybe$withDefault,
 												'',
 												$elm$core$List$head(
 													$elm$core$List$reverse(prevLines)));
 											var targetColumn = A2(
-												$elm$core$Debug$log,
-												'targetColumn',
-												A2(
-													$elm$core$Basics$min,
-													column,
-													$elm$core$String$length(lastLine)));
+												$elm$core$Basics$min,
+												column,
+												$elm$core$String$length(lastLine));
 											return _Utils_Tuple2(
 												_Utils_update(
 													model,
@@ -14283,19 +14399,29 @@ var $author$project$Main$update = F2(
 								var _v37 = A2($author$project$ListItem$findInForest, itemId, model.items);
 								if (_v37.$ === 'Just') {
 									var item = _v37.a;
-									var currentLines = $author$project$ListItem$getContent(item);
+									var currentLines = A2(
+										$elm$core$Debug$log,
+										'currentLines',
+										$author$project$ContentBlock$contentBlocksToLines(
+											$author$project$ListItem$getContent(item)));
 									var lastLineIndex = $elm$core$List$length(currentLines) - 1;
 									if (_Utils_cmp(line, lastLineIndex) < 0) {
 										var targetLine = line + 1;
 										var targetLineText = A2(
-											$elm$core$Maybe$withDefault,
-											'',
-											$elm$core$List$head(
-												A2($elm$core$List$drop, targetLine, currentLines)));
+											$elm$core$Debug$log,
+											'targetLineText',
+											A2(
+												$elm$core$Maybe$withDefault,
+												'',
+												$elm$core$List$head(
+													A2($elm$core$List$drop, targetLine, currentLines))));
 										var targetColumn = A2(
-											$elm$core$Basics$min,
-											column,
-											$elm$core$String$length(targetLineText));
+											$elm$core$Debug$log,
+											'targetColumn',
+											A2(
+												$elm$core$Basics$min,
+												column,
+												$elm$core$String$length(targetLineText)));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
@@ -14312,7 +14438,8 @@ var $author$project$Main$update = F2(
 										var _v38 = A2($author$project$ListItem$findNextItem, item, model.items);
 										if (_v38.$ === 'Just') {
 											var nextItem = _v38.a;
-											var nextLines = $author$project$ListItem$getContent(nextItem);
+											var nextLines = $author$project$ContentBlock$contentBlocksToLines(
+												$author$project$ListItem$getContent(nextItem));
 											var nextId = $author$project$ListItem$getId(nextItem);
 											var firstLine = A2(
 												$elm$core$Maybe$withDefault,
@@ -14590,7 +14717,8 @@ var $author$project$Main$update = F2(
 					var _v44 = A2($author$project$ListItem$findPreviousItem, item, model.items);
 					if (_v44.$ === 'Just') {
 						var prevItem = _v44.a;
-						var prevLines = $author$project$ListItem$getContent(prevItem);
+						var prevLines = $author$project$ContentBlock$contentBlocksToLines(
+							$author$project$ListItem$getContent(prevItem));
 						var targetLine = $elm$core$List$length(prevLines) - 1;
 						var prevId = $author$project$ListItem$getId(prevItem);
 						var lastLine = A2(
@@ -14623,7 +14751,8 @@ var $author$project$Main$update = F2(
 					var _v45 = A2($author$project$ListItem$findNextItem, item, model.items);
 					if (_v45.$ === 'Just') {
 						var nextItem = _v45.a;
-						var nextLines = $author$project$ListItem$getContent(nextItem);
+						var nextLines = $author$project$ContentBlock$contentBlocksToLines(
+							$author$project$ListItem$getContent(nextItem));
 						var nextId = $author$project$ListItem$getId(nextItem);
 						var firstLine = A2(
 							$elm$core$Maybe$withDefault,
@@ -14684,6 +14813,13 @@ var $author$project$Theme$container = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'margin', '0 auto'),
 		A2($elm$html$Html$Attributes$style, 'padding', $author$project$Theme$spacing.xl)
 	]);
+var $elm$core$List$all = F2(
+	function (isOkay, list) {
+		return !A2(
+			$elm$core$List$any,
+			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
+			list);
+	});
 var $author$project$ListItem$getTags = function (_v0) {
 	var record = _v0.a;
 	return record.tags;
@@ -14726,7 +14862,18 @@ var $author$project$ListItem$filterItems = F3(
 					A2(
 						$elm$core$String$join,
 						' ',
-						$author$project$ListItem$getContent(item)));
+						A2(
+							$elm$core$List$map,
+							function (block) {
+								if (block.$ === 'TextBlock') {
+									var text = block.a;
+									return text;
+								} else {
+									var code = block.a;
+									return code;
+								}
+							},
+							$author$project$ListItem$getContent(item))));
 				var contentMatches = A2(matches, searchWords, itemContent);
 				return (contentMatches || tagMatches) && selectedTagsMatch;
 			};
@@ -15478,21 +15625,29 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 						} else {
 							switch (key.$) {
 								case 'Backspace':
-									return ($elm$core$List$isEmpty(
-										$author$project$ListItem$getContent(item)) || _Utils_eq(
-										$author$project$ListItem$getContent(item),
-										_List_fromArray(
-											['']))) ? _Utils_Tuple2(
+									var isEmpty = function () {
+										var _v2 = $author$project$ListItem$getContent(item);
+										if (!_v2.b) {
+											return true;
+										} else {
+											if (((_v2.a.$ === 'TextBlock') && (_v2.a.a === '')) && (!_v2.b.b)) {
+												return true;
+											} else {
+												return false;
+											}
+										}
+									}();
+									return isEmpty ? _Utils_Tuple2(
 										config.onDeleteItem(item),
 										true) : _Utils_Tuple2(config.onNoOp, false);
 								case 'Enter':
-									var _v2 = _Utils_Tuple3(
+									var _v3 = _Utils_Tuple3(
 										shift,
 										$author$project$TagPopup$isVisible(config.tagPopup),
 										$author$project$TagPopup$getHighlightedTag(config.tagPopup));
-									if (!_v2.a) {
-										if (_v2.b && (_v2.c.$ === 'Just')) {
-											var tag = _v2.c.a;
+									if (!_v3.a) {
+										if (_v3.b && (_v3.c.$ === 'Just')) {
+											var tag = _v3.c.a;
 											return _Utils_Tuple2(
 												A2(config.onInsertSelectedTagAfter, item, tag),
 												true);
@@ -15521,13 +15676,13 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										config.onTagPopupMsg($author$project$TagPopup$Hide),
 										false);
 								case 'Escape':
-									var _v3 = _Utils_Tuple2(
+									var _v4 = _Utils_Tuple2(
 										$author$project$Clipboard$hasItem(config.clipboard),
 										$author$project$TagPopup$isVisible(config.tagPopup));
-									if (_v3.a) {
+									if (_v4.a) {
 										return _Utils_Tuple2(config.onRestoreCutItem, true);
 									} else {
-										if (_v3.b) {
+										if (_v4.b) {
 											return _Utils_Tuple2(
 												config.onTagPopupMsg($author$project$TagPopup$Hide),
 												true);
@@ -15738,37 +15893,38 @@ var $author$project$Main$viewItemContent = F2(
 					elements));
 		};
 		var staticContent = function () {
-			var viewBlock = function (_v0) {
-				var isCode = _v0.a;
-				var lines = _v0.b;
-				return isCode ? _List_fromArray(
-					[
+			var viewBlock = function (block) {
+				if (block.$ === 'CodeBlock') {
+					var code = block.a;
+					return _List_fromArray(
+						[
+							A2(
+							$elm$html$Html$pre,
+							_List_Nil,
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$code,
+									$author$project$Theme$codeBlock,
+									_List_fromArray(
+										[
+											$elm$html$Html$text(code)
+										]))
+								]))
+						]);
+				} else {
+					var text = block.a;
+					return addBreaks(
 						A2(
-						$elm$html$Html$pre,
-						_List_Nil,
-						_List_fromArray(
-							[
-								A2(
-								$elm$html$Html$code,
-								$author$project$Theme$codeBlock,
-								_List_fromArray(
-									[
-										$elm$html$Html$text(
-										A2($elm$core$String$join, '\n', lines))
-									]))
-							]))
-					]) : addBreaks(
-					A2(
-						$elm$core$List$map,
-						A3(
-							$author$project$Main$viewContentWithSelectedTags,
-							model.items,
-							item,
-							$author$project$SearchToolbar$getSelectedTags(model.searchToolbar)),
-						lines));
+							$elm$core$List$map,
+							A3(
+								$author$project$Main$viewContentWithSelectedTags,
+								model.items,
+								item,
+								$author$project$SearchToolbar$getSelectedTags(model.searchToolbar)),
+							A2($elm$core$String$split, '\n', text)));
+				}
 			};
-			var contentBlocks = $author$project$TagsUtils$processContent(
-				$author$project$ListItem$getContent(item));
 			return $elm$core$List$isEmpty(
 				$author$project$ListItem$getContent(item)) ? _List_fromArray(
 				[
@@ -15779,8 +15935,10 @@ var $author$project$Main$viewItemContent = F2(
 						[
 							$elm$html$Html$text('empty')
 						]))
-				]) : $elm$core$List$concat(
-				A2($elm$core$List$map, viewBlock, contentBlocks));
+				]) : A2(
+				$elm$core$List$concatMap,
+				viewBlock,
+				$author$project$ListItem$getContent(item));
 		}();
 		return A2(
 			$elm$html$Html$div,
@@ -15900,4 +16058,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"SaveItem":["ListItem.ListItem","String.String","Time.Posix"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["ListItem.ListItem"],"OutdentItem":["ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem","String.String"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"SetCursorPosition":["Basics.Int","( Basics.Int, Basics.Int )"],"SetSearchCursor":["Basics.Int"],"GotCursorCoordinates":["Basics.Int","Basics.Int","String.String","Basics.Bool","Basics.Bool"],"ReceiveCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"NoOp":[],"MoveItemUp":["ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["ListItem.ListItem"],"ToggleNoBlur":[],"InsertSelectedTag":["ListItem.ListItem","String.String","( Basics.Int, Basics.Int )","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"],"ItemInput":["ListItem.ListItem","String.String","Time.Posix"],"GetCurrentCursorCoordinates":[],"AddNewLineAfter":["ListItem.ListItem"],"InsertSelectedTagAfter":["ListItem.ListItem","String.String"],"MoveItemUpAfter":["ListItem.ListItem"],"MoveItemDownAfter":["ListItem.ListItem"],"IndentItemAfter":["ListItem.ListItem"],"OutdentItemAfter":["ListItem.ListItem"],"NavigateToPreviousAfter":["ListItem.ListItem"],"NavigateToNextAfter":["ListItem.ListItem"],"SplitLine":["ListItem.ListItem","( Basics.Int, Basics.Int )","Time.Posix"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List String.String, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"ToggleCollapse":["ListItem.ListItem"],"SaveItem":["ListItem.ListItem","String.String","Time.Posix"],"CreateItemAfter":["ListItem.ListItem","Time.Posix"],"CreateItemAtStart":["Time.Posix"],"GetCurrentTime":["Time.Posix -> Main.Msg"],"IndentItem":["ListItem.ListItem"],"OutdentItem":["ListItem.ListItem"],"DeleteItem":["ListItem.ListItem"],"DeleteItemWithChildren":["ListItem.ListItem"],"SaveAndCreateAfter":["ListItem.ListItem","String.String"],"FocusResult":["Result.Result Browser.Dom.Error ()"],"SetCursorPosition":["Basics.Int","( Basics.Int, Basics.Int )"],"SetSearchCursor":["Basics.Int"],"GotCursorCoordinates":["Basics.Int","Basics.Int","String.String","Basics.Bool","Basics.Bool"],"ReceiveCursorPosition":["Basics.Int","Basics.Int","Basics.Int"],"NoOp":[],"MoveItemUp":["ListItem.ListItem"],"SearchToolbarMsg":["SearchToolbar.Msg"],"MoveItemDown":["ListItem.ListItem"],"ToggleNoBlur":[],"InsertSelectedTag":["ListItem.ListItem","String.String","( Basics.Int, Basics.Int )","Time.Posix"],"NavigateToPreviousWithColumn":["ListItem.ListItem","Basics.Int"],"NavigateToNextWithColumn":["ListItem.ListItem","Basics.Int"],"ClipboardMsg":["Clipboard.Msg"],"TagPopupMsg":["TagPopup.Msg"],"ReceiveImportedModel":["Json.Decode.Value"],"ItemInput":["ListItem.ListItem","String.String","Time.Posix"],"GetCurrentCursorCoordinates":[],"AddNewLineAfter":["ListItem.ListItem"],"InsertSelectedTagAfter":["ListItem.ListItem","String.String"],"MoveItemUpAfter":["ListItem.ListItem"],"MoveItemDownAfter":["ListItem.ListItem"],"IndentItemAfter":["ListItem.ListItem"],"OutdentItemAfter":["ListItem.ListItem"],"NavigateToPreviousAfter":["ListItem.ListItem"],"NavigateToNextAfter":["ListItem.ListItem"],"SplitLine":["ListItem.ListItem","( Basics.Int, Basics.Int )","Time.Posix"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"ListItem.ListItem":{"args":[],"tags":{"ListItem":["{ id : Basics.Int, content : List.List ContentBlock.ContentBlock, tags : List.List String.String, children : List.List ListItem.ListItem, collapsed : Basics.Bool, editing : Basics.Bool, created : Time.Posix, updated : Time.Posix }"]}},"Clipboard.Msg":{"args":[],"tags":{"CutItem":["ListItem.ListItem","List.List ListItem.ListItem"],"CopyItem":["ListItem.ListItem","List.List ListItem.ListItem","Time.Posix"],"PasteItem":["ListItem.ListItem","List.List ListItem.ListItem"],"RestoreCutItem":["List.List ListItem.ListItem"]}},"SearchToolbar.Msg":{"args":[],"tags":{"SearchQueryChanged":["String.String","Basics.Int"],"CollapseAllClicked":[],"ExpandAllClicked":[],"SearchKeyDown":["Basics.Int"],"SortOrderChanged":["String.String"],"RemoveSelectedTag":["String.String"],"ClearAllSelectedTags":[],"AddTagToSelected":["String.String"],"ExportModel":[],"ImportModel":[],"NewItemClicked":[]}},"TagPopup.Msg":{"args":[],"tags":{"Hide":[],"NavigateUp":[],"NavigateDown":[],"HighlightTag":["String.String"],"NoOp":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}},"ContentBlock.ContentBlock":{"args":[],"tags":{"TextBlock":["String.String"],"CodeBlock":["String.String"]}},"List.List":{"args":["a"],"tags":{}}}}})}});}(this));

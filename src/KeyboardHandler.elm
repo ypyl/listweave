@@ -1,6 +1,7 @@
 module KeyboardHandler exposing (onKeyDown)
 
 import Clipboard
+import ContentBlock exposing (ContentBlock(..))
 import Html
 import Html.Events exposing (preventDefaultOn)
 import Json.Decode as D
@@ -127,9 +128,15 @@ onKeyDown config item =
                 else
                     case key of
                         Backspace ->
-                            if List.isEmpty (getContent item) || getContent item == [ "" ] then
+                            let
+                                isEmpty = 
+                                    case getContent item of
+                                        [] -> True
+                                        [ TextBlock "" ] -> True
+                                        _ -> False
+                            in
+                            if isEmpty then
                                 ( config.onDeleteItem item, True )
-
                             else
                                 ( config.onNoOp, False )
 

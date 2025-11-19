@@ -1,5 +1,6 @@
 module TagsUtils exposing (..)
 
+import ContentBlock exposing (ContentBlock(..), contentBlocksToLines, linesToContentBlocks)
 import Regex
 
 
@@ -122,44 +123,7 @@ findPrev list current =
                 findPrev (y :: rest) current
 
 
-processContent : List String -> List ( Bool, List String )
-processContent content =
-    let
-        isCodeBlock line =
-            String.startsWith "```" line
 
-        processLines =
-            List.foldl
-                (\line ( currentLines, inCode, acc ) ->
-                    if isCodeBlock line then
-                        if inCode then
-                            -- End of code block, finalize the code block and reset
-                            ( [], False, acc ++ [ ( True, currentLines ) ] )
-                        else
-                            -- Start of code block, save previous lines as text block if any
-                            ( []
-                            , True
-                            , if List.isEmpty currentLines then
-                                acc
-                              else
-                                acc ++ [ ( False, currentLines ) ]
-                            )
-                    else if inCode then
-                        -- Inside code block, collect the line
-                        ( currentLines ++ [ line ], inCode, acc )
-                    else
-                        -- Regular text
-                        ( currentLines ++ [ line ], inCode, acc )
-                )
-                ( [], False, [] )
-                content
-    in
-    case processLines of
-        ( remainingLines, _, blocks ) ->
-            if List.isEmpty remainingLines then
-                blocks
-            else
-                blocks ++ [ ( False, remainingLines ) ]
 
 
 isInsideCodeBlock : Int -> String -> Bool
@@ -185,11 +149,12 @@ isInsideCodeBlock cursorPos content =
             False
 
 
-insertTagAtCursor : List String -> String -> (Int, Int) -> ( List String, (Int, Int) )
-insertTagAtCursor content tag (line, column) =
+insertTagAtCursor : List ContentBlock -> String -> (Int, Int) -> ( List ContentBlock, (Int, Int) )
+insertTagAtCursor blocks tag (line, column) =
     let
+        lines = contentBlocksToLines blocks
         targetLine = 
-            List.drop line content |> List.head |> Maybe.withDefault ""
+            List.drop line lines |> List.head |> Maybe.withDefault ""
         
         beforeColumn = String.left column targetLine
         afterColumn = String.dropLeft column targetLine
@@ -207,11 +172,11 @@ insertTagAtCursor content tag (line, column) =
                 ++ tag
                 ++ afterColumn
         
-        newContent =
-            List.take line content
+        newLines =
+            List.take line lines
                 ++ [ newLine ]
-                ++ List.drop (line + 1) content
+                ++ List.drop (line + 1) lines
         
         newColumn = tagStart + String.length tagPrefix + String.length tag
     in
-    ( newContent, (line, newColumn) )
+    ( linesToContentBlocks newLines, (line, newColumn) )
