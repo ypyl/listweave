@@ -13779,7 +13779,14 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{items: updatedItems}),
+							{
+								items: updatedItems,
+								setCursorPositionTask: $elm$core$Maybe$Just(
+									_Utils_Tuple3(
+										$author$project$ListItem$getId(item),
+										line + 1,
+										0))
+							}),
 						$elm$core$Platform$Cmd$none);
 				case 'GetCurrentCursorCoordinates':
 					return _Utils_Tuple2(

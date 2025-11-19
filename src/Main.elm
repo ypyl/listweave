@@ -276,7 +276,7 @@ update msg model =
                 updatedItems =
                     mapItem (updateItemContentFn item updatedContent currentTime) model.items
             in
-            ( { model | items = updatedItems }, Cmd.none )
+            ( { model | items = updatedItems, setCursorPositionTask = Just ( getId item, line + 1, 0 ) }, Cmd.none )
 
         GetCurrentCursorCoordinates ->
             ( model, requestCursorCoordinates () )
