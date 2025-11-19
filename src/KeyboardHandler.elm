@@ -67,20 +67,21 @@ keyFromCode code =
 onKeyDown :
     { tagPopup : TagPopup.Model
     , clipboard : Clipboard.Model
-    , onMoveItemUp : Int -> ListItem -> msg
-    , onMoveItemDown : Int -> ListItem -> msg
+    , onMoveItemUpAfter : ListItem -> msg
+    , onMoveItemDownAfter : ListItem -> msg
     , onCutItem : ListItem -> msg
     , onCopyItem : ListItem -> msg
     , onPasteItem : ListItem -> msg
     , onDeleteItem : ListItem -> msg
-    , onInsertSelectedTag : ListItem -> String -> Int -> msg
-    , onSaveAndCreateAfter : ListItem -> msg
-    , onIndentItem : Int -> ListItem -> msg
-    , onOutdentItem : Int -> ListItem -> msg
+    , onInsertSelectedTagAfter : ListItem -> String -> msg
+    , onSaveAndCreateAfter : ListItem -> String -> msg
+    , onIndentItemAfter : ListItem -> msg
+    , onOutdentItemAfter : ListItem -> msg
     , onTagPopupMsg : TagPopup.Msg -> msg
-    , onNavigateToPreviousWithColumn : ListItem -> Int -> msg
-    , onNavigateToNextWithColumn : ListItem -> Int -> msg
+    , onNavigateToPreviousAfter : ListItem -> msg
+    , onNavigateToNextAfter : ListItem -> msg
     , onRestoreCutItem : msg
+    , onAddNewLineAfter : ListItem -> msg
     , onNoOp : msg
     }
     -> ListItem
@@ -97,22 +98,19 @@ onKeyDown config item =
         shiftKeyDecoder =
             D.field "shiftKey" D.bool
 
-        cursorPosDecoder =
-            D.field "target" (D.field "selectionStart" D.int)
-
-        valueDecoder =
-            D.field "target" (D.field "value" D.string)
+        innerHtml =
+            D.at ["target", "innerHTML"] (D.string)
     in
     preventDefaultOn "keydown"
-        (D.map5
-            (\key alt shift cursorPos value ->
+        (D.map4
+            (\key alt shift innerHtmlValue ->
                 if alt then
                     case key of
                         Up ->
-                            ( config.onMoveItemUp cursorPos item, True )
+                            ( config.onMoveItemUpAfter item, True )
 
                         Down ->
-                            ( config.onMoveItemDown cursorPos item, True )
+                            ( config.onMoveItemDownAfter item, True )
 
                         X ->
                             ( config.onCutItem item, True )
@@ -138,36 +136,26 @@ onKeyDown config item =
                         Enter ->
                             case ( shift, TagPopup.isVisible config.tagPopup, TagPopup.getHighlightedTag config.tagPopup ) of
                                 ( False, True, Just tag ) ->
-                                    ( config.onInsertSelectedTag item tag cursorPos, True )
+                                    ( config.onInsertSelectedTagAfter item tag, True )
 
                                 ( True, _, _ ) ->
-                                    ( config.onNoOp, False )
+                                    ( config.onAddNewLineAfter item, True )
 
                                 _ ->
-                                    ( config.onSaveAndCreateAfter item, True )
+                                    ( config.onSaveAndCreateAfter item innerHtmlValue, True )
 
                         Tab ->
                             if shift then
-                                ( config.onOutdentItem cursorPos item, True )
+                                ( config.onOutdentItemAfter item, True )
 
                             else
-                                ( config.onIndentItem cursorPos item, True )
+                                ( config.onIndentItemAfter item, True )
 
                         Left ->
-                            case TagsUtils.focusedTag cursorPos value of
-                                Just _ ->
-                                    ( config.onNoOp, False )
-
-                                Nothing ->
-                                    ( config.onTagPopupMsg TagPopup.Hide, False )
+                            ( config.onTagPopupMsg TagPopup.Hide, False )
 
                         Right ->
-                            case TagsUtils.focusedTag cursorPos value of
-                                Just _ ->
-                                    ( config.onNoOp, False )
-
-                                Nothing ->
-                                    ( config.onTagPopupMsg TagPopup.Hide, False )
+                            ( config.onTagPopupMsg TagPopup.Hide, False )
 
                         Escape ->
                             case ( Clipboard.hasItem config.clipboard, TagPopup.isVisible config.tagPopup ) of
@@ -187,29 +175,15 @@ onKeyDown config item =
                             else
                                 let
                                     lines =
-                                        String.lines value
+                                        String.lines innerHtmlValue
 
                                     totalLines =
                                         List.length lines
-
-                                    currentLineIndex =
-                                        String.left cursorPos value
-                                            |> String.lines
-                                            |> List.length
-                                            |> (\n -> n - 1)
                                 in
-                                if currentLineIndex >= totalLines - 1 then
-                                    let
-                                        currentLine =
-                                            String.left cursorPos value |> String.lines |> List.reverse |> List.head |> Maybe.withDefault ""
-
-                                        columnPos =
-                                            String.length currentLine
-                                    in
-                                    ( config.onNavigateToNextWithColumn item columnPos, True )
-
-                                else
+                                if totalLines > 1 then
                                     ( config.onNoOp, False )
+                                else
+                                    ( config.onNavigateToNextAfter item, True )
 
                         Up ->
                             if TagPopup.isVisible config.tagPopup then
@@ -217,22 +191,11 @@ onKeyDown config item =
 
                             else
                                 let
-                                    currentLineIndex =
-                                        String.left cursorPos value
-                                            |> String.lines
-                                            |> List.length
-                                            |> (\n -> n - 1)
+                                    lines =
+                                        String.lines innerHtmlValue
                                 in
-                                if currentLineIndex <= 0 then
-                                    let
-                                        currentLine =
-                                            String.left cursorPos value |> String.lines |> List.reverse |> List.head |> Maybe.withDefault ""
-
-                                        columnPos =
-                                            String.length currentLine
-                                    in
-                                    ( config.onNavigateToPreviousWithColumn item columnPos, True )
-
+                                if List.length lines <= 1 then
+                                    ( config.onNavigateToPreviousAfter item, True )
                                 else
                                     ( config.onNoOp, False )
 
@@ -242,6 +205,5 @@ onKeyDown config item =
             keyDecoder
             altKeyDecoder
             shiftKeyDecoder
-            cursorPosDecoder
-            valueDecoder
+            innerHtml
         )

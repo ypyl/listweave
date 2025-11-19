@@ -242,6 +242,13 @@ textarea =
     ]
 
 
+editableDiv : List (Html.Attribute msg)
+editableDiv =
+    textarea
+        ++ [ style "min-height" "1.8em"
+           ]
+
+
 content : List (Html.Attribute msg)
 content =
     [ style "white-space" "pre-wrap"
@@ -384,9 +391,9 @@ indentStyle level =
     [ style "margin-left" (String.fromInt (level * 24) ++ "px") ]
 
 
-positionStyle : Int -> Int -> Int -> List (Html.Attribute msg)
-positionStyle top left width =
+positionStyle : Int -> Int -> List (Html.Attribute msg)
+positionStyle top left =
     [ style "top" (String.fromInt top ++ "px")
     , style "left" (String.fromInt left ++ "px")
-    , style "width" (String.fromInt width ++ "px")
+    , style "width" "auto"
     ]
