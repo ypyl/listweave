@@ -171,33 +171,14 @@ onKeyDown config item =
                         Down ->
                             if TagPopup.isVisible config.tagPopup then
                                 ( config.onTagPopupMsg TagPopup.NavigateDown, True )
-
                             else
-                                let
-                                    lines =
-                                        String.lines innerHtmlValue
-
-                                    totalLines =
-                                        List.length lines
-                                in
-                                if totalLines > 1 then
-                                    ( config.onNoOp, False )
-                                else
-                                    ( config.onNavigateToNextAfter item, True )
+                                ( config.onNavigateToNextAfter item, True )
 
                         Up ->
                             if TagPopup.isVisible config.tagPopup then
                                 ( config.onTagPopupMsg TagPopup.NavigateUp, True )
-
                             else
-                                let
-                                    lines =
-                                        String.lines innerHtmlValue
-                                in
-                                if List.length lines <= 1 then
-                                    ( config.onNavigateToPreviousAfter item, True )
-                                else
-                                    ( config.onNoOp, False )
+                                ( config.onNavigateToPreviousAfter item, True )
 
                         _ ->
                             ( config.onNoOp, False )

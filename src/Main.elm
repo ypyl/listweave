@@ -471,35 +471,56 @@ update msg model =
                 Just NavigatePreviousData ->
                     case findInForest itemId model.items of
                         Just item ->
-                            case findPreviousItem item model.items of
-                                Just prevItem ->
-                                    let
-                                        prevId = getId prevItem
-                                        prevLines = getContent prevItem
-                                        lastLine = List.reverse prevLines |> List.head |> Maybe.withDefault ""
-                                        targetColumn = min column (String.length lastLine)
-                                        targetLine = List.length prevLines - 1
-                                    in
-                                    ( { model | items = mapItem (editItemFn prevId) model.items, setCursorPositionTask = Just ( prevId, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
-                                Nothing ->
-                                    ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                            if (line |> Debug.log "line") > 0 then
+                                let
+                                    currentLines = getContent item
+                                    targetLine = line - 1
+                                    targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
+                                    targetColumn = min column (String.length targetLineText)
+                                in
+                                ( { model | setCursorPositionTask = Just ( getId item, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                            else
+                                case findPreviousItem item model.items of
+                                    Just prevItem ->
+                                        let
+                                            prevId = getId prevItem |> Debug.log "prevId"
+                                            prevLines = getContent prevItem
+                                            lastLine = List.reverse prevLines |> List.head |> Maybe.withDefault ""
+                                            targetColumn = min column (String.length lastLine) |> Debug.log "targetColumn"
+                                            targetLine = (List.length prevLines - 1) |> Debug.log "targetLine"
+                                        in
+                                        ( { model | items = mapItem (editItemFn prevId) model.items, setCursorPositionTask = Just ( prevId, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                                    Nothing ->
+                                        ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
                         Nothing ->
                             ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
 
                 Just NavigateNextData ->
                     case findInForest itemId model.items of
                         Just item ->
-                            case findNextItem item model.items of
-                                Just nextItem ->
-                                    let
-                                        nextId = getId nextItem
-                                        nextLines = getContent nextItem
-                                        firstLine = List.head nextLines |> Maybe.withDefault ""
-                                        targetColumn = min column (String.length firstLine)
-                                    in
-                                    ( { model | items = mapItem (editItemFn nextId) model.items, setCursorPositionTask = Just ( nextId, 0, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
-                                Nothing ->
-                                    ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                            let
+                                currentLines = getContent item
+                                lastLineIndex = List.length currentLines - 1
+                            in
+                            if line < lastLineIndex then
+                                let
+                                    targetLine = line + 1
+                                    targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
+                                    targetColumn = min column (String.length targetLineText)
+                                in
+                                ( { model | setCursorPositionTask = Just ( getId item, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                            else
+                                case findNextItem item model.items of
+                                    Just nextItem ->
+                                        let
+                                            nextId = getId nextItem
+                                            nextLines = getContent nextItem
+                                            firstLine = List.head nextLines |> Maybe.withDefault ""
+                                            targetColumn = min column (String.length firstLine)
+                                        in
+                                        ( { model | items = mapItem (editItemFn nextId) model.items, setCursorPositionTask = Just ( nextId, 0, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                                    Nothing ->
+                                        ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
                         Nothing ->
                             ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
 

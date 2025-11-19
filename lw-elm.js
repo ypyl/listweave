@@ -11762,14 +11762,18 @@ var $author$project$ListItem$findNextItem = F2(
 			},
 			A2($author$project$ListItem$elemIndex, target, visibleItems));
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$ListItem$findPreviousItem = F2(
 	function (target, items) {
 		var visibleItems = $author$project$ListItem$flattenVisibleItems(items);
 		return A2(
 			$elm$core$Maybe$andThen,
 			function (index) {
-				return (index > 0) ? $elm$core$List$head(
-					A2($elm$core$List$drop, index - 1, visibleItems)) : $elm$core$Maybe$Nothing;
+				return (index > 0) ? A2(
+					$elm$core$Debug$log,
+					'visibleItems',
+					$elm$core$List$head(
+						A2($elm$core$List$drop, index - 1, visibleItems))) : $elm$core$Maybe$Nothing;
 			},
 			A2($author$project$ListItem$elemIndex, target, visibleItems));
 	});
@@ -14197,40 +14201,75 @@ var $author$project$Main$update = F2(
 								var _v34 = A2($author$project$ListItem$findInForest, itemId, model.items);
 								if (_v34.$ === 'Just') {
 									var item = _v34.a;
-									var _v35 = A2($author$project$ListItem$findPreviousItem, item, model.items);
-									if (_v35.$ === 'Just') {
-										var prevItem = _v35.a;
-										var prevLines = $author$project$ListItem$getContent(prevItem);
-										var targetLine = $elm$core$List$length(prevLines) - 1;
-										var prevId = $author$project$ListItem$getId(prevItem);
-										var lastLine = A2(
+									if (A2($elm$core$Debug$log, 'line', line) > 0) {
+										var targetLine = line - 1;
+										var currentLines = $author$project$ListItem$getContent(item);
+										var targetLineText = A2(
 											$elm$core$Maybe$withDefault,
 											'',
 											$elm$core$List$head(
-												$elm$core$List$reverse(prevLines)));
+												A2($elm$core$List$drop, targetLine, currentLines)));
 										var targetColumn = A2(
 											$elm$core$Basics$min,
 											column,
-											$elm$core$String$length(lastLine));
+											$elm$core$String$length(targetLineText));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
 												{
-													items: A2(
-														$author$project$ListItem$mapItem,
-														$author$project$ListItem$editItemFn(prevId),
-														model.items),
 													receiveCursorPositionTask: $elm$core$Maybe$Nothing,
 													setCursorPositionTask: $elm$core$Maybe$Just(
-														_Utils_Tuple3(prevId, targetLine, targetColumn))
+														_Utils_Tuple3(
+															$author$project$ListItem$getId(item),
+															targetLine,
+															targetColumn))
 												}),
 											$elm$core$Platform$Cmd$none);
 									} else {
-										return _Utils_Tuple2(
-											_Utils_update(
-												model,
-												{receiveCursorPositionTask: $elm$core$Maybe$Nothing}),
-											$elm$core$Platform$Cmd$none);
+										var _v35 = A2($author$project$ListItem$findPreviousItem, item, model.items);
+										if (_v35.$ === 'Just') {
+											var prevItem = _v35.a;
+											var prevLines = $author$project$ListItem$getContent(prevItem);
+											var targetLine = A2(
+												$elm$core$Debug$log,
+												'targetLine',
+												$elm$core$List$length(prevLines) - 1);
+											var prevId = A2(
+												$elm$core$Debug$log,
+												'prevId',
+												$author$project$ListItem$getId(prevItem));
+											var lastLine = A2(
+												$elm$core$Maybe$withDefault,
+												'',
+												$elm$core$List$head(
+													$elm$core$List$reverse(prevLines)));
+											var targetColumn = A2(
+												$elm$core$Debug$log,
+												'targetColumn',
+												A2(
+													$elm$core$Basics$min,
+													column,
+													$elm$core$String$length(lastLine)));
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{
+														items: A2(
+															$author$project$ListItem$mapItem,
+															$author$project$ListItem$editItemFn(prevId),
+															model.items),
+														receiveCursorPositionTask: $elm$core$Maybe$Nothing,
+														setCursorPositionTask: $elm$core$Maybe$Just(
+															_Utils_Tuple3(prevId, targetLine, targetColumn))
+													}),
+												$elm$core$Platform$Cmd$none);
+										} else {
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{receiveCursorPositionTask: $elm$core$Maybe$Nothing}),
+												$elm$core$Platform$Cmd$none);
+										}
 									}
 								} else {
 									return _Utils_Tuple2(
@@ -14244,38 +14283,65 @@ var $author$project$Main$update = F2(
 								var _v37 = A2($author$project$ListItem$findInForest, itemId, model.items);
 								if (_v37.$ === 'Just') {
 									var item = _v37.a;
-									var _v38 = A2($author$project$ListItem$findNextItem, item, model.items);
-									if (_v38.$ === 'Just') {
-										var nextItem = _v38.a;
-										var nextLines = $author$project$ListItem$getContent(nextItem);
-										var nextId = $author$project$ListItem$getId(nextItem);
-										var firstLine = A2(
+									var currentLines = $author$project$ListItem$getContent(item);
+									var lastLineIndex = $elm$core$List$length(currentLines) - 1;
+									if (_Utils_cmp(line, lastLineIndex) < 0) {
+										var targetLine = line + 1;
+										var targetLineText = A2(
 											$elm$core$Maybe$withDefault,
 											'',
-											$elm$core$List$head(nextLines));
+											$elm$core$List$head(
+												A2($elm$core$List$drop, targetLine, currentLines)));
 										var targetColumn = A2(
 											$elm$core$Basics$min,
 											column,
-											$elm$core$String$length(firstLine));
+											$elm$core$String$length(targetLineText));
 										return _Utils_Tuple2(
 											_Utils_update(
 												model,
 												{
-													items: A2(
-														$author$project$ListItem$mapItem,
-														$author$project$ListItem$editItemFn(nextId),
-														model.items),
 													receiveCursorPositionTask: $elm$core$Maybe$Nothing,
 													setCursorPositionTask: $elm$core$Maybe$Just(
-														_Utils_Tuple3(nextId, 0, targetColumn))
+														_Utils_Tuple3(
+															$author$project$ListItem$getId(item),
+															targetLine,
+															targetColumn))
 												}),
 											$elm$core$Platform$Cmd$none);
 									} else {
-										return _Utils_Tuple2(
-											_Utils_update(
-												model,
-												{receiveCursorPositionTask: $elm$core$Maybe$Nothing}),
-											$elm$core$Platform$Cmd$none);
+										var _v38 = A2($author$project$ListItem$findNextItem, item, model.items);
+										if (_v38.$ === 'Just') {
+											var nextItem = _v38.a;
+											var nextLines = $author$project$ListItem$getContent(nextItem);
+											var nextId = $author$project$ListItem$getId(nextItem);
+											var firstLine = A2(
+												$elm$core$Maybe$withDefault,
+												'',
+												$elm$core$List$head(nextLines));
+											var targetColumn = A2(
+												$elm$core$Basics$min,
+												column,
+												$elm$core$String$length(firstLine));
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{
+														items: A2(
+															$author$project$ListItem$mapItem,
+															$author$project$ListItem$editItemFn(nextId),
+															model.items),
+														receiveCursorPositionTask: $elm$core$Maybe$Nothing,
+														setCursorPositionTask: $elm$core$Maybe$Just(
+															_Utils_Tuple3(nextId, 0, targetColumn))
+													}),
+												$elm$core$Platform$Cmd$none);
+										} else {
+											return _Utils_Tuple2(
+												_Utils_update(
+													model,
+													{receiveCursorPositionTask: $elm$core$Maybe$Nothing}),
+												$elm$core$Platform$Cmd$none);
+										}
 									}
 								} else {
 									return _Utils_Tuple2(
@@ -15470,28 +15536,17 @@ var $author$project$KeyboardHandler$onKeyDown = F2(
 										}
 									}
 								case 'Down':
-									if ($author$project$TagPopup$isVisible(config.tagPopup)) {
-										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$NavigateDown),
-											true);
-									} else {
-										var lines = $elm$core$String$lines(innerHtmlValue);
-										var totalLines = $elm$core$List$length(lines);
-										return (totalLines > 1) ? _Utils_Tuple2(config.onNoOp, false) : _Utils_Tuple2(
-											config.onNavigateToNextAfter(item),
-											true);
-									}
+									return $author$project$TagPopup$isVisible(config.tagPopup) ? _Utils_Tuple2(
+										config.onTagPopupMsg($author$project$TagPopup$NavigateDown),
+										true) : _Utils_Tuple2(
+										config.onNavigateToNextAfter(item),
+										true);
 								case 'Up':
-									if ($author$project$TagPopup$isVisible(config.tagPopup)) {
-										return _Utils_Tuple2(
-											config.onTagPopupMsg($author$project$TagPopup$NavigateUp),
-											true);
-									} else {
-										var lines = $elm$core$String$lines(innerHtmlValue);
-										return ($elm$core$List$length(lines) <= 1) ? _Utils_Tuple2(
-											config.onNavigateToPreviousAfter(item),
-											true) : _Utils_Tuple2(config.onNoOp, false);
-									}
+									return $author$project$TagPopup$isVisible(config.tagPopup) ? _Utils_Tuple2(
+										config.onTagPopupMsg($author$project$TagPopup$NavigateUp),
+										true) : _Utils_Tuple2(
+										config.onNavigateToPreviousAfter(item),
+										true);
 								default:
 									return _Utils_Tuple2(config.onNoOp, false);
 							}

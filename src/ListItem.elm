@@ -828,7 +828,7 @@ findPreviousItem target items =
         |> Maybe.andThen
             (\index ->
                 if index > 0 then
-                    List.head (List.drop (index - 1) visibleItems)
+                    List.head (List.drop (index - 1) visibleItems) |> Debug.log "visibleItems"
 
                 else
                     Nothing

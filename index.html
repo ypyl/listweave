@@ -144,13 +144,13 @@
               currentLine++;
               currentColumn = 0;
             } else if (node.nodeName === "CODE") {
-              currentLine++;
+              currentLine += 2;
               currentColumn = 0;
               for (let child of node.childNodes) {
                 traverse(child);
                 if (found) return;
               }
-              currentLine++;
+              currentLine += 2;
             } else {
               for (let child of node.childNodes) {
                 traverse(child);
