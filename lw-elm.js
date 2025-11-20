@@ -15449,11 +15449,6 @@ var $author$project$Theme$codeBlock = _List_fromArray(
 		A2($elm$html$Html$Attributes$style, 'margin', $author$project$Theme$spacing.xs + ' 0'),
 		A2($elm$html$Html$Attributes$style, 'font-family', $author$project$Theme$typography.fontFamilyMono)
 	]);
-var $author$project$Theme$contentEmpty = _List_fromArray(
-	[
-		A2($elm$html$Html$Attributes$style, 'color', $author$project$Theme$colors.textPlaceholder),
-		A2($elm$html$Html$Attributes$style, 'line-height', $author$project$Theme$typography.lineHeight)
-	]);
 var $author$project$Theme$textarea = _List_fromArray(
 	[
 		A2($elm$html$Html$Attributes$style, 'box-sizing', 'border-box'),
@@ -15879,17 +15874,7 @@ var $author$project$Main$viewItemContent = F2(
 							A2($elm$core$String$split, '\n', text)));
 				}
 			};
-			return $elm$core$List$isEmpty(
-				$author$project$ListItem$getContent(item)) ? _List_fromArray(
-				[
-					A2(
-					$elm$html$Html$span,
-					$author$project$Theme$contentEmpty,
-					_List_fromArray(
-						[
-							$elm$html$Html$text('empty')
-						]))
-				]) : A2(
+			return A2(
 				$elm$core$List$concatMap,
 				viewBlock,
 				$author$project$ListItem$getContent(item));

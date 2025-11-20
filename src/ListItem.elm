@@ -1,13 +1,13 @@
 module ListItem exposing (..)
 
 import Actions exposing (SortOrder(..))
-import ContentBlock exposing (ContentBlock(..), contentBlocksToLines)
+import ContentBlock exposing (ContentBlock(..))
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Regex
 import Set
 import TagsUtils exposing (isTagRegex)
-import Time exposing (Month(..), Posix, millisToPosix, posixToMillis, toDay, toMonth, toYear)
+import Time exposing (Month(..), Posix)
 
 
 type ListItem

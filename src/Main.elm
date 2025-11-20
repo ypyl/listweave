@@ -7,8 +7,8 @@ import Browser.Events
 import Clipboard
 import ContentBlock exposing (ContentBlock(..), contentBlocksToLines, linesToContentBlocks)
 import Html exposing (Html, br, code, div, pre, span, text)
-import Html.Attributes exposing (attribute, id, style, target)
-import Html.Events exposing (on, onBlur, onClick, onInput, stopPropagationOn)
+import Html.Attributes exposing (attribute, style)
+import Html.Events exposing (on, onClick,stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
@@ -610,7 +610,7 @@ update msg model =
                     insertItemAfter item newId model.items currentTime |> mapItem (editItemFn newId)
             in
             ( { model | items = newItems }
-            , Task.attempt FocusResult (Browser.Dom.focus ("input-id-" ++ String.fromInt newId))
+            , Cmd.none
             )
 
         CreateItemAtStart currentTime ->
@@ -787,11 +787,7 @@ viewItemContent model item =
                                 |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar))
                                 |> addBreaks
             in
-            if List.isEmpty (getContent item) then
-                [ span Theme.contentEmpty [ text "empty" ] ]
-
-            else
-                List.concatMap viewBlock (getContent item)
+            List.concatMap viewBlock (getContent item)
 
         onBlurCustom =
             if model.noBlur then

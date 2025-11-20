@@ -7,7 +7,6 @@ import Html.Events exposing (preventDefaultOn)
 import Json.Decode as D
 import ListItem exposing (ListItem, getContent)
 import TagPopup
-import TagsUtils
 
 
 type Key
@@ -129,7 +128,7 @@ onKeyDown config item =
                     case key of
                         Backspace ->
                             let
-                                isEmpty = 
+                                isEmpty =
                                     case getContent item of
                                         [] -> True
                                         [ TextBlock "" ] -> True

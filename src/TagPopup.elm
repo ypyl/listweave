@@ -20,7 +20,6 @@ module TagPopup exposing
 
 import Actions exposing (TagPopupAction)
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (id)
 import Html.Events exposing (onClick, stopPropagationOn)
 import TagsUtils
 import Theme
