@@ -13,6 +13,8 @@
 
       app.ports.requestCursorPosition.subscribe(function (data) {
         const itemId = data.itemId;
+        const element = document.getElementById("item-" + itemId);
+        const innerHTML = element ? element.innerHTML : "";
         const sel = window.getSelection();
         if (sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
@@ -95,6 +97,7 @@
               line: line,
               column: column,
               itemId: itemId,
+              innerHTML: innerHTML,
             });
           }
         }
@@ -351,8 +354,8 @@
         }
 
         if (!coordsRect) {
-          if (app.ports && app.ports.receiveCursorPosition) {
-            app.ports.receiveCursorPosition.send(fallback);
+          if (app.ports && app.ports.receiveCursorCoordinates) {
+            app.ports.receiveCursorCoordinates.send(fallback);
           }
           return;
         }

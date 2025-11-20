@@ -193,13 +193,13 @@ type Msg
     | SetCursorPosition Int ( Int, Int )
     | SetSearchCursor Int
     | GotCursorCoordinates Int Int String Bool Bool
-    | ReceiveCursorPosition Int Int Int
+    | ReceiveCursorPosition Int Int Int String Posix
     | NoOp
     | MoveItemUp ListItem
     | SearchToolbarMsg SearchToolbar.Msg
     | MoveItemDown ListItem
     | ToggleNoBlur
-    | InsertSelectedTag ListItem String (Int, Int) Posix
+    | InsertSelectedTag ListItem String ( Int, Int ) Posix
     | NavigateToPreviousWithColumn ListItem Int
     | NavigateToNextWithColumn ListItem Int
     | ClipboardMsg Clipboard.Msg
@@ -225,46 +225,60 @@ update msg model =
             ( model, Cmd.none )
 
         AddNewLineAfter item ->
-            ( {model | receiveCursorPositionTask = Just SplitLineData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just SplitLineData }, requestCursorPosition { itemId = getId item } )
 
         InsertSelectedTagAfter item tag ->
-            ( {model | receiveCursorPositionTask = Just (TagInsertData tag) }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just (TagInsertData tag) }, requestCursorPosition { itemId = getId item } )
 
         MoveItemUpAfter item ->
-            ( {model | receiveCursorPositionTask = Just MoveUpData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just MoveUpData }, requestCursorPosition { itemId = getId item } )
 
         MoveItemDownAfter item ->
-            ( {model | receiveCursorPositionTask = Just MoveDownData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just MoveDownData }, requestCursorPosition { itemId = getId item } )
 
         IndentItemAfter item ->
-            ( {model | receiveCursorPositionTask = Just IndentData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just IndentData }, requestCursorPosition { itemId = getId item } )
 
         OutdentItemAfter item ->
-            ( {model | receiveCursorPositionTask = Just OutdentData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just OutdentData }, requestCursorPosition { itemId = getId item } )
 
         NavigateToPreviousAfter item ->
-            ( {model | receiveCursorPositionTask = Just NavigatePreviousData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just NavigatePreviousData }, requestCursorPosition { itemId = getId item } )
 
         NavigateToNextAfter item ->
-            ( {model | receiveCursorPositionTask = Just NavigateNextData }, requestCursorPosition { itemId = getId item } )
+            ( { model | receiveCursorPositionTask = Just NavigateNextData }, requestCursorPosition { itemId = getId item } )
 
         SplitLine item ( line, column ) currentTime ->
             let
-                lines = contentBlocksToLines (getContent item)
+                lines =
+                    contentBlocksToLines (getContent item)
+
                 updatedLines =
                     case List.head (List.drop line lines) of
                         Just targetLine ->
                             let
-                                before = String.left column targetLine
-                                after = String.dropLeft column targetLine
-                                beforeLines = List.take line lines
-                                afterLines = List.drop (line + 1) lines
+                                before =
+                                    String.left column targetLine
+
+                                after =
+                                    String.dropLeft column targetLine
+
+                                beforeLines =
+                                    List.take line lines
+
+                                afterLines =
+                                    List.drop (line + 1) lines
                             in
                             beforeLines ++ [ before, after ] ++ afterLines
+
                         Nothing ->
                             lines
-                updatedContent = linesToContentBlocks updatedLines
-                updatedItems = mapItem (updateItemContentFn item updatedContent currentTime) model.items
+
+                updatedContent =
+                    linesToContentBlocks updatedLines
+
+                updatedItems =
+                    mapItem (updateItemContentFn item updatedContent currentTime) model.items
             in
             ( { model | items = updatedItems, setCursorPositionTask = Just ( getId item, line + 1, 0 ) }, Cmd.none )
 
@@ -404,153 +418,127 @@ update msg model =
         SetSearchCursor pos ->
             ( { model | searchToolbar = resetUpdatedCursorPosition model.searchToolbar }, setSearchInputCursor pos )
 
-        ReceiveCursorPosition line column itemId ->
-            case model.receiveCursorPositionTask of
-                Just SplitLineData ->
+        ReceiveCursorPosition line column itemId innerHTML currentTime ->
+            case findInForest itemId model.items of
+                Just item ->
                     let
-                        targetItem =
-                            findInForest itemId model.items
+                        lines =
+                            ListItem.parseInnerHtml innerHTML
+
+                        updatedModel =
+                            { model | items = mapItem (updateItemContentFn item lines currentTime) model.items }
+
+                        updatedItem =
+                            findInForest itemId updatedModel.items |> Maybe.withDefault item
                     in
-                    case targetItem of
-                        Just item ->
-                            update (GetCurrentTime (SplitLine item ( line, column ))) { model | receiveCursorPositionTask = Nothing }
+                    case updatedModel.receiveCursorPositionTask of
+                        Just SplitLineData ->
+                            update (SplitLine updatedItem ( line, column ) currentTime ) { updatedModel | receiveCursorPositionTask = Nothing }
 
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                        Just (TagInsertData tag) ->
+                            update (InsertSelectedTag updatedItem tag ( line, column ) currentTime) { updatedModel | receiveCursorPositionTask = Nothing }
 
-                Just (TagInsertData tag) ->
-                    case findInForest itemId model.items of
-                        Just item ->
-                            update (GetCurrentTime (InsertSelectedTag item tag (line, column))) { model | receiveCursorPositionTask = Nothing }
+                        Just MoveUpData ->
+                            ( { updatedModel | noBlur = True, items = moveItemInTree ListItem.moveItemUp updatedItem updatedModel.items, setCursorPositionTask = Just ( getId updatedItem, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
 
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                        Just MoveDownData ->
+                            ( { updatedModel | noBlur = True, items = moveItemInTree ListItem.moveItemDown updatedItem updatedModel.items, setCursorPositionTask = Just ( getId updatedItem, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
 
-                Just MoveUpData ->
-                    case findInForest itemId model.items of
-                        Just item ->
-                            ( { model | noBlur = True, items = moveItemInTree ListItem.moveItemUp item model.items, setCursorPositionTask = Just ( getId item, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                        Just IndentData ->
+                            ( { updatedModel | noBlur = True, items = indentItem updatedItem updatedModel.items, setCursorPositionTask = Just ( getId updatedItem, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
 
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                        Just OutdentData ->
+                            ( { updatedModel | noBlur = True, items = outdentItem updatedItem updatedModel.items, setCursorPositionTask = Just ( getId updatedItem, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
 
-                Just MoveDownData ->
-                    case findInForest itemId model.items of
-                        Just item ->
-                            ( { model | noBlur = True, items = moveItemInTree ListItem.moveItemDown item model.items, setCursorPositionTask = Just ( getId item, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
-
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
-
-                Just IndentData ->
-                    case findInForest itemId model.items of
-                        Just item ->
-                            ( { model | noBlur = True, items = indentItem item model.items, setCursorPositionTask = Just ( getId item, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
-
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
-
-                Just OutdentData ->
-                    case findInForest itemId model.items of
-                        Just item ->
-                            ( { model | noBlur = True, items = outdentItem item model.items, setCursorPositionTask = Just ( getId item, line, column ), receiveCursorPositionTask = Nothing }, Cmd.none )
-
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
-
-                Just NavigatePreviousData ->
-                    case findInForest itemId model.items of
-                        Just item ->
+                        Just NavigatePreviousData ->
                             if line > 0 then
                                 let
-                                    currentLines = contentBlocksToLines (getContent item)
-                                    targetLine = line - 1
-                                    targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
-                                    targetColumn = min column (String.length targetLineText)
+                                    currentLines =
+                                        contentBlocksToLines (getContent updatedItem)
+
+                                    targetLine =
+                                        line - 1
+
+                                    targetLineText =
+                                        List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
+
+                                    targetColumn =
+                                        min column (String.length targetLineText)
                                 in
-                                ( { model | setCursorPositionTask = Just ( getId item, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                                ( { updatedModel | setCursorPositionTask = Just ( getId updatedItem, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+
                             else
-                                case findPreviousItem item model.items of
+                                case findPreviousItem updatedItem updatedModel.items of
                                     Just prevItem ->
                                         let
-                                            prevId = getId prevItem
-                                            prevLines = contentBlocksToLines (getContent prevItem)
-                                            lastLine = List.reverse prevLines |> List.head |> Maybe.withDefault ""
-                                            targetColumn = min column (String.length lastLine)
-                                            targetLine = List.length prevLines - 1
-                                        in
-                                        ( { model | items = mapItem (editItemFn prevId) model.items, setCursorPositionTask = Just ( prevId, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
-                                    Nothing ->
-                                        ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
-                        Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                                            prevId =
+                                                getId prevItem
 
-                Just NavigateNextData ->
-                    case findInForest itemId model.items of
-                        Just item ->
+                                            prevLines =
+                                                contentBlocksToLines (getContent prevItem)
+
+                                            lastLine =
+                                                List.reverse prevLines |> List.head |> Maybe.withDefault ""
+
+                                            targetColumn =
+                                                min column (String.length lastLine)
+
+                                            targetLine =
+                                                List.length prevLines - 1
+                                        in
+                                        ( { updatedModel | items = mapItem (editItemFn prevId) updatedModel.items, setCursorPositionTask = Just ( prevId, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+
+                                    Nothing ->
+                                        ( { updatedModel | receiveCursorPositionTask = Nothing }, Cmd.none )
+
+                        Just NavigateNextData ->
                             let
-                                currentLines = contentBlocksToLines (getContent item) |> Debug.log "currentLines"
-                                lastLineIndex = List.length currentLines - 1
+                                currentLines =
+                                    contentBlocksToLines (getContent updatedItem)
+
+                                lastLineIndex =
+                                    List.length currentLines - 1
                             in
                             if line < lastLineIndex then
                                 let
-                                    targetLine = line + 1
-                                    targetLineText = List.drop targetLine currentLines |> List.head |> Maybe.withDefault "" |> Debug.log "targetLineText"
-                                    targetColumn = min column (String.length targetLineText) |> Debug.log "targetColumn"
+                                    targetLine =
+                                        line + 1
+
+                                    targetLineText =
+                                        List.drop targetLine currentLines |> List.head |> Maybe.withDefault ""
+
+                                    targetColumn =
+                                        min column (String.length targetLineText)
                                 in
-                                ( { model | setCursorPositionTask = Just ( getId item, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                                ( { updatedModel | setCursorPositionTask = Just ( getId item, targetLine, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+
                             else
-                                case findNextItem item model.items of
+                                case findNextItem item updatedModel.items of
                                     Just nextItem ->
                                         let
-                                            nextId = getId nextItem
-                                            nextLines = contentBlocksToLines (getContent nextItem)
-                                            firstLine = List.head nextLines |> Maybe.withDefault ""
-                                            targetColumn = min column (String.length firstLine)
+                                            nextId =
+                                                getId nextItem
+
+                                            nextLines =
+                                                contentBlocksToLines (getContent nextItem)
+
+                                            firstLine =
+                                                List.head nextLines |> Maybe.withDefault ""
+
+                                            targetColumn =
+                                                min column (String.length firstLine)
                                         in
-                                        ( { model | items = mapItem (editItemFn nextId) model.items, setCursorPositionTask = Just ( nextId, 0, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+                                        ( { updatedModel | items = mapItem (editItemFn nextId) updatedModel.items, setCursorPositionTask = Just ( nextId, 0, targetColumn ), receiveCursorPositionTask = Nothing }, Cmd.none )
+
                                     Nothing ->
-                                        ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                                        ( { updatedModel | receiveCursorPositionTask = Nothing }, Cmd.none )
+
                         Nothing ->
-                            ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
+                            ( updatedModel, Cmd.none )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( { model | receiveCursorPositionTask = Nothing }, Cmd.none )
 
-        -- ( { model | pendingTagInsertion = Nothing }, Cmd.none )
-        --     |> (\( m, c ) -> update (GetCurrentTime (InsertSelectedTag item tag cursorPos)) m |> Tuple.mapSecond (\cmd -> Cmd.batch [ c, cmd ]))
-        -- UpdateItemContent item content cursorPos currentTime ->
-        --     let
-        --         itemId =
-        --             getId item
-        --     in
-        --     case isInsideTagBrackets cursorPos content of
-        --         Just ( tagSearchPrefix, tag ) ->
-        --             let
-        --                 matchingTags =
-        --                     getAllTags model.items
-        --                         |> List.filter (String.startsWith tagSearchPrefix)
-        --                         |> List.filter ((/=) tag)
-        --                 updatedTagPopup =
-        --                     if List.isEmpty matchingTags then
-        --                         hidePopup model.tagPopup
-        --                     else
-        --                         TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
-        --             in
-        --             ( { model
-        --                 | items = mapItem (updateItemContentFn item (String.split "\n" content) currentTime) model.items
-        --                 , tagPopup = updatedTagPopup
-        --                 , noBlur = List.isEmpty matchingTags |> not
-        --               }
-        --             , requestCursorPosition itemId
-        --             )
-        --         Nothing ->
-        --             ( { model
-        --                 | items = mapItem (updateItemContentFn item (String.split "\n" content) currentTime) model.items
-        --                 , tagPopup = hidePopup model.tagPopup
-        --               }
-        --             , Cmd.none
-        --             )
         MoveItemUp item ->
             ( { model | noBlur = True, items = moveItemInTree ListItem.moveItemUp item model.items }, Cmd.none )
 
@@ -654,13 +642,13 @@ update msg model =
         DeleteItemWithChildren item ->
             ( { model | items = removeItemCompletely item model.items }, Cmd.none )
 
-        InsertSelectedTag item tag (line, column) currentTime ->
+        InsertSelectedTag item tag ( line, column ) currentTime ->
             let
-                ( newContent, (newLine, newColumn) ) =
-                    TagsUtils.insertTagAtCursor (getContent item) tag (line, column)
+                ( newContent, ( newLine, newColumn ) ) =
+                    TagsUtils.insertTagAtCursor (getContent item |> Debug.log "") (tag |> Debug.log "tag") ( line, (column |> Debug.log "column") )
             in
             ( { model
-                | items = mapItem (updateItemContentFn item newContent currentTime) model.items
+                | items = mapItem (updateItemContentFn item (newContent |> Debug.log "newContent") currentTime) model.items
                 , tagPopup = hidePopup model.tagPopup
                 , noBlur = False
                 , setCursorPositionTask = Just ( getId item, newLine, newColumn )
@@ -672,13 +660,23 @@ update msg model =
             case findPreviousItem item model.items of
                 Just prevItem ->
                     let
-                        prevId = getId prevItem
-                        prevLines = contentBlocksToLines (getContent prevItem)
-                        lastLine = List.reverse prevLines |> List.head |> Maybe.withDefault ""
-                        targetColumn = min columnPos (String.length lastLine)
-                        targetLine = List.length prevLines - 1
+                        prevId =
+                            getId prevItem
+
+                        prevLines =
+                            contentBlocksToLines (getContent prevItem)
+
+                        lastLine =
+                            List.reverse prevLines |> List.head |> Maybe.withDefault ""
+
+                        targetColumn =
+                            min columnPos (String.length lastLine)
+
+                        targetLine =
+                            List.length prevLines - 1
                     in
                     ( { model | items = mapItem (editItemFn prevId) model.items, setCursorPositionTask = Just ( prevId, targetLine, targetColumn ) }, Cmd.none )
+
                 Nothing ->
                     ( model, Cmd.none )
 
@@ -686,12 +684,20 @@ update msg model =
             case findNextItem item model.items of
                 Just nextItem ->
                     let
-                        nextId = getId nextItem
-                        nextLines = contentBlocksToLines (getContent nextItem)
-                        firstLine = List.head nextLines |> Maybe.withDefault ""
-                        targetColumn = min columnPos (String.length firstLine)
+                        nextId =
+                            getId nextItem
+
+                        nextLines =
+                            contentBlocksToLines (getContent nextItem)
+
+                        firstLine =
+                            List.head nextLines |> Maybe.withDefault ""
+
+                        targetColumn =
+                            min columnPos (String.length firstLine)
                     in
                     ( { model | items = mapItem (editItemFn nextId) model.items, setCursorPositionTask = Just ( nextId, 0, targetColumn ) }, Cmd.none )
+
                 Nothing ->
                     ( model, Cmd.none )
 
@@ -775,6 +781,7 @@ viewItemContent model item =
                     case block of
                         CodeBlock code ->
                             [ pre [] [ Html.code Theme.codeBlock [ text code ] ] ]
+
                         TextBlock text ->
                             String.split "\n" text
                                 |> List.map (viewContentWithSelectedTags model.items item (getSelectedTags model.searchToolbar))
@@ -782,6 +789,7 @@ viewItemContent model item =
             in
             if List.isEmpty (getContent item) then
                 [ span Theme.contentEmpty [ text "empty" ] ]
+
             else
                 List.concatMap viewBlock (getContent item)
 
@@ -956,12 +964,13 @@ subscriptions model =
                 case
                     D.decodeValue
                         (D.map3
-                            (\line column itemId ->
-                                ReceiveCursorPosition line column itemId
+                            (\line column itemId innerHTML ->
+                                GetCurrentTime (ReceiveCursorPosition line column itemId innerHTML)
                             )
                             (D.field "line" D.int)
                             (D.field "column" D.int)
                             (D.field "itemId" D.int)
+                            |> D.andThen (\fn -> D.map fn (D.field "innerHTML" D.string))
                         )
                         value
                 of
