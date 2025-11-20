@@ -8,7 +8,7 @@ import Clipboard
 import ContentBlock exposing (ContentBlock(..), contentBlocksToLines, linesToContentBlocks)
 import Html exposing (Html, br, code, div, pre, span, text)
 import Html.Attributes exposing (attribute, style)
-import Html.Events exposing (on, onClick,stopPropagationOn)
+import Html.Events exposing (on, onClick, stopPropagationOn)
 import Json.Decode as D
 import Json.Encode as Encode
 import KeyboardHandler
@@ -433,7 +433,7 @@ update msg model =
                     in
                     case updatedModel.receiveCursorPositionTask of
                         Just SplitLineData ->
-                            update (SplitLine updatedItem ( line, column ) currentTime ) { updatedModel | receiveCursorPositionTask = Nothing }
+                            update (SplitLine updatedItem ( line, column ) currentTime) { updatedModel | receiveCursorPositionTask = Nothing }
 
                         Just (TagInsertData tag) ->
                             update (InsertSelectedTag updatedItem tag ( line, column ) currentTime) { updatedModel | receiveCursorPositionTask = Nothing }
@@ -645,7 +645,7 @@ update msg model =
         InsertSelectedTag item tag ( line, column ) currentTime ->
             let
                 ( newContent, ( newLine, newColumn ) ) =
-                    TagsUtils.insertTagAtCursor (getContent item |> Debug.log "") (tag |> Debug.log "tag") ( line, (column |> Debug.log "column") )
+                    TagsUtils.insertTagAtCursor (getContent item |> Debug.log "") (tag |> Debug.log "tag") ( line, column |> Debug.log "column" )
             in
             ( { model
                 | items = mapItem (updateItemContentFn item (newContent |> Debug.log "newContent") currentTime) model.items
@@ -764,15 +764,7 @@ viewItemContent model item =
 
         addBreaks : List (List (Html Msg)) -> List (Html Msg)
         addBreaks elements =
-            List.indexedMap
-                (\i el ->
-                    if i < List.length elements - 1 then
-                        el ++ [ br [] [] ]
-
-                    else
-                        el
-                )
-                elements
+            List.map (\el -> el ++ [ br [] [] ]) elements
                 |> List.concat
 
         staticContent =

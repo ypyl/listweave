@@ -13886,28 +13886,64 @@ var $author$project$Main$update = F2(
 					var line = _v1.a;
 					var column = _v1.b;
 					var currentTime = msg.c;
-					var lines = $author$project$ContentBlock$contentBlocksToLines(
-						$author$project$ListItem$getContent(item));
-					var updatedLines = function () {
-						var _v2 = $elm$core$List$head(
-							A2($elm$core$List$drop, line, lines));
-						if (_v2.$ === 'Just') {
-							var targetLine = _v2.a;
-							var beforeLines = A2($elm$core$List$take, line, lines);
-							var before = A2($elm$core$String$left, column, targetLine);
-							var afterLines = A2($elm$core$List$drop, line + 1, lines);
-							var after = A2($elm$core$String$dropLeft, column, targetLine);
-							return _Utils_ap(
-								beforeLines,
+					var splitTextBlock = F3(
+						function (text, lineIdx, colIdx) {
+							var textLines = A2($elm$core$String$split, '\n', text);
+							var targetLine = A2(
+								$elm$core$Maybe$withDefault,
+								'',
+								$elm$core$List$head(
+									A2($elm$core$List$drop, lineIdx, textLines)));
+							var beforeLines = A2($elm$core$List$take, lineIdx, textLines);
+							var before = A2($elm$core$String$left, colIdx, targetLine);
+							var afterLines = A2($elm$core$List$drop, lineIdx + 1, textLines);
+							var after = A2($elm$core$String$dropLeft, colIdx, targetLine);
+							return A2(
+								$elm$core$String$join,
+								'\n',
 								_Utils_ap(
-									_List_fromArray(
-										[before, after]),
-									afterLines));
+									beforeLines,
+									_Utils_ap(
+										_List_fromArray(
+											[before, after]),
+										afterLines)));
+						});
+					var content = $author$project$ListItem$getContent(item);
+					var updatedContent = function () {
+						if (!content.b) {
+							return _List_fromArray(
+								[
+									$author$project$ContentBlock$TextBlock('\n')
+								]);
 						} else {
-							return lines;
+							if ((content.a.$ === 'TextBlock') && (!content.b.b)) {
+								var text = content.a.a;
+								return _List_fromArray(
+									[
+										$author$project$ContentBlock$TextBlock(
+										A3(splitTextBlock, text, line, column))
+									]);
+							} else {
+								var lines = $author$project$ContentBlock$contentBlocksToLines(content);
+								var targetLine = A2(
+									$elm$core$Maybe$withDefault,
+									'',
+									$elm$core$List$head(
+										A2($elm$core$List$drop, line, lines)));
+								var beforeLines = A2($elm$core$List$take, line, lines);
+								var before = A2($elm$core$String$left, column, targetLine);
+								var afterLines = A2($elm$core$List$drop, line + 1, lines);
+								var after = A2($elm$core$String$dropLeft, column, targetLine);
+								var updatedLines = _Utils_ap(
+									beforeLines,
+									_Utils_ap(
+										_List_fromArray(
+											[before, after]),
+										afterLines));
+								return $author$project$ContentBlock$linesToContentBlocks(updatedLines);
+							}
 						}
 					}();
-					var updatedContent = $author$project$ContentBlock$linesToContentBlocks(updatedLines);
 					var updatedItems = A2(
 						$author$project$ListItem$mapItem,
 						A3($author$project$ListItem$updateItemContentFn, item, updatedContent, currentTime),
@@ -14557,11 +14593,7 @@ var $author$project$Main$update = F2(
 						_Utils_update(
 							model,
 							{items: newItems}),
-						A2(
-							$elm$core$Task$attempt,
-							$author$project$Main$FocusResult,
-							$elm$browser$Browser$Dom$focus(
-								'input-id-' + $elm$core$String$fromInt(newId))));
+						$elm$core$Platform$Cmd$none);
 				case 'CreateItemAtStart':
 					var currentTime = msg.a;
 					var newId = $author$project$ListItem$getNextId(model.items);
@@ -15827,18 +15859,15 @@ var $author$project$Main$viewItemContent = F2(
 		var addBreaks = function (elements) {
 			return $elm$core$List$concat(
 				A2(
-					$elm$core$List$indexedMap,
-					F2(
-						function (i, el) {
-							return (_Utils_cmp(
-								i,
-								$elm$core$List$length(elements) - 1) < 0) ? _Utils_ap(
-								el,
-								_List_fromArray(
-									[
-										A2($elm$html$Html$br, _List_Nil, _List_Nil)
-									])) : el;
-						}),
+					$elm$core$List$map,
+					function (el) {
+						return _Utils_ap(
+							el,
+							_List_fromArray(
+								[
+									A2($elm$html$Html$br, _List_Nil, _List_Nil)
+								]));
+					},
 					elements));
 		};
 		var staticContent = function () {

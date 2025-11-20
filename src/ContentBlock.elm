@@ -13,6 +13,7 @@ contentBlocksToLines blocks =
             case block of
                 TextBlock text ->
                     String.split "\n" text
+
                 CodeBlock code ->
                     String.split "\n" code
         )
@@ -27,23 +28,29 @@ linesToContentBlocks lines =
                 [] ->
                     if inCode then
                         List.reverse (CodeBlock (String.join "\n" (List.reverse codeAcc)) :: acc)
+
                     else if List.isEmpty acc then
                         []
+
                     else
                         List.reverse acc
-                
+
                 line :: rest ->
                     if String.startsWith "```" line then
                         if inCode then
                             helper rest (CodeBlock (String.join "\n" (List.reverse codeAcc)) :: acc) False []
+
                         else
                             helper rest acc True []
+
                     else if inCode then
                         helper rest acc True (line :: codeAcc)
+
                     else
                         case acc of
                             (TextBlock text) :: accRest ->
                                 helper rest (TextBlock (text ++ "\n" ++ line) :: accRest) False []
+
                             _ ->
                                 helper rest (TextBlock line :: acc) False []
     in
