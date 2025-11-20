@@ -13886,64 +13886,28 @@ var $author$project$Main$update = F2(
 					var line = _v1.a;
 					var column = _v1.b;
 					var currentTime = msg.c;
-					var splitTextBlock = F3(
-						function (text, lineIdx, colIdx) {
-							var textLines = A2($elm$core$String$split, '\n', text);
-							var targetLine = A2(
-								$elm$core$Maybe$withDefault,
-								'',
-								$elm$core$List$head(
-									A2($elm$core$List$drop, lineIdx, textLines)));
-							var beforeLines = A2($elm$core$List$take, lineIdx, textLines);
-							var before = A2($elm$core$String$left, colIdx, targetLine);
-							var afterLines = A2($elm$core$List$drop, lineIdx + 1, textLines);
-							var after = A2($elm$core$String$dropLeft, colIdx, targetLine);
-							return A2(
-								$elm$core$String$join,
-								'\n',
+					var lines = $author$project$ContentBlock$contentBlocksToLines(
+						$author$project$ListItem$getContent(item));
+					var updatedLines = function () {
+						var _v2 = $elm$core$List$head(
+							A2($elm$core$List$drop, line, lines));
+						if (_v2.$ === 'Just') {
+							var targetLine = _v2.a;
+							var beforeLines = A2($elm$core$List$take, line, lines);
+							var before = A2($elm$core$String$left, column, targetLine);
+							var afterLines = A2($elm$core$List$drop, line + 1, lines);
+							var after = A2($elm$core$String$dropLeft, column, targetLine);
+							return _Utils_ap(
+								beforeLines,
 								_Utils_ap(
-									beforeLines,
-									_Utils_ap(
-										_List_fromArray(
-											[before, after]),
-										afterLines)));
-						});
-					var content = $author$project$ListItem$getContent(item);
-					var updatedContent = function () {
-						if (!content.b) {
-							return _List_fromArray(
-								[
-									$author$project$ContentBlock$TextBlock('\n')
-								]);
+									_List_fromArray(
+										[before, after]),
+									afterLines));
 						} else {
-							if ((content.a.$ === 'TextBlock') && (!content.b.b)) {
-								var text = content.a.a;
-								return _List_fromArray(
-									[
-										$author$project$ContentBlock$TextBlock(
-										A3(splitTextBlock, text, line, column))
-									]);
-							} else {
-								var lines = $author$project$ContentBlock$contentBlocksToLines(content);
-								var targetLine = A2(
-									$elm$core$Maybe$withDefault,
-									'',
-									$elm$core$List$head(
-										A2($elm$core$List$drop, line, lines)));
-								var beforeLines = A2($elm$core$List$take, line, lines);
-								var before = A2($elm$core$String$left, column, targetLine);
-								var afterLines = A2($elm$core$List$drop, line + 1, lines);
-								var after = A2($elm$core$String$dropLeft, column, targetLine);
-								var updatedLines = _Utils_ap(
-									beforeLines,
-									_Utils_ap(
-										_List_fromArray(
-											[before, after]),
-										afterLines));
-								return $author$project$ContentBlock$linesToContentBlocks(updatedLines);
-							}
+							return lines;
 						}
 					}();
+					var updatedContent = $author$project$ContentBlock$linesToContentBlocks(updatedLines);
 					var updatedItems = A2(
 						$author$project$ListItem$mapItem,
 						A3($author$project$ListItem$updateItemContentFn, item, updatedContent, currentTime),

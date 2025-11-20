@@ -290,6 +290,12 @@
         }
         let offsetInNode = Math.max(0, Math.min(caret.offset, textNode.length));
 
+        // Find contenteditable root to respect boundary
+        let editableRoot = textNode.parentNode;
+        while (editableRoot && (!editableRoot.getAttribute || !editableRoot.getAttribute("contenteditable"))) {
+          editableRoot = editableRoot.parentNode;
+        }
+
         // Define word characters. Include @ to support mentions like @yauhen.
         const isWordChar = (ch) => /[A-Za-z0-9_@\u00C0-\uFFFF-]/.test(ch);
 
@@ -302,6 +308,18 @@
         let stop = false;
 
         while (currentNode && charsLeft > 0 && !stop) {
+          // Stop if we've walked outside the contenteditable boundary
+          let ancestor = currentNode.parentNode;
+          let insideBoundary = false;
+          while (ancestor) {
+            if (ancestor === editableRoot) {
+              insideBoundary = true;
+              break;
+            }
+            ancestor = ancestor.parentNode;
+          }
+          if (!insideBoundary) break;
+
           const txt = currentNode.nodeValue || "";
           let i = pos - 1;
           for (; i >= 0 && charsLeft > 0; i--, charsLeft--) {
