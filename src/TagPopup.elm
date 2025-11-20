@@ -20,7 +20,7 @@ module TagPopup exposing
 
 import Actions exposing (TagPopupAction)
 import Html exposing (Html, div, text)
-import Html.Events exposing (onClick, stopPropagationOn)
+import Html.Events exposing (onClick, onMouseDown, stopPropagationOn)
 import TagsUtils
 import Theme
 import Json.Decode as Decode exposing (Decoder)
@@ -32,7 +32,7 @@ import Json.Encode as Encode
 
 type Source
     = FromSearchToolbar
-    | FromItem
+    | FromItem Int
 
 
 type alias Model =
@@ -95,16 +95,16 @@ sourceEncoder : Source -> Encode.Value
 sourceEncoder source =
     case source of
         FromSearchToolbar ->
-            Encode.string "FromSearchToolbar"
+            Encode.object [ ( "type", Encode.string "FromSearchToolbar" ) ]
 
-        FromItem ->
-            Encode.string "FromItem"
+        FromItem itemId ->
+            Encode.object [ ( "type", Encode.string "FromItem" ), ( "itemId", Encode.int itemId ) ]
 
 
 -- Decoder for the Source custom type
 sourceDecoder : Decoder Source
 sourceDecoder =
-    Decode.string
+    Decode.field "type" Decode.string
         |> Decode.andThen
             (\str ->
                 case str of
@@ -112,7 +112,7 @@ sourceDecoder =
                         Decode.succeed FromSearchToolbar
 
                     "FromItem" ->
-                        Decode.succeed FromItem
+                        Decode.map FromItem (Decode.field "itemId" Decode.int)
 
                     _ ->
                         Decode.fail ("Unexpected source value: " ++ str)
@@ -261,7 +261,7 @@ view model =
 
             else
                 div
-                    (stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left ++ Theme.popup)
+                    (Theme.positionStyle top left ++ Theme.popup)
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
         _ ->
@@ -278,7 +278,7 @@ viewPopupTag currentHighlightedTag tag =
                 Theme.popupItemNormal
     in
     div
-        (onClick (HighlightTag tag) :: styles)
+        (onMouseDown (HighlightTag tag) :: styles)
         [ text tag ]
 
 

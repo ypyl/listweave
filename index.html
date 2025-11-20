@@ -175,8 +175,9 @@
         }
       });
 
-      app.ports.requestCursorCoordinates.subscribe(function () {
-        const fallback = { top: 0, left: 0, width: 0, word: "", ok: false, inCode: false, line: 0, column: 0 };
+      app.ports.requestCursorCoordinates.subscribe(function (data) {
+        const itemId = data.itemId;
+        const fallback = { itemId: itemId, top: 0, left: 0, width: 0, word: "", ok: false, inCode: false, line: 0, column: 0 };
 
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) {
@@ -385,6 +386,7 @@
 
         if (app.ports && app.ports.receiveCursorCoordinates) {
           app.ports.receiveCursorCoordinates.send({
+            itemId: itemId,
             top: top,
             left: left,
             word: fragment,

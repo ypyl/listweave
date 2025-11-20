@@ -29,7 +29,7 @@ import Time exposing (Month(..), Posix, millisToPosix)
 port setCursorPosition : { id : Int, line : Int, column : Int } -> Cmd msg
 
 
-port requestCursorCoordinates : () -> Cmd msg
+port requestCursorCoordinates : { itemId : Int } -> Cmd msg
 
 
 port receiveCursorCoordinates : (D.Value -> msg) -> Sub msg
@@ -192,7 +192,7 @@ type Msg
     | FocusResult (Result Browser.Dom.Error ())
     | SetCursorPosition Int ( Int, Int )
     | SetSearchCursor Int
-    | GotCursorCoordinates Int Int String Bool Bool
+    | GotCursorCoordinates Int Int Int String Bool Bool
     | ReceiveCursorPosition Int Int Int String Posix
     | NoOp
     | MoveItemUp ListItem
@@ -206,7 +206,7 @@ type Msg
     | TagPopupMsg TagPopup.Msg
     | ReceiveImportedModel D.Value
     | ItemInput ListItem String Posix
-    | GetCurrentCursorCoordinates
+    | GetCurrentCursorCoordinates ListItem
     | AddNewLineAfter ListItem
     | InsertSelectedTagAfter ListItem String
     | MoveItemUpAfter ListItem
@@ -282,8 +282,8 @@ update msg model =
             in
             ( { model | items = updatedItems, setCursorPositionTask = Just ( getId item, line + 1, 0 ) }, Cmd.none )
 
-        GetCurrentCursorCoordinates ->
-            ( model, requestCursorCoordinates () )
+        GetCurrentCursorCoordinates item ->
+            ( model, requestCursorCoordinates { itemId = getId item } )
 
         ReceiveImportedModel jsonValue ->
             case D.decodeValue decode jsonValue of
@@ -307,17 +307,10 @@ update msg model =
                                 ( searchToolbarUpdatedModel, _ ) =
                                     SearchToolbar.update (SearchToolbar.SearchKeyDown 13) model.searchToolbar
                             in
-                            -- Tag selection from search input
                             ( { model | tagPopup = updatedmodel, searchToolbar = selectTag tag searchToolbarUpdatedModel }, Cmd.none )
 
-                        Just TagPopup.FromItem ->
-                            -- Tag selection from textarea - get current cursor position
-                            case findEditingItem model.items of
-                                Just ( editingItem, _ ) ->
-                                    ( { model | tagPopup = updatedmodel, receiveCursorPositionTask = Just (TagInsertData tag) }, requestCursorPosition { itemId = getId editingItem } )
-
-                                Nothing ->
-                                    ( { model | tagPopup = updatedmodel }, Cmd.none )
+                        Just (TagPopup.FromItem itemId) ->
+                            ( { model | tagPopup = updatedmodel, receiveCursorPositionTask = Just (TagInsertData tag) }, requestCursorPosition { itemId = itemId } )
 
                         _ ->
                             ( { model | tagPopup = updatedmodel }, Cmd.none )
@@ -551,7 +544,7 @@ update msg model =
         OutdentItem item ->
             ( { model | noBlur = True, items = outdentItem item model.items }, Cmd.none )
 
-        GotCursorCoordinates top left fragment ok inCode ->
+        GotCursorCoordinates itemId top left fragment ok inCode ->
             if inCode || not ok then
                 ( model, Cmd.none )
 
@@ -566,7 +559,7 @@ update msg model =
                             hidePopup model.tagPopup
 
                         else
-                            TagPopup.setTags ( matchingTags, TagPopup.FromItem ) model.tagPopup
+                            TagPopup.setTags ( matchingTags, TagPopup.FromItem itemId ) model.tagPopup
                 in
                 ( { model | tagPopup = showPopup ( top, left ) matchingTags updatedTagPopup }, Cmd.none )
 
@@ -645,10 +638,10 @@ update msg model =
         InsertSelectedTag item tag ( line, column ) currentTime ->
             let
                 ( newContent, ( newLine, newColumn ) ) =
-                    TagsUtils.insertTagAtCursor (getContent item |> Debug.log "") (tag |> Debug.log "tag") ( line, column |> Debug.log "column" )
+                    TagsUtils.insertTagAtCursor (getContent item) tag ( line, column )
             in
             ( { model
-                | items = mapItem (updateItemContentFn item (newContent |> Debug.log "newContent") currentTime) model.items
+                | items = mapItem (updateItemContentFn item newContent currentTime) model.items
                 , tagPopup = hidePopup model.tagPopup
                 , noBlur = False
                 , setCursorPositionTask = Just ( getId item, newLine, newColumn )
@@ -793,7 +786,7 @@ viewItemContent model item =
                 [ on "blur" (D.map (\x -> GetCurrentTime (SaveItem item x)) innerHtml) ]
 
         onInputCustom =
-            on "input" (D.succeed GetCurrentCursorCoordinates)
+            on "input" (D.succeed (GetCurrentCursorCoordinates item))
     in
     div
         (Theme.flexGrow
@@ -940,12 +933,12 @@ subscriptions model =
                 Sub.none
         , receiveCursorCoordinates
             (\value ->
-                case D.decodeValue (D.map5 GotCursorCoordinates (D.field "top" D.int) (D.field "left" D.int) (D.field "word" D.string) (D.field "ok" D.bool) (D.field "inCode" D.bool)) value of
+                case D.decodeValue (D.map6 GotCursorCoordinates (D.field "itemId" D.int) (D.field "top" D.int) (D.field "left" D.int) (D.field "word" D.string) (D.field "ok" D.bool) (D.field "inCode" D.bool)) value of
                     Ok msg ->
                         msg
 
                     Err _ ->
-                        GotCursorCoordinates 0 0 "" False False
+                        GotCursorCoordinates 0 0 0 "" False False
             )
         , receiveCursorPosition
             (\value ->
