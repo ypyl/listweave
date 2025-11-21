@@ -93,9 +93,78 @@
               if (found) break;
             }
 
+            // Calculate end position if there's a selection
+            let endLine = line;
+            let endColumn = column;
+            if (!range.collapsed) {
+              const endCaret = findTextNodeAndOffset(range.endContainer, range.endOffset);
+              const endTextNode = endCaret.node;
+              const endOffsetInNode = endCaret.offset;
+              
+              let eLine = 0;
+              let eColumn = 0;
+              let eCharCount = 0;
+              let eFound = false;
+              
+              function traverseEnd(node) {
+                if (eFound) return;
+                if (node === endTextNode) {
+                  const text = node.nodeValue || "";
+                  const textUpToCursor = text.substring(0, endOffsetInNode);
+                  const lines = textUpToCursor.split("\n");
+                  if (lines.length > 1) {
+                    eLine += lines.length - 1;
+                    eColumn = lines[lines.length - 1].length;
+                  } else {
+                    eColumn = eCharCount + endOffsetInNode;
+                  }
+                  eFound = true;
+                  return;
+                }
+                if (node.nodeType === Node.TEXT_NODE) {
+                  const text = node.nodeValue || "";
+                  for (let i = 0; i < text.length; i++) {
+                    if (text[i] === "\n") {
+                      eLine++;
+                      eCharCount = 0;
+                    } else {
+                      eCharCount++;
+                    }
+                  }
+                } else if (node.nodeName === "BR") {
+                  eLine++;
+                  eCharCount = 0;
+                } else if (node.nodeName === "CODE") {
+                  eLine++;
+                  eCharCount = 0;
+                  for (let child of node.childNodes) {
+                    traverseEnd(child);
+                    if (eFound) return;
+                  }
+                  eLine++;
+                  eCharCount = 0;
+                } else {
+                  for (let child of node.childNodes) {
+                    traverseEnd(child);
+                    if (eFound) return;
+                  }
+                }
+              }
+              
+              for (let child of editableRoot.childNodes) {
+                traverseEnd(child);
+                if (eFound) break;
+              }
+              
+              endLine = eLine;
+              endColumn = eColumn;
+            }
+
             app.ports.receiveCursorPosition.send({
               line: line,
               column: column,
+              endLine: endLine,
+              endColumn: endColumn,
               itemId: itemId,
               innerHTML: innerHTML,
             });

@@ -81,6 +81,8 @@ type ReceiveCursorPositionTask
     | OutdentData
     | NavigatePreviousData
     | NavigateNextData
+    | DeleteCharData
+    | DeleteAfterCharData
 
 
 initialModel : Model
@@ -177,6 +179,160 @@ encode model =
 -- UPDATE
 
 
+deleteCharacterAfterCursor : List String -> ( Int, Int ) -> ( Int, Int ) -> ( List String, ( Int, Int ) )
+deleteCharacterAfterCursor lines ( line, column ) ( endLine, endColumn ) =
+    if line /= endLine || column /= endColumn then
+        -- Delete selection
+        let
+            startLineText =
+                List.drop line lines |> List.head |> Maybe.withDefault ""
+
+            endLineText =
+                List.drop endLine lines |> List.head |> Maybe.withDefault ""
+
+            before =
+                String.left column startLineText
+
+            after =
+                String.dropLeft endColumn endLineText
+
+            newLine =
+                before ++ after
+
+            beforeLines =
+                List.take line lines
+
+            afterLines =
+                List.drop (endLine + 1) lines
+        in
+        ( beforeLines ++ [ newLine ] ++ afterLines, ( line, column ) )
+
+    else
+        case List.head (List.drop line lines) of
+            Just currentLine ->
+                if column < String.length currentLine then
+                    -- Delete character after cursor
+                    let
+                        before =
+                            String.left column currentLine
+
+                        after =
+                            String.dropLeft (column + 1) currentLine
+
+                        newLine =
+                            before ++ after
+
+                        beforeLines =
+                            List.take line lines
+
+                        afterLines =
+                            List.drop (line + 1) lines
+                    in
+                    ( beforeLines ++ [ newLine ] ++ afterLines, ( line, column ) )
+
+                else
+                    -- Merge with next line
+                    case List.head (List.drop (line + 1) lines) of
+                        Just nextLine ->
+                            let
+                                mergedLine =
+                                    currentLine ++ nextLine
+
+                                beforeLines =
+                                    List.take line lines
+
+                                afterLines =
+                                    List.drop (line + 2) lines
+                            in
+                            ( beforeLines ++ [ mergedLine ] ++ afterLines, ( line, column ) )
+
+                        Nothing ->
+                            ( lines, ( line, column ) )
+
+            Nothing ->
+                ( lines, ( line, column ) )
+
+
+deleteCharacterBeforeCursor : List String -> ( Int, Int ) -> ( Int, Int ) -> ( List String, ( Int, Int ) )
+deleteCharacterBeforeCursor lines ( line, column ) ( endLine, endColumn ) =
+    if line /= endLine || column /= endColumn then
+        -- Delete selection
+        let
+            startLineText =
+                List.drop line lines |> List.head |> Maybe.withDefault ""
+
+            endLineText =
+                List.drop endLine lines |> List.head |> Maybe.withDefault ""
+
+            before =
+                String.left column startLineText
+
+            after =
+                String.dropLeft endColumn endLineText
+
+            newLine =
+                before ++ after
+
+            beforeLines =
+                List.take line lines
+
+            afterLines =
+                List.drop (endLine + 1) lines
+        in
+        ( beforeLines ++ [ newLine ] ++ afterLines, ( line, column ) )
+
+    else if column > 0 then
+        -- Delete character in current line
+        case List.head (List.drop line lines) of
+            Just currentLine ->
+                let
+                    before =
+                        String.left (column - 1) currentLine
+
+                    after =
+                        String.dropLeft column currentLine
+
+                    newLine =
+                        before ++ after
+
+                    beforeLines =
+                        List.take line lines
+
+                    afterLines =
+                        List.drop (line + 1) lines
+                in
+                ( beforeLines ++ [ newLine ] ++ afterLines, ( line, column - 1 ) )
+
+            Nothing ->
+                ( lines, ( line, column ) )
+
+    else if line > 0 then
+        -- Merge with previous line
+        let
+            prevLine =
+                List.drop (line - 1) lines |> List.head |> Maybe.withDefault ""
+
+            currentLine =
+                List.drop line lines |> List.head |> Maybe.withDefault ""
+
+            mergedLine =
+                prevLine ++ currentLine
+
+            beforeLines =
+                List.take (line - 1) lines
+
+            afterLines =
+                List.drop (line + 1) lines
+
+            newColumn =
+                String.length prevLine
+        in
+        ( beforeLines ++ [ mergedLine ] ++ afterLines, ( line - 1, newColumn ) )
+
+    else
+        ( lines, ( line, column ) )
+
+
 type Msg
     = ToggleCollapse ListItem
       -- | UpdateItemContent ListItem String Int Posix
@@ -193,7 +349,7 @@ type Msg
     | SetCursorPosition Int ( Int, Int )
     | SetSearchCursor Int
     | GotCursorCoordinates Int Int Int String Bool Bool
-    | ReceiveCursorPosition Int Int Int String Posix
+    | ReceiveCursorPosition Int Int Int Int Int String Posix
     | NoOp
     | MoveItemUp ListItem
     | SearchToolbarMsg SearchToolbar.Msg
@@ -209,6 +365,8 @@ type Msg
     | GetCurrentCursorCoordinates ListItem
     | AddNewLineAfter ListItem
     | InsertSelectedTagAfter ListItem String
+    | DeleteCharacterBeforeCursor ListItem
+    | DeleteCharacterAfterCursor ListItem
     | MoveItemUpAfter ListItem
     | MoveItemDownAfter ListItem
     | IndentItemAfter ListItem
@@ -229,6 +387,12 @@ update msg model =
 
         InsertSelectedTagAfter item tag ->
             ( { model | receiveCursorPositionTask = Just (TagInsertData tag) }, requestCursorPosition { itemId = getId item } )
+
+        DeleteCharacterBeforeCursor item ->
+            ( { model | receiveCursorPositionTask = Just DeleteCharData }, requestCursorPosition { itemId = getId item } )
+
+        DeleteCharacterAfterCursor item ->
+            ( { model | receiveCursorPositionTask = Just DeleteAfterCharData }, requestCursorPosition { itemId = getId item } )
 
         MoveItemUpAfter item ->
             ( { model | receiveCursorPositionTask = Just MoveUpData }, requestCursorPosition { itemId = getId item } )
@@ -411,7 +575,7 @@ update msg model =
         SetSearchCursor pos ->
             ( { model | searchToolbar = resetUpdatedCursorPosition model.searchToolbar }, setSearchInputCursor pos )
 
-        ReceiveCursorPosition line column itemId innerHTML currentTime ->
+        ReceiveCursorPosition line column endLine endColumn itemId innerHTML currentTime ->
             case findInForest itemId model.items of
                 Just item ->
                     let
@@ -525,6 +689,44 @@ update msg model =
 
                                     Nothing ->
                                         ( { updatedModel | receiveCursorPositionTask = Nothing }, Cmd.none )
+
+                        Just DeleteCharData ->
+                            let
+                                currentLines =
+                                    contentBlocksToLines (getContent updatedItem)
+
+                                ( newLines, ( newLine, newColumn ) ) =
+                                    deleteCharacterBeforeCursor currentLines ( line, column ) ( endLine, endColumn )
+
+                                newContent =
+                                    linesToContentBlocks newLines
+                            in
+                            ( { updatedModel
+                                | items = mapItem (updateItemContentFn updatedItem newContent currentTime) updatedModel.items
+                                , setCursorPositionTask = Just ( getId updatedItem, newLine, newColumn )
+                                , receiveCursorPositionTask = Nothing
+                              }
+                            , Cmd.none
+                            )
+
+                        Just DeleteAfterCharData ->
+                            let
+                                currentLines =
+                                    contentBlocksToLines (getContent updatedItem)
+
+                                ( newLines, ( newLine, newColumn ) ) =
+                                    deleteCharacterAfterCursor currentLines ( line, column ) ( endLine, endColumn )
+
+                                newContent =
+                                    linesToContentBlocks newLines
+                            in
+                            ( { updatedModel
+                                | items = mapItem (updateItemContentFn updatedItem newContent currentTime) updatedModel.items
+                                , setCursorPositionTask = Just ( getId updatedItem, newLine, newColumn )
+                                , receiveCursorPositionTask = Nothing
+                              }
+                            , Cmd.none
+                            )
 
                         Nothing ->
                             ( updatedModel, Cmd.none )
@@ -752,6 +954,8 @@ viewItemContent model item =
             , onNavigateToNextAfter = NavigateToNextAfter
             , onRestoreCutItem = ClipboardMsg (Clipboard.RestoreCutItem model.items)
             , onAddNewLineAfter = AddNewLineAfter
+            , onDeleteCharacterBeforeCursor = DeleteCharacterBeforeCursor
+            , onDeleteCharacterAfterCursor = DeleteCharacterAfterCursor
             , onNoOp = NoOp
             }
 
@@ -944,12 +1148,14 @@ subscriptions model =
             (\value ->
                 case
                     D.decodeValue
-                        (D.map3
-                            (\line column itemId innerHTML ->
-                                GetCurrentTime (ReceiveCursorPosition line column itemId innerHTML)
+                        (D.map5
+                            (\line column endLine endColumn itemId innerHTML ->
+                                GetCurrentTime (ReceiveCursorPosition line column endLine endColumn itemId innerHTML)
                             )
                             (D.field "line" D.int)
                             (D.field "column" D.int)
+                            (D.field "endLine" D.int)
+                            (D.field "endColumn" D.int)
                             (D.field "itemId" D.int)
                             |> D.andThen (\fn -> D.map fn (D.field "innerHTML" D.string))
                         )

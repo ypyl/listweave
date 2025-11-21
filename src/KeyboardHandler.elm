@@ -11,6 +11,7 @@ import TagPopup
 
 type Key
     = Backspace
+    | Delete
     | Enter
     | Left
     | Right
@@ -29,6 +30,9 @@ keyFromCode code =
     case code of
         8 ->
             Backspace
+
+        46 ->
+            Delete
 
         13 ->
             Enter
@@ -82,6 +86,8 @@ onKeyDown :
     , onNavigateToNextAfter : ListItem -> msg
     , onRestoreCutItem : msg
     , onAddNewLineAfter : ListItem -> msg
+    , onDeleteCharacterBeforeCursor : ListItem -> msg
+    , onDeleteCharacterAfterCursor : ListItem -> msg
     , onNoOp : msg
     }
     -> ListItem
@@ -137,7 +143,10 @@ onKeyDown config item =
                             if isEmpty then
                                 ( config.onDeleteItem item, True )
                             else
-                                ( config.onNoOp, False )
+                                ( config.onDeleteCharacterBeforeCursor item, True )
+
+                        Delete ->
+                            ( config.onDeleteCharacterAfterCursor item, True )
 
                         Enter ->
                             case ( shift, TagPopup.isVisible config.tagPopup, TagPopup.getHighlightedTag config.tagPopup ) of
