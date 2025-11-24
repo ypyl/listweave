@@ -69,7 +69,7 @@ type Msg
     | RestoreCutItem (List ListItem)
 
 
-update : Msg -> Model -> ( Model, List ListItem, Maybe ( Int, Int ) )
+update : Msg -> Model -> ( Model, List ListItem, Maybe ( Int, Int, Int ) )
 update msg model =
     case msg of
         CopyItem item items currentTime ->
@@ -119,7 +119,7 @@ update msg model =
                         , clipboardOriginalPosition = Nothing
                       }
                     , newItems
-                    , Just ( ListItem.getId targetItem, 0 )
+                    , Just ( ListItem.getId targetItem, 0, 0 )
                     )
 
                 Nothing ->

@@ -20,7 +20,7 @@ module TagPopup exposing
 
 import Actions exposing (TagPopupAction)
 import Html exposing (Html, div, text)
-import Html.Events exposing (onClick, stopPropagationOn)
+import Html.Events exposing (onClick, onMouseDown, stopPropagationOn)
 import TagsUtils
 import Theme
 import Json.Decode as Decode exposing (Decoder)
@@ -32,11 +32,11 @@ import Json.Encode as Encode
 
 type Source
     = FromSearchToolbar
-    | FromItem
+    | FromItem Int
 
 
 type alias Model =
-    { position : Maybe ( Int, Int, Int ) -- top, left, width
+    { position : Maybe ( Int, Int ) -- top, left
     , tags : Maybe (List String)
     , highlightedTag : Maybe String
     , source : Maybe Source
@@ -48,7 +48,7 @@ encode : Model -> Encode.Value
 encode model =
     Encode.object
         [ ( "position"
-          , Maybe.map (\( a, b, c ) -> Encode.list Encode.int [ a, b, c ]) model.position
+          , Maybe.map (\( a, b ) -> Encode.list Encode.int [ a, b ]) model.position
                 |> Maybe.withDefault Encode.null
           )
         , ( "tags"
@@ -76,14 +76,14 @@ decode =
 
 
 -- Helper decoder for the position tuple (Int, Int, Int)
-positionDecoder : Decoder ( Int, Int, Int )
+positionDecoder : Decoder ( Int, Int )
 positionDecoder =
     Decode.list Decode.int
         |> Decode.andThen
             (\list ->
                 case list of
-                    [ a, b, c ] ->
-                        Decode.succeed ( a, b, c )
+                    [ a, b ] ->
+                        Decode.succeed ( a, b )
 
                     _ ->
                         Decode.fail "Position list must have exactly 3 elements (top, left, width)"
@@ -95,16 +95,16 @@ sourceEncoder : Source -> Encode.Value
 sourceEncoder source =
     case source of
         FromSearchToolbar ->
-            Encode.string "FromSearchToolbar"
+            Encode.object [ ( "type", Encode.string "FromSearchToolbar" ) ]
 
-        FromItem ->
-            Encode.string "FromItem"
+        FromItem itemId ->
+            Encode.object [ ( "type", Encode.string "FromItem" ), ( "itemId", Encode.int itemId ) ]
 
 
 -- Decoder for the Source custom type
 sourceDecoder : Decoder Source
 sourceDecoder =
-    Decode.string
+    Decode.field "type" Decode.string
         |> Decode.andThen
             (\str ->
                 case str of
@@ -112,7 +112,7 @@ sourceDecoder =
                         Decode.succeed FromSearchToolbar
 
                     "FromItem" ->
-                        Decode.succeed FromItem
+                        Decode.map FromItem (Decode.field "itemId" Decode.int)
 
                     _ ->
                         Decode.fail ("Unexpected source value: " ++ str)
@@ -230,7 +230,7 @@ hidePopup model =
     }
 
 
-showPopup : ( Int, Int, Int ) -> List String -> Model -> Model
+showPopup : ( Int, Int ) -> List String -> Model -> Model
 showPopup position tags model =
     let
         selectedTag =
@@ -255,13 +255,13 @@ showPopup position tags model =
 view : Model -> Html Msg
 view model =
     case ( model.position, model.tags ) of
-        ( Just ( top, left, width ), Just matchingTags ) ->
+        ( Just ( top, left ), Just matchingTags ) ->
             if List.isEmpty matchingTags then
                 text ""
 
             else
                 div
-                    (stopPropagationOn "click" (Decode.succeed ( NoOp, True )) :: Theme.positionStyle top left width ++ Theme.popup)
+                    (Theme.positionStyle top left ++ Theme.popup)
                     (List.map (viewPopupTag model.highlightedTag) matchingTags)
 
         _ ->
@@ -278,7 +278,7 @@ viewPopupTag currentHighlightedTag tag =
                 Theme.popupItemNormal
     in
     div
-        (onClick (HighlightTag tag) :: styles)
+        (onMouseDown (HighlightTag tag) :: styles)
         [ text tag ]
 
 

@@ -1,0 +1,96 @@
+<style>
+.editable {
+  display: inline-block;
+  white-space: pre-wrap;
+  cursor: text;
+  width: 100%;
+  border: 1px solid transparent;
+}
+
+.editable:focus {
+  outline: none;
+}
+
+.editable.editing textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  font: inherit;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+}
+
+.editable.editing textarea:focus-visible {
+  outline: none;
+}
+
+#container {
+    border: 1px solid blue;
+    padding: 8px;
+}
+/* Code block styling inside the editable area */
+.editable pre {
+  background: #2b2b2b;
+  color: #f8f8f2;
+  padding: 8px;
+  border-radius: 4px;
+  overflow: auto;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  white-space: pre;
+  margin: 0 0 8px 0;
+}
+.editable code {
+  font-family: inherit;
+  color: inherit;
+}
+</style>
+
+<div id="container">
+<div id="editable" class="editable" contenteditable="true"></div>
+</div>
+
+<script>
+const list = [
+  "<pre><code>const x = 1;\nconsole.log(x);\n</code></pre>",
+  "Alpha Test Long Text And some Additinal Text",
+  "Bravo",
+  "Charlie"
+];
+const div = document.getElementById("editable");
+
+function render() {
+  div.innerHTML = list.join("<br>");
+}
+
+function handleInput(event) {
+  const content = div.innerHTML;
+  const newList = content.split("<br>").map(item =>
+    item.replace(/&nbsp;/g, ' ').trim()
+  ).filter(Boolean);
+
+  list.length = 0;
+  list.push(...newList);
+  console.log(list);
+}
+
+div.addEventListener("input", handleInput);
+// Keydown handler to detect Alt+X while editing the contenteditable div.
+function handleAltX(e) {
+    console.log('keydown', e);
+  const active = document.activeElement;
+  const inEditable = active === div || div.contains(active);
+  if (!inEditable) return;
+  // Check altKey + X (case-insensitive). Use code as a fallback.
+  if (e.altKey && (e.key === 'x' || e.key === 'X' || e.code === 'KeyX')) {
+    e.preventDefault();
+    alert('Alt+X pressed in editable div');
+  }
+}
+
+div.addEventListener('keydown', handleAltX);
+// Fallback: listen on document but only act when focus is inside `div`.
+// document.addEventListener('keydown', handleAltX);
+
+render();
+</script>

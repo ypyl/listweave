@@ -1,18 +1,19 @@
 module ListItem exposing (..)
 
 import Actions exposing (SortOrder(..))
+import ContentBlock exposing (ContentBlock(..))
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Regex
 import Set
-import TagsUtils exposing (isTagRegex, processContent)
-import Time exposing (Month(..), Posix, millisToPosix, posixToMillis, toDay, toMonth, toYear)
+import TagsUtils exposing (isTagRegex)
+import Time exposing (Month(..), Posix)
 
 
 type ListItem
     = ListItem
         { id : Int
-        , content : List String
+        , content : List ContentBlock
         , tags : List String
         , children : List ListItem
         , collapsed : Bool
@@ -22,14 +23,37 @@ type ListItem
         }
 
 
+encodeContentBlock : ContentBlock -> Encode.Value
+encodeContentBlock block =
+    case block of
+        TextBlock text ->
+            Encode.object [ ( "type", Encode.string "text" ), ( "content", Encode.string text ) ]
+        CodeBlock code ->
+            Encode.object [ ( "type", Encode.string "code" ), ( "content", Encode.string code ) ]
+
+
+decodeContentBlock : Decoder ContentBlock
+decodeContentBlock =
+    Decode.field "type" Decode.string
+        |> Decode.andThen
+            (\blockType ->
+                case blockType of
+                    "text" ->
+                        Decode.map TextBlock (Decode.field "content" Decode.string)
+                    "code" ->
+                        Decode.map CodeBlock (Decode.field "content" Decode.string)
+                    _ ->
+                        Decode.fail "Unknown content block type"
+            )
+
+
 encode : ListItem -> Encode.Value
 encode (ListItem item) =
-    -- Destructure the custom type
     Encode.object
         [ ( "id", Encode.int item.id )
-        , ( "content", Encode.list Encode.string item.content )
+        , ( "content", Encode.list encodeContentBlock item.content )
         , ( "tags", Encode.list Encode.string item.tags )
-        , ( "children", Encode.list encode item.children ) -- `encoder` handles the custom type
+        , ( "children", Encode.list encode item.children )
         , ( "collapsed", Encode.bool item.collapsed )
         , ( "editing", Encode.bool item.editing )
         , ( "created", Encode.float (toFloat (Time.posixToMillis item.created)) )
@@ -40,7 +64,6 @@ encode (ListItem item) =
 decode : Decoder ListItem
 decode =
     Decode.map ListItem
-        -- Map the *record* to the *custom type constructor*
         (Decode.map8
             (\id content tags children collapsed editing created updated ->
                 { id = id
@@ -54,10 +77,9 @@ decode =
                 }
             )
             (Decode.field "id" Decode.int)
-            (Decode.field "content" (Decode.list Decode.string))
+            (Decode.field "content" (Decode.list decodeContentBlock))
             (Decode.field "tags" (Decode.list Decode.string))
             (Decode.field "children" (Decode.list (Decode.lazy (\_ -> decode))))
-            -- Use lazy here
             (Decode.field "collapsed" Decode.bool)
             (Decode.field "editing" Decode.bool)
             (Decode.field "created" posixDecoder)
@@ -236,14 +258,119 @@ newEmptyListItem posix id =
     ListItem { id = id, content = [], tags = autoTags, children = [], collapsed = True, editing = False, created = posix, updated = posix }
 
 
-newListItem : { a | id : Int, content : List String, tags : List String, children : List ListItem, collapsed : Bool, editing : Bool, created : Posix, updated : Posix } -> ListItem
+newListItem : { a | id : Int, content : List ContentBlock, tags : List String, children : List ListItem, collapsed : Bool, editing : Bool, created : Posix, updated : Posix } -> ListItem
 newListItem item =
     ListItem { id = item.id, content = item.content, tags = item.tags, children = item.children, collapsed = item.collapsed, editing = item.editing, created = item.created, updated = item.updated }
 
 
-getContent : ListItem -> List String
+getContent : ListItem -> List ContentBlock
 getContent (ListItem record) =
     record.content
+
+
+{-| Parse innerHTML from a contentEditable element into ContentBlocks.
+    The parser handles:
+
+    - <br>, <br/> and <br /> as line separators
+    - <pre><code>...</code></pre> code blocks: converted to CodeBlock
+    - <span>...</span> and other inline tags: tags are stripped and inner
+      text is preserved as TextBlock
+
+    This is intentionally forgiving (simple string scanning) to avoid
+    pulling in an HTML parser dependency.
+-}
+parseInnerHtml : String -> List ContentBlock
+parseInnerHtml html =
+    let
+        normalizedNbsp = String.replace "&nbsp;" " " html
+        normalizedBr =
+            normalizedNbsp
+                |> String.replace "<br/>" "\n"
+                |> String.replace "<br />" "\n"
+                |> String.replace "<br>" "\n"
+
+        withCodeMarkers =
+            let
+                prefix = "<pre><code"
+                replacePreCode s =
+                    case String.indexes prefix s of
+                        [] -> s
+                        idx :: _ ->
+                            let
+                                before = String.slice 0 idx s
+                                rest = String.slice (idx + String.length prefix) (String.length s) s
+                            in
+                            case String.indexes ">" rest of
+                                [] -> s
+                                closeIdx :: _ ->
+                                    let
+                                        after = String.slice (closeIdx + 1) (String.length rest) rest
+                                    in
+                                    replacePreCode (before ++ "||CODE_START||" ++ after)
+            in
+            normalizedBr
+                |> replacePreCode
+                |> String.replace "</code></pre>" "||CODE_END||"
+
+        stripTags : String -> String
+        stripTags s =
+            case String.indexes "<" s of
+                [] -> s
+                i :: _ ->
+                    let
+                        before = String.slice 0 i s
+                        rest = String.slice i (String.length s) s
+                    in
+                    case String.indexes ">" rest of
+                        [] -> before
+                        j :: _ ->
+                            let
+                                after = String.slice (j + 1) (String.length rest) rest
+                            in
+                            stripTags (before ++ after)
+
+        startMarker = "||CODE_START||"
+        endMarker = "||CODE_END||"
+        lenStart = String.length startMarker
+        lenEnd = String.length endMarker
+
+        helper : String -> List ContentBlock
+        helper s =
+            case String.indexes startMarker s of
+                [] ->
+                    let
+                        text = stripTags s |> String.trim
+                    in
+                    if String.isEmpty text then
+                        []
+                    else
+                        [ TextBlock text ]
+
+                idx :: _ ->
+                    let
+                        prefix = String.slice 0 idx s
+                        afterStart = String.slice (idx + lenStart) (String.length s) s
+                    in
+                    case String.indexes endMarker afterStart of
+                        [] ->
+                            let
+                                text = stripTags s |> String.trim
+                            in
+                            if String.isEmpty text then
+                                []
+                            else
+                                [ TextBlock text ]
+
+                        endIdx :: _ ->
+                            let
+                                codeContent = String.slice 0 endIdx afterStart
+                                rest = String.slice (endIdx + lenEnd) (String.length afterStart) afterStart
+                                prefixText = stripTags prefix |> String.trim
+                                prefixBlocks = if String.isEmpty prefixText then [] else [ TextBlock prefixText ]
+                            in
+                            prefixBlocks ++ [ CodeBlock codeContent ] ++ helper rest
+    in
+    helper withCodeMarkers
 
 
 getTags : ListItem -> List String
@@ -460,9 +587,6 @@ mapItem fn list =
             let
                 (ListItem record) =
                     fn item
-
-                (ListItem _) =
-                    item
             in
             ListItem { record | children = mapItem fn record.children }
         )
@@ -521,78 +645,58 @@ editItemFn id (ListItem item) =
         ListItem { item | editing = False }
 
 
-updateItemContentFn : ListItem -> String -> Posix -> ListItem -> ListItem
-updateItemContentFn (ListItem current) content currentTime (ListItem item) =
-    if item.id == current.id then
+updateItemContentFn : ListItem -> List ContentBlock -> Posix -> ListItem -> ListItem
+updateItemContentFn (ListItem current) blocks currentTime (ListItem item) =
+    if item == current then
         let
-            lines =
-                String.lines content
-
-            finalLines =
-                if List.all String.isEmpty lines then
-                    []
-
-                else
-                    lines
-
             userTags =
-                extractTags content
+                extractTags blocks
 
             hasCodeBlock =
-                TagsUtils.processContent lines
-                    |> List.any (\( isCode, _ ) -> isCode)
+                List.any (\b -> case b of
+                    CodeBlock _ -> True
+                    _ -> False
+                ) blocks
 
             autoTags =
                 [ "created:" ++ formatDateToMDY item.created
                 , "updated:" ++ formatDateToMDY currentTime
                 ]
-                    ++ (if hasCodeBlock then
-                            [ "code" ]
-
-                        else
-                            []
-                       )
+                    ++ (if hasCodeBlock then [ "code" ] else [])
 
             allTags =
                 Set.fromList (userTags ++ autoTags) |> Set.toList
         in
-        ListItem { item | content = finalLines, tags = allTags, updated = currentTime }
+        ListItem { item | content = blocks, tags = allTags, updated = currentTime }
 
     else
         ListItem item
 
 
-extractTags : String -> List String
-extractTags content =
+extractTags : List ContentBlock -> List String
+extractTags blocks =
     let
-        lines =
-            String.lines content
-
-        blocks =
-            TagsUtils.processContent lines
-
-        -- Only extract tags from non-code blocks
-        textBlocks =
+        textContent =
             blocks
-                |> List.filter (\( isCode, _ ) -> not isCode)
-                |> List.concatMap (\( _, blockLines ) -> blockLines)
+                |> List.filterMap (\block ->
+                    case block of
+                        TextBlock text -> Just text
+                        CodeBlock _ -> Nothing
+                )
                 |> String.join "\n"
     in
-    Regex.find isTagRegex textBlocks
+    Regex.find isTagRegex textContent
         |> List.filterMap
             (\m ->
                 case m.submatches of
-                    (Just tag) :: _ ->
-                        Just tag
-
-                    _ ->
-                        Nothing
+                    (Just tag) :: _ -> Just tag
+                    _ -> Nothing
             )
 
 
 saveItemFn : ListItem -> ListItem -> ListItem
 saveItemFn (ListItem current) (ListItem item) =
-    if item.id == current.id then
+    if item == current then
         ListItem { item | editing = False }
 
     else
@@ -723,7 +827,7 @@ findPreviousItem target items =
         |> Maybe.andThen
             (\index ->
                 if index > 0 then
-                    List.head (List.drop (index - 1) visibleItems)
+                    List.head (List.drop (index - 1) visibleItems) |> Debug.log "visibleItems"
 
                 else
                     Nothing
@@ -928,12 +1032,18 @@ filterItems query selectedTags items =
                     matches words text =
                         if List.isEmpty words then
                             True
-
                         else
                             List.any (\word -> String.contains word text) words
 
                     itemContent =
-                        String.toLower (String.join " " (getContent item))
+                        getContent item
+                            |> List.map (\block ->
+                                case block of
+                                    TextBlock text -> text
+                                    CodeBlock code -> code
+                            )
+                            |> String.join " "
+                            |> String.toLower
 
                     itemTags =
                         String.toLower (String.join " " (getTags item))
@@ -947,7 +1057,6 @@ filterItems query selectedTags items =
                     selectedTagsMatch =
                         if List.isEmpty selectedTags then
                             True
-
                         else
                             List.all (\selectedTag -> List.member selectedTag (getTags item)) selectedTags
                 in

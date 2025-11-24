@@ -1,5 +1,6 @@
 module TagsUtils exposing (..)
 
+import ContentBlock exposing (ContentBlock(..), contentBlocksToLines, linesToContentBlocks)
 import Regex
 
 
@@ -122,91 +123,60 @@ findPrev list current =
                 findPrev (y :: rest) current
 
 
-processContent : List String -> List ( Bool, List String )
-processContent content =
-    let
-        isCodeBlock line =
-            String.startsWith "```" line
 
-        processLines =
-            List.foldl
-                (\line ( currentLines, inCode, acc ) ->
-                    if isCodeBlock line then
-                        if inCode then
-                            -- End of code block, finalize the code block and reset
-                            ( [], False, acc ++ [ ( True, currentLines ) ] )
-                        else
-                            -- Start of code block, save previous lines as text block if any
-                            ( []
-                            , True
-                            , if List.isEmpty currentLines then
-                                acc
-                              else
-                                acc ++ [ ( False, currentLines ) ]
-                            )
-                    else if inCode then
-                        -- Inside code block, collect the line
-                        ( currentLines ++ [ line ], inCode, acc )
-                    else
-                        -- Regular text
-                        ( currentLines ++ [ line ], inCode, acc )
-                )
-                ( [], False, [] )
-                content
-    in
-    case processLines of
-        ( remainingLines, _, blocks ) ->
-            if List.isEmpty remainingLines then
-                blocks
-            else
-                blocks ++ [ ( False, remainingLines ) ]
 
 
 isInsideCodeBlock : Int -> String -> Bool
 isInsideCodeBlock cursorPos content =
     let
-        lines = String.lines content
-        blocks = processContent lines
-        
-        -- Calculate character positions for each block
-        checkPosition pos remaining =
-            case remaining of
-                [] ->
-                    False
-                
-                (isCode, blockLines) :: rest ->
-                    let
-                        blockContent = String.join "\n" blockLines
-                        blockEnd = pos + String.length blockContent
-                    in
-                    if isCode && cursorPos >= pos && cursorPos <= blockEnd then
-                        True
-                    else
-                        checkPosition (blockEnd + 1) rest
+        contentBeforeCursor =
+            String.left cursorPos content
+
+        lastFence =
+            String.indexes "```" contentBeforeCursor
+                |> List.reverse
+                |> List.head
     in
-    checkPosition 0 blocks
+    case lastFence of
+        Just fencePos ->
+            let
+                contentAfterFence =
+                    String.dropLeft (fencePos + 3) contentBeforeCursor
+            in
+            not (String.contains "```" contentAfterFence)
+
+        Nothing ->
+            False
 
 
-insertTagAtCursor : String -> String -> Int -> ( String, Int )
-insertTagAtCursor content tag cursorPos =
+insertTagAtCursor : List ContentBlock -> String -> (Int, Int) -> ( List ContentBlock, (Int, Int) )
+insertTagAtCursor blocks tag (line, column) =
     let
-        before = String.left cursorPos content
-        after = String.dropLeft cursorPos content
-
+        lines = contentBlocksToLines blocks
+        targetLine = 
+            List.drop line lines |> List.head |> Maybe.withDefault ""
+        
+        beforeColumn = String.left column targetLine
+        afterColumn = String.dropLeft column targetLine
+        
         tagStart =
-            String.reverse before
+            String.reverse beforeColumn
                 |> String.indexes tagPrefix
                 |> List.head
-                |> Maybe.map (\i -> cursorPos - i - 1)
-                |> Maybe.withDefault cursorPos
-
-        newContent =
-            String.left tagStart content
+                |> Maybe.map (\i -> column - i - 1)
+                |> Maybe.withDefault column
+        
+        newLine = 
+            String.left tagStart targetLine
                 ++ tagPrefix
                 ++ tag
-                ++ after
-
-        newCaretPos =
-            tagStart + String.length tagPrefix + String.length tag
+                ++ afterColumn
+        
+        newLines =
+            List.take line lines
+                ++ [ newLine ]
+                ++ List.drop (line + 1) lines
+        
+        newColumn = tagStart + String.length tagPrefix + String.length tag
     in
-    ( newContent, newCaretPos )
+    ( linesToContentBlocks newLines, (line, newColumn) )

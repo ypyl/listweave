@@ -11,94 +11,456 @@
     <script>
       var app = Elm.Main.init({ node: document.getElementById("root") });
 
-      function getCaretCoordinates(textarea, position) {
-        // Create a mirror div
-        const div = document.createElement("div");
-        const style = getComputedStyle(textarea);
-        for (const prop of style) {
-          div.style[prop] = style[prop];
-        }
+      app.ports.requestCursorPosition.subscribe(function (data) {
+        const itemId = data.itemId;
+        const element = document.getElementById("item-" + itemId);
+        const innerHTML = element ? element.innerHTML : "";
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
 
-        div.style.position = "absolute";
-        // div.style.visibility = "hidden";
-        div.style.whiteSpace = "pre-wrap";
-        div.style.wordWrap = "break-word";
-        div.style.overflow = "hidden";
-        div.style.width = textarea.offsetWidth + "px";
+          // Find contenteditable root
+          let editableRoot = range.startContainer;
+          while (editableRoot && (!editableRoot.getAttribute || !editableRoot.getAttribute("contenteditable"))) {
+            editableRoot = editableRoot.parentNode;
+          }
 
-        // Mirror scroll
-        div.scrollTop = textarea.scrollTop;
-        div.scrollLeft = textarea.scrollLeft;
+          if (editableRoot) {
+            function findTextNodeAndOffset(container, offset) {
+              if (container.nodeType === Node.TEXT_NODE) return { node: container, offset: offset };
+              const child = container.childNodes[offset];
+              if (child && child.nodeType === Node.TEXT_NODE) return { node: child, offset: 0 };
+              return { node: container, offset: offset };
+            }
 
-        // Insert text up to caret, ensuring we don't cut words in half
-        const fullText = textarea.value;
-        let text = fullText.substring(0, position);
+            const caret = findTextNodeAndOffset(range.startContainer, range.startOffset);
+            const textNode = caret.node;
+            const offsetInNode = caret.offset;
 
-        // If we cut in the middle of a word, include the rest of the word
-        if (position < fullText.length && /\w/.test(fullText[position])) {
-          // Find the next non-word character (word boundary)
-          const rest = fullText.slice(position);
-          const nextBoundary = rest.search(/[^\w]/);
-          if (nextBoundary !== -1) {
-            text = fullText.substring(0, position + nextBoundary);
-          } else {
-            text = fullText;
+            // Calculate line and column position
+            let line = 0;
+            let column = 0;
+            let charCount = 0;
+            let found = false;
+
+            function traverse(node) {
+              if (found) return;
+              if (node === textNode) {
+                const text = node.nodeValue || "";
+                const textUpToCursor = text.substring(0, offsetInNode);
+                const lines = textUpToCursor.split("\n");
+                if (lines.length > 1) {
+                  line += lines.length - 1;
+                  column = lines[lines.length - 1].length;
+                } else {
+                  column = charCount + offsetInNode;
+                }
+                found = true;
+                return;
+              }
+              if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.nodeValue || "";
+                for (let i = 0; i < text.length; i++) {
+                  if (text[i] === "\n") {
+                    line++;
+                    charCount = 0;
+                  } else {
+                    charCount++;
+                  }
+                }
+              } else if (node.nodeName === "BR") {
+                line++;
+                charCount = 0;
+              } else if (node.nodeName === "CODE") {
+                line++;
+                charCount = 0;
+                for (let child of node.childNodes) {
+                  traverse(child);
+                  if (found) return;
+                }
+                line++;
+                charCount = 0;
+              } else {
+                for (let child of node.childNodes) {
+                  traverse(child);
+                  if (found) return;
+                }
+              }
+            }
+
+            for (let child of editableRoot.childNodes) {
+              traverse(child);
+              if (found) break;
+            }
+
+            // Calculate end position if there's a selection
+            let endLine = line;
+            let endColumn = column;
+            if (!range.collapsed) {
+              const endCaret = findTextNodeAndOffset(range.endContainer, range.endOffset);
+              const endTextNode = endCaret.node;
+              const endOffsetInNode = endCaret.offset;
+              
+              let eLine = 0;
+              let eColumn = 0;
+              let eCharCount = 0;
+              let eFound = false;
+              
+              function traverseEnd(node) {
+                if (eFound) return;
+                if (node === endTextNode) {
+                  const text = node.nodeValue || "";
+                  const textUpToCursor = text.substring(0, endOffsetInNode);
+                  const lines = textUpToCursor.split("\n");
+                  if (lines.length > 1) {
+                    eLine += lines.length - 1;
+                    eColumn = lines[lines.length - 1].length;
+                  } else {
+                    eColumn = eCharCount + endOffsetInNode;
+                  }
+                  eFound = true;
+                  return;
+                }
+                if (node.nodeType === Node.TEXT_NODE) {
+                  const text = node.nodeValue || "";
+                  for (let i = 0; i < text.length; i++) {
+                    if (text[i] === "\n") {
+                      eLine++;
+                      eCharCount = 0;
+                    } else {
+                      eCharCount++;
+                    }
+                  }
+                } else if (node.nodeName === "BR") {
+                  eLine++;
+                  eCharCount = 0;
+                } else if (node.nodeName === "CODE") {
+                  eLine++;
+                  eCharCount = 0;
+                  for (let child of node.childNodes) {
+                    traverseEnd(child);
+                    if (eFound) return;
+                  }
+                  eLine++;
+                  eCharCount = 0;
+                } else {
+                  for (let child of node.childNodes) {
+                    traverseEnd(child);
+                    if (eFound) return;
+                  }
+                }
+              }
+              
+              for (let child of editableRoot.childNodes) {
+                traverseEnd(child);
+                if (eFound) break;
+              }
+              
+              endLine = eLine;
+              endColumn = eColumn;
+            }
+
+            app.ports.receiveCursorPosition.send({
+              line: line,
+              column: column,
+              endLine: endLine,
+              endColumn: endColumn,
+              itemId: itemId,
+              innerHTML: innerHTML,
+            });
           }
         }
-        div.textContent = text;
+      });
 
-        // Insert marker span
-        const span = document.createElement("div");
-        span.textContent = textarea.value.substring(position) || "."; // avoid empty
-        div.appendChild(span);
-
-        document.body.appendChild(div);
-
-        const rect = span.getBoundingClientRect();
-        const divRect = div.getBoundingClientRect();
-        const taRect = textarea.getBoundingClientRect();
-
-        document.body.removeChild(div);
-
-        return {
-          top: rect.top - divRect.top + taRect.top + textarea.scrollTop,
-          left: taRect.left,
-          width: textarea.offsetWidth,
-        };
-      }
-
-      app.ports.setCaret.subscribe(function (data) {
+      app.ports.setCursorPosition.subscribe(function (data) {
         const id = data.id;
-        const pos = data.pos;
-        const input = document.getElementById("input-id-" + id);
+        const line = data.line;
+        const column = data.column;
+        const input = document.getElementById("item-" + id);
         if (input) {
           input.focus();
-          input.setSelectionRange(pos, pos);
-          autoResize.call(input);
+          const range = document.createRange();
+          const sel = window.getSelection();
+
+          let currentLine = 0;
+          let currentColumn = 0;
+          let found = false;
+
+          function traverse(node) {
+            if (found) return;
+
+            if (node.nodeType === Node.TEXT_NODE) {
+              const text = node.nodeValue || "";
+              for (let i = 0; i < text.length; i++) {
+                if (currentLine === line && currentColumn === column) {
+                  range.setStart(node, i);
+                  found = true;
+                  return;
+                }
+                if (text[i] === "\n") {
+                  currentLine++;
+                  currentColumn = 0;
+                } else {
+                  currentColumn++;
+                }
+              }
+              if (currentLine === line && currentColumn === column) {
+                range.setStart(node, text.length);
+                found = true;
+              }
+            } else if (node.nodeName === "BR") {
+              if (currentLine === line && currentColumn === column) {
+                range.setStartBefore(node);
+                found = true;
+                return;
+              }
+              currentLine++;
+              currentColumn = 0;
+            } else if (node.nodeName === "CODE") {
+              currentLine++;
+              currentColumn = 0;
+              for (let child of node.childNodes) {
+                traverse(child);
+                if (found) return;
+              }
+              currentColumn = 0;
+              currentLine++;
+            } else {
+              for (let child of node.childNodes) {
+                traverse(child);
+                if (found) return;
+              }
+            }
+          }
+
+          for (let child of input.childNodes) {
+            traverse(child);
+            if (found) break;
+          }
+
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
         }
       });
 
-      app.ports.resizeTextarea.subscribe(function (id) {
-        const input = document.getElementById("input-id-" + id);
-        if (input) {
-          autoResize.call(input);
-        }
-      });
+      app.ports.requestCursorCoordinates.subscribe(function (data) {
+        const itemId = data.itemId;
+        const fallback = { itemId: itemId, top: 0, left: 0, width: 0, word: "", ok: false, inCode: false, line: 0, column: 0 };
 
-      app.ports.requestCursorPosition.subscribe(function (id) {
-        // Find the textarea element by its value
-        const textarea = document.getElementById("input-id-" + id);
-        if (!textarea) {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) {
+          if (app.ports && app.ports.receiveCursorCoordinates) {
+            app.ports.receiveCursorCoordinates.send(fallback);
+          }
           return;
         }
-        const cursorPos = textarea.selectionStart;
-        const coords = getCaretCoordinates(textarea, cursorPos);
 
-        if (app.ports && app.ports.receiveCursorPosition) {
-          app.ports.receiveCursorPosition.send({
-            top: Math.ceil(coords.top),
-            left: Math.ceil(coords.left),
-            width: Math.ceil(coords.width),
+        const originalRange = sel.getRangeAt(0);
+        const range = originalRange.cloneRange();
+        range.collapse(true);
+
+        function findLastTextDescendant(node) {
+          if (!node) return null;
+          if (node.nodeType === Node.TEXT_NODE) return node;
+          for (let i = node.childNodes.length - 1; i >= 0; i--) {
+            const found = findLastTextDescendant(node.childNodes[i]);
+            if (found) return found;
+          }
+          return null;
+        }
+
+        function findNextTextDescendant(node) {
+          if (!node) return null;
+          if (node.nodeType === Node.TEXT_NODE) return node;
+          for (let i = 0; i < node.childNodes.length; i++) {
+            const found = findNextTextDescendant(node.childNodes[i]);
+            if (found) return found;
+          }
+          return null;
+        }
+
+        function getPreviousTextNode(node) {
+          if (!node) return null;
+          let cur = node;
+          while (cur) {
+            if (cur.previousSibling) {
+              // get last text descendant of previousSibling
+              return findLastTextDescendant(cur.previousSibling);
+            }
+            cur = cur.parentNode;
+          }
+          return null;
+        }
+
+        function getNextTextNode(node) {
+          if (!node) return null;
+          let cur = node;
+          while (cur) {
+            if (cur.nextSibling) {
+              return findNextTextDescendant(cur.nextSibling);
+            }
+            cur = cur.parentNode;
+          }
+          return null;
+        }
+
+        function findTextNodeAndOffset(container, offset) {
+          if (container.nodeType === Node.TEXT_NODE) return { node: container, offset: offset };
+          // Try child at offset
+          const child = container.childNodes[offset];
+          if (child) {
+            const nextText = findNextTextDescendant(child);
+            if (nextText) return { node: nextText, offset: 0 };
+          }
+          // Try previous sibling text
+          for (let i = offset - 1; i >= 0; i--) {
+            const prev = container.childNodes[i];
+            const lastText = findLastTextDescendant(prev);
+            if (lastText) return { node: lastText, offset: lastText.length };
+          }
+          // Walk up to find a place
+          let cur = container;
+          while (cur) {
+            if (cur.nodeType === Node.TEXT_NODE) return { node: cur, offset: offset };
+            cur = cur.parentNode;
+          }
+          // As a last resort, search the document for any text node
+          const walker = document.createTreeWalker(document, NodeFilter.SHOW_TEXT, null);
+          const any = walker.nextNode();
+          if (any) return { node: any, offset: 0 };
+          return null;
+        }
+
+        const caret = findTextNodeAndOffset(range.startContainer, range.startOffset);
+        if (!caret || !caret.node) {
+          if (app.ports && app.ports.receiveCursorPosition) {
+            app.ports.receiveCursorPosition.send(fallback);
+          }
+          return;
+        }
+
+        const textNode = caret.node;
+        // Detect whether caret is inside a <code> element by walking ancestors
+        // Stop walking once we reach the element that explicitly sets `contenteditable`.
+        let inCode = false;
+        let anc = textNode && textNode.parentNode;
+        while (anc) {
+          if (anc.nodeName && anc.nodeName.toUpperCase() === "CODE") {
+            inCode = true;
+            break;
+          }
+          // If this ancestor explicitly sets the `contenteditable` attribute, stop here.
+          // Treat presence of the attribute as the boundary unless it's explicitly 'false'.
+          const attr = anc.getAttribute && anc.getAttribute("contenteditable");
+          if (attr !== null && attr !== "false") {
+            break;
+          }
+          anc = anc.parentNode;
+        }
+        let offsetInNode = Math.max(0, Math.min(caret.offset, textNode.length));
+
+        // Find contenteditable root to respect boundary
+        let editableRoot = textNode.parentNode;
+        while (editableRoot && (!editableRoot.getAttribute || !editableRoot.getAttribute("contenteditable"))) {
+          editableRoot = editableRoot.parentNode;
+        }
+
+        // Define word characters. Include @ to support mentions like @yauhen.
+        const isWordChar = (ch) => /[A-Za-z0-9_@\u00C0-\uFFFF-]/.test(ch);
+
+        // Walk backwards across text nodes to build the fragment before the caret
+        let fragment = "";
+        const maxChars = 1024;
+        let charsLeft = maxChars;
+        let currentNode = textNode;
+        let pos = offsetInNode;
+        let stop = false;
+
+        while (currentNode && charsLeft > 0 && !stop) {
+          // Stop if we've walked outside the contenteditable boundary
+          let ancestor = currentNode.parentNode;
+          let insideBoundary = false;
+          while (ancestor) {
+            if (ancestor === editableRoot) {
+              insideBoundary = true;
+              break;
+            }
+            ancestor = ancestor.parentNode;
+          }
+          if (!insideBoundary) break;
+
+          const txt = currentNode.nodeValue || "";
+          let i = pos - 1;
+          for (; i >= 0 && charsLeft > 0; i--, charsLeft--) {
+            const ch = txt.charAt(i);
+            if (!isWordChar(ch)) {
+              stop = true;
+              break;
+            }
+            fragment = ch + fragment;
+          }
+          if (!stop) {
+            // move to previous text node and set pos to its length
+            currentNode = getPreviousTextNode(currentNode);
+            pos = currentNode ? currentNode.length : 0;
+          }
+        }
+
+        // Measure caret coordinates
+        function measureCollapsedRangeCoordinates(collapsedRange) {
+          let rect = null;
+          const rects = collapsedRange.getClientRects();
+          if (rects && rects.length > 0) rect = rects[0];
+          if (!rect || (rect.width === 0 && rect.height === 0)) {
+            // insert temporary marker
+            const marker = document.createElement("span");
+            marker.textContent = "\u200B";
+            marker.style.display = "inline";
+            marker.style.padding = "0";
+            marker.style.margin = "0";
+            marker.style.lineHeight = "0";
+            try {
+              collapsedRange.insertNode(marker);
+              rect = marker.getBoundingClientRect();
+            } finally {
+              // remove marker and normalize if needed
+              if (marker.parentNode) marker.parentNode.removeChild(marker);
+            }
+          } else {
+            // use bounding rect if available
+            if (!rect || (rect.width === 0 && rect.height === 0)) rect = collapsedRange.getBoundingClientRect();
+          }
+          return rect;
+        }
+
+        let coordsRect = null;
+        try {
+          coordsRect = measureCollapsedRangeCoordinates(range);
+        } catch (err) {
+          coordsRect = null;
+        }
+
+        if (!coordsRect) {
+          if (app.ports && app.ports.receiveCursorCoordinates) {
+            app.ports.receiveCursorCoordinates.send(fallback);
+          }
+          return;
+        }
+
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft || 0;
+        const top = Math.ceil(coordsRect.bottom + scrollTop);
+        const left = Math.ceil(coordsRect.left + scrollLeft);
+
+        if (app.ports && app.ports.receiveCursorCoordinates) {
+          app.ports.receiveCursorCoordinates.send({
+            itemId: itemId,
+            top: top,
+            left: left,
+            word: fragment,
+            ok: true,
+            inCode: inCode,
           });
         }
       });
@@ -129,105 +491,6 @@
           searchInput.setSelectionRange(position, position);
         }
       });
-
-      app.ports.getCurrentCursorPosition.subscribe(function (itemId) {
-        const textarea = document.getElementById("input-id-" + itemId);
-        if (textarea && app.ports.receiveCurrentCursorPosition) {
-          const cursorPos = textarea.selectionStart;
-          app.ports.receiveCurrentCursorPosition.send({
-            itemId: itemId,
-            tag: "", // Will be handled by Elm
-            cursorPos: cursorPos,
-          });
-        }
-      });
-
-      app.ports.getPosition.subscribe(function (data) {
-        // data: { id: number, clientX: number, clientY: number }
-        const viewItemId = data.id;
-        const clientX = data.clientX;
-        const clientY = data.clientY;
-
-        const viewItem = document.getElementById("view-item-" + viewItemId);
-        if (!viewItem) {
-          return;
-        }
-
-        const contentDiv = viewItem.querySelector(".content-click-area");
-        if (!contentDiv) {
-          return;
-        }
-
-        const clickRange = document.caretRangeFromPoint
-          ? document.caretRangeFromPoint(clientX, clientY)
-          : document.caretPositionFromPoint?.(clientX, clientY);
-
-        if (!clickRange || !contentDiv.contains(clickRange.startContainer)) {
-          return;
-        }
-
-        const totalRange = document.createRange();
-        totalRange.selectNodeContents(contentDiv);
-        totalRange.setEnd(clickRange.startContainer, clickRange.startOffset);
-        const offset = totalRange.toString().length;
-
-        if (app.ports.clickedAt) {
-          app.ports.clickedAt.send({ id: viewItemId, pos: offset });
-        }
-      });
-
-      function autoResize() {
-        const ta = this;
-
-        // Ensure wrapping behaviour is consistent so scrollHeight reflects wrapped lines
-        ta.style.whiteSpace = "pre-wrap";
-        ta.style.wordWrap = "break-word";
-        ta.style.overflowWrap = "anywhere";
-        ta.style.overflow = "hidden";
-
-        // Reset height so scrollHeight can shrink when content is removed
-        ta.style.height = "auto";
-
-        // Primary approach: use scrollHeight which accounts for wrapped lines
-        let newHeight = ta.scrollHeight;
-
-        // Fallback: if for some reason scrollHeight is unavailable or 0, measure with a mirror div
-        if (!newHeight || newHeight === 0) {
-          const mirror = document.createElement("div");
-          const style = getComputedStyle(ta);
-          for (const prop of style) {
-            mirror.style[prop] = style[prop];
-          }
-          mirror.style.position = "absolute";
-          mirror.style.visibility = "hidden";
-          mirror.style.whiteSpace = "pre-wrap";
-          mirror.style.wordWrap = "break-word";
-          mirror.style.overflowWrap = "anywhere";
-          mirror.style.width = ta.offsetWidth + "px";
-          // Use textContent to match rendering and avoid injection
-          mirror.textContent = ta.value || ".";
-          document.body.appendChild(mirror);
-          newHeight = mirror.getBoundingClientRect().height;
-          document.body.removeChild(mirror);
-        }
-
-        // Add a tiny buffer to avoid scrollbars appearing
-        const style = getComputedStyle(ta);
-        const fontSize = parseFloat(style.fontSize) || 14;
-        const minHeight = fontSize * 1.8;
-        ta.style.height = Math.max(newHeight, minHeight) + "px";
-      }
-
-      window.addEventListener(
-        "resize",
-        () => {
-          const textareas = document.querySelectorAll("textarea");
-          textareas.forEach((textarea) => {
-            autoResize.call(textarea);
-          });
-        },
-        false
-      );
 
       app.ports.downloadJson.subscribe(function (data) {
         const blob = new Blob([data.content], { type: "application/json" });
